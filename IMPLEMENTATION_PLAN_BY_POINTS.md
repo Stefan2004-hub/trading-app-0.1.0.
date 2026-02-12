@@ -110,7 +110,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: token roundtrip validation passes unit test.
 
-18. Implement refresh token hash storage and rotation.
+18. [x] Implement refresh token hash storage and rotation.
    - Estimate: 25m
    - Done when: old refresh token is rejected after rotation.
 
