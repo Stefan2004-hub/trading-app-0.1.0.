@@ -46,19 +46,19 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: package tree compiles and app starts.
 
-2. Add backend dependencies (`web`, `data-jpa`, `security`, `oauth2-client`, `validation`, `flyway`, `postgresql`).
+2. [x] Add backend dependencies (`web`, `data-jpa`, `security`, `oauth2-client`, `validation`, `flyway`, `postgresql`).
    - Estimate: 20m
    - Done when: dependency resolution succeeds.
 
-3. Add environment variable matrix for backend/frontend configs.
+3. [x] Add environment variable matrix for backend/frontend configs.
    - Estimate: 20m
    - Done when: sample config loads without missing required keys.
 
-4. Create Flyway migration map (`V1`..`V4`) and file stubs.
+4. [x] Create Flyway migration map (`V1`..`V4`) and file stubs.
    - Estimate: 25m
    - Done when: all migration files exist in expected path.
 
-5. Move base DDL for `btc_historic_data`, `assets`, `exchanges` into `V1` plan section.
+5. [x] Move base DDL for `btc_historic_data`, `assets`, `exchanges` into `V1` plan section.
    - Estimate: 25m
    - Done when: SQL section compiles in PostgreSQL parser.
 

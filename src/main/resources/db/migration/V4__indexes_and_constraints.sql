@@ -1,0 +1,2 @@
+-- V4 placeholder: indexes and constraints
+-- Next points will add auth and user_id query-path indexes.

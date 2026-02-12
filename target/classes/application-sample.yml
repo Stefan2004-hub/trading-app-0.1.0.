@@ -1,0 +1,22 @@
+spring:
+  config:
+    activate:
+      on-profile: sample
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+
+# Sample values used to verify env matrix wiring without requiring infrastructure.
+app:
+  security:
+    jwt:
+      secret: sample-jwt-secret-for-local-validation
+      access-token-ttl-minutes: 15
+      refresh-token-ttl-days: 30
+  cors:
+    allowed-origin: http://localhost:5173
+
+server:
+  port: 8080

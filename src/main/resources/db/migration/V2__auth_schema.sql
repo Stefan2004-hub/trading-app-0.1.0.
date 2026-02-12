@@ -1,0 +1,2 @@
+-- V2 placeholder: authentication schema
+-- Next points will define users, oauth_accounts, and refresh_tokens.

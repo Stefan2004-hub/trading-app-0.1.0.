@@ -1,0 +1,2 @@
+-- V3 placeholder: multi-tenant user ownership
+-- Next points will add user_id foreign keys and user-scoped view updates.
