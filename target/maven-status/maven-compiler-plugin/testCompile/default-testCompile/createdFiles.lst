@@ -1,2 +1,3 @@
 com/trading/security/RefreshTokenServiceImplTest.class
+com/trading/service/auth/InMemoryAuthRegistrationServiceTest.class
 com/trading/security/JwtServiceImplTest.class

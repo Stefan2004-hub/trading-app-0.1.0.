@@ -114,7 +114,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: old refresh token is rejected after rotation.
 
-19. Implement register flow (email + username uniqueness, BCrypt).
+19. [x] Implement register flow (email + username uniqueness, BCrypt).
    - Estimate: 25m
    - Done when: duplicate checks and successful registration tests pass.
 
