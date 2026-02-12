@@ -62,19 +62,19 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: SQL section compiles in PostgreSQL parser.
 
-6. Move `transactions` table and `realized_pnl` alteration into `V1` plan section.
+6. [x] Move `transactions` table and `realized_pnl` alteration into `V1` plan section.
    - Estimate: 20m
    - Done when: SQL syntax validates.
 
-7. Move `user_portfolio_performance` view into `V1` plan section.
+7. [x] Move `user_portfolio_performance` view into `V1` plan section.
    - Estimate: 20m
    - Done when: view references valid tables/columns.
 
-8. Move `accumulation_trades` + indexes into `V1` plan section.
+8. [x] Move `accumulation_trades` + indexes into `V1` plan section.
    - Estimate: 20m
    - Done when: SQL syntax validates.
 
-9. Move strategy tables (`sell_strategies`, `buy_strategies`, `strategy_alerts`, `price_peaks`) into `V1` plan section.
+9. [x] Move strategy tables (`sell_strategies`, `buy_strategies`, `strategy_alerts`, `price_peaks`) into `V1` plan section.
    - Estimate: 25m
    - Done when: all tables + indexes parse correctly.
 
