@@ -90,15 +90,15 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: all auth tables parse and FK constraints are valid.
 
-13. Define `V3` multi-tenant `user_id` additions on user-owned tables.
+13. [x] Define `V3` multi-tenant `user_id` additions on user-owned tables.
    - Estimate: 25m
    - Done when: all required tables include `user_id` + FK.
 
-14. Define `V3` view updates to enforce user scoping.
+14. [x] Define `V3` view updates to enforce user scoping.
    - Estimate: 20m
    - Done when: updated views include `user_id` in output/filter path.
 
-15. Define `V4` indexes for auth lookup and `user_id` query paths.
+15. [x] Define `V4` indexes for auth lookup and `user_id` query paths.
    - Estimate: 20m
    - Done when: index DDL parses and matches query patterns.
 
