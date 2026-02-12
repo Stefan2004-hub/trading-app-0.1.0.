@@ -102,11 +102,11 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: index DDL parses and matches query patterns.
 
-16. Security route matrix (`/api/auth/**` public, trading APIs protected).
+16. [x] Security route matrix (`/api/auth/**` public, trading APIs protected).
    - Estimate: 20m
    - Done when: unauthorized access returns 401 on protected endpoints.
 
-17. Implement JWT access token issue/validate service.
+17. [x] Implement JWT access token issue/validate service.
    - Estimate: 25m
    - Done when: token roundtrip validation passes unit test.
 

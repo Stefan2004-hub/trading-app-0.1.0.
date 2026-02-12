@@ -1,12 +1,16 @@
+com/trading/security/JwtService.class
 com/trading/config/package-info.class
 com/trading/dto/transaction/package-info.class
 com/trading/domain/repository/package-info.class
 com/trading/domain/entity/package-info.class
 com/trading/exception/package-info.class
+com/trading/controller/RouteProbeController.class
 com/trading/dto/strategy/package-info.class
+com/trading/config/SecurityConfig.class
 com/trading/dto/auth/package-info.class
 com/trading/dto/portfolio/package-info.class
 com/trading/TradingApplication.class
 com/trading/controller/package-info.class
 com/trading/service/package-info.class
 com/trading/security/package-info.class
+com/trading/security/JwtServiceImpl.class
