@@ -78,15 +78,15 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: all tables + indexes parse correctly.
 
-10. Move `sell_opportunities` and `buy_opportunities` views into `V1` plan section.
+10. [x] Move `sell_opportunities` and `buy_opportunities` views into `V1` plan section.
    - Estimate: 25m
    - Done when: both views compile against schema.
 
-11. Move peak reset function + trigger into `V1` plan section.
+11. [x] Move peak reset function + trigger into `V1` plan section.
    - Estimate: 20m
    - Done when: function and trigger create successfully.
 
-12. Define `V2` auth schema (`users`, `oauth_accounts`, `refresh_tokens`).
+12. [x] Define `V2` auth schema (`users`, `oauth_accounts`, `refresh_tokens`).
    - Estimate: 25m
    - Done when: all auth tables parse and FK constraints are valid.
 

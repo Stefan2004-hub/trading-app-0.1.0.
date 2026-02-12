@@ -130,3 +130,58 @@ CREATE TABLE price_peaks (
 );
 
 CREATE INDEX idx_price_peaks_asset_active ON price_peaks(asset_id, is_active);
+
+CREATE OR REPLACE VIEW sell_opportunities AS
+SELECT
+    t.id AS transaction_id,
+    a.symbol,
+    a.name AS asset_name,
+    t.transaction_type,
+    t.unit_price_usd AS buy_price,
+    t.net_amount AS coin_amount,
+    ss.threshold_percent,
+    t.unit_price_usd * (1 + ss.threshold_percent / 100) AS target_sell_price
+FROM transactions t
+JOIN assets a ON t.asset_id = a.id
+JOIN sell_strategies ss ON ss.asset_id = t.asset_id AND ss.is_active = true
+WHERE t.transaction_type = 'BUY'
+  AND ss.threshold_percent IS NOT NULL;
+
+CREATE OR REPLACE VIEW buy_opportunities AS
+SELECT
+    a.id AS asset_id,
+    a.symbol,
+    a.name AS asset_name,
+    bs.dip_threshold_percent,
+    bs.buy_amount_usd,
+    pp.peak_price,
+    pp.peak_price * (1 - bs.dip_threshold_percent / 100) AS target_buy_price,
+    pp.last_buy_transaction_id,
+    pp.peak_timestamp AS last_peak_timestamp
+FROM buy_strategies bs
+JOIN assets a ON bs.asset_id = a.id
+LEFT JOIN price_peaks pp ON pp.asset_id = bs.asset_id AND pp.is_active = true
+WHERE bs.is_active = true;
+
+CREATE OR REPLACE FUNCTION reset_price_peak_on_buy()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO price_peaks (asset_id, last_buy_transaction_id, peak_price, peak_timestamp, is_active)
+    VALUES (NEW.asset_id, NEW.id, NEW.unit_price_usd, NEW.transaction_date, true)
+    ON CONFLICT (asset_id)
+    DO UPDATE SET
+        last_buy_transaction_id = NEW.id,
+        peak_price = NEW.unit_price_usd,
+        peak_timestamp = NEW.transaction_date,
+        is_active = true,
+        updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_reset_price_peak ON transactions;
+CREATE TRIGGER trg_reset_price_peak
+    AFTER INSERT ON transactions
+    FOR EACH ROW
+    WHEN (NEW.transaction_type = 'BUY')
+    EXECUTE FUNCTION reset_price_peak_on_buy();
