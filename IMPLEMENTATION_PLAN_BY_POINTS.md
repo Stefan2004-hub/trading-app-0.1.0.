@@ -234,7 +234,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: user A cannot read/write user B data.
 
-49. Implement frontend auth flow slices (login/register/google entry/protected routes).
+49. [x] Implement frontend auth flow slices (login/register/google entry/protected routes).
    - Estimate: 30m
    - Done when: unauthenticated users are redirected and login succeeds.
 
