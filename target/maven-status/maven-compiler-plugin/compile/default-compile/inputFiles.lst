@@ -46,6 +46,8 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/auth/RegisterResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/auth/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/portfolio/package-info.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/strategy/SellStrategyResponse.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/strategy/UpsertSellStrategyRequest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/strategy/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/transaction/AccumulationTradeResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/transaction/BuyTransactionRequest.java
@@ -75,6 +77,8 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/auth/InMemoryAuthOAuthService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/auth/InMemoryAuthRegistrationService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/package-info.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/strategy/SellStrategyService.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/strategy/SellStrategyServiceImpl.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/AccumulationTradeService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/AccumulationTradeServiceImpl.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/TransactionService.java

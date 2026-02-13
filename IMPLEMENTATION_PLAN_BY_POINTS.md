@@ -170,7 +170,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: close updates delta and status correctly.
 
-33. Implement sell strategy create/update flow.
+33. [x] Implement sell strategy create/update flow.
    - Estimate: 20m
    - Done when: one active strategy per asset is enforced.
 
