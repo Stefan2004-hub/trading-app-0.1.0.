@@ -218,7 +218,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: all fee/PnL permutations pass.
 
-45. Add unit tests for strategy trigger logic.
+45. [x] Add unit tests for strategy trigger logic.
    - Estimate: 30m
    - Done when: trigger thresholds produce expected alerts.
 
