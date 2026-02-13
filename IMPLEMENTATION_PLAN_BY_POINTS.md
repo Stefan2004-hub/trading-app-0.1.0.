@@ -150,7 +150,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: native queries map cleanly to projection types.
 
-28. Define `AuthService` interface + DTOs.
+28. [x] Define `AuthService` interface + DTOs.
    - Estimate: 20m
    - Done when: controller compiles against DTO contracts.
 
