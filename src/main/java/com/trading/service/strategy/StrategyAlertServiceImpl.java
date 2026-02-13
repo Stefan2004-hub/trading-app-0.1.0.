@@ -59,6 +59,14 @@ public class StrategyAlertServiceImpl implements StrategyAlertService {
     }
 
     @Override
+    public List<StrategyAlertResponse> list(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        return strategyAlertRepository.findAllByUser_IdOrderByCreatedAtDesc(userId).stream()
+            .map(StrategyAlertServiceImpl::toResponse)
+            .toList();
+    }
+
+    @Override
     public List<StrategyAlertResponse> generate(UUID userId, GenerateStrategyAlertsRequest request) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(request, "request is required");
@@ -72,6 +80,22 @@ public class StrategyAlertServiceImpl implements StrategyAlertService {
         maybeGenerateSellAlert(userId, request.assetId(), request.currentPriceUsd(), generated);
         maybeGenerateBuyAlert(userId, request.assetId(), request.currentPriceUsd(), generated);
         return generated;
+    }
+
+    @Override
+    public StrategyAlertResponse acknowledge(UUID userId, UUID alertId) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(alertId, "alertId is required");
+
+        StrategyAlert alert = strategyAlertRepository.findByIdAndUser_Id(alertId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Strategy alert not found: " + alertId));
+
+        if (alert.getStatus() != StrategyAlertStatus.ACKNOWLEDGED) {
+            alert.setStatus(StrategyAlertStatus.ACKNOWLEDGED);
+            alert.setAcknowledgedAt(OffsetDateTime.now());
+            alert = strategyAlertRepository.save(alert);
+        }
+        return toResponse(alert);
     }
 
     private void maybeGenerateSellAlert(
@@ -184,7 +208,9 @@ public class StrategyAlertServiceImpl implements StrategyAlertService {
             alert.getReferencePrice(),
             alert.getAlertMessage(),
             alert.getStatus(),
-            alert.getCreatedAt()
+            alert.getCreatedAt(),
+            alert.getAcknowledgedAt(),
+            alert.getExecutedAt()
         );
     }
 }

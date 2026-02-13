@@ -25,11 +25,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
@@ -175,5 +177,28 @@ class StrategyAlertServiceImplTest {
         );
 
         assertTrue(generated.isEmpty());
+    }
+
+    @Test
+    void acknowledgeUpdatesStatusAndTimestamp() {
+        StrategyAlert pending = new StrategyAlert();
+        pending.setId(UUID.randomUUID());
+        pending.setUser(user);
+        pending.setAsset(asset);
+        pending.setStrategyType(StrategyType.SELL);
+        pending.setTriggerPrice(new BigDecimal("110.00"));
+        pending.setThresholdPercent(new BigDecimal("10.00"));
+        pending.setReferencePrice(new BigDecimal("100.00"));
+        pending.setAlertMessage("Sell threshold reached for BTC");
+        pending.setStatus(StrategyAlertStatus.PENDING);
+        pending.setCreatedAt(OffsetDateTime.parse("2026-02-13T09:00:00Z"));
+
+        when(strategyAlertRepository.findByIdAndUser_Id(pending.getId(), userId)).thenReturn(Optional.of(pending));
+        when(strategyAlertRepository.save(any(StrategyAlert.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        StrategyAlertResponse response = strategyAlertService.acknowledge(userId, pending.getId());
+
+        assertEquals(StrategyAlertStatus.ACKNOWLEDGED, response.status());
+        assertNotNull(response.acknowledgedAt());
     }
 }

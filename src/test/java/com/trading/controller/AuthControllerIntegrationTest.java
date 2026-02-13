@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trading.security.UserPrincipal;
 import com.trading.service.portfolio.PortfolioService;
+import com.trading.service.strategy.BuyStrategyService;
+import com.trading.service.strategy.SellStrategyService;
+import com.trading.service.strategy.StrategyAlertService;
 import com.trading.service.transaction.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +51,15 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private PortfolioService portfolioService;
+
+    @MockBean
+    private SellStrategyService sellStrategyService;
+
+    @MockBean
+    private BuyStrategyService buyStrategyService;
+
+    @MockBean
+    private StrategyAlertService strategyAlertService;
 
     @Test
     void registerLoginRefreshLogoutAndMeEndpointsPass() throws Exception {

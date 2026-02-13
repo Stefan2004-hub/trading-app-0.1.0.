@@ -198,7 +198,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: summary/performance endpoints return user-scoped data.
 
-40. Implement `StrategyController` + alert acknowledge endpoint.
+40. [x] Implement `StrategyController` + alert acknowledge endpoint.
    - Estimate: 25m
    - Done when: acknowledge changes status and timestamps.
 

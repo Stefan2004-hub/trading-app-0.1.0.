@@ -17,6 +17,8 @@ public record StrategyAlertResponse(
     BigDecimal referencePrice,
     String alertMessage,
     StrategyAlertStatus status,
-    OffsetDateTime createdAt
+    OffsetDateTime createdAt,
+    OffsetDateTime acknowledgedAt,
+    OffsetDateTime executedAt
 ) {
 }

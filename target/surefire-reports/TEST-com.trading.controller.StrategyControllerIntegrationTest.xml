@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.PortfolioControllerIntegrationTest" time="0.039" tests="3" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.StrategyControllerIntegrationTest" time="0.067" tests="2" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -63,11 +63,10 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[trading-app] "/>
   </properties>
-  <testcase name="summaryEndpointReturnsUserScopedData" classname="com.trading.controller.PortfolioControllerIntegrationTest" time="0.012">
-    <system-out><![CDATA[2026-02-13T13:29:32.635+02:00  INFO 457886 --- [trading-app] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.trading.controller.PortfolioControllerIntegrationTest]: PortfolioControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-02-13T13:29:32.639+02:00  INFO 457886 --- [trading-app] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.PortfolioControllerIntegrationTest
+  <testcase name="strategyEndpointsReturnExpectedStatusAndPayload" classname="com.trading.controller.StrategyControllerIntegrationTest" time="0.04">
+    <system-out><![CDATA[2026-02-13T13:29:32.677+02:00  INFO 457886 --- [trading-app] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.trading.controller.StrategyControllerIntegrationTest]: StrategyControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-13T13:29:32.680+02:00  INFO 457886 --- [trading-app] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.StrategyControllerIntegrationTest
 ]]></system-out>
   </testcase>
-  <testcase name="performanceEndpointReturnsUserScopedData" classname="com.trading.controller.PortfolioControllerIntegrationTest" time="0.006"/>
-  <testcase name="portfolioEndpointsRequireAuthentication" classname="com.trading.controller.PortfolioControllerIntegrationTest" time="0.006"/>
+  <testcase name="strategyEndpointsRequireAuthentication" classname="com.trading.controller.StrategyControllerIntegrationTest" time="0.013"/>
 </testsuite>

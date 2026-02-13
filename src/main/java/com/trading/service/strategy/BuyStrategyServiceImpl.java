@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -34,6 +35,14 @@ public class BuyStrategyServiceImpl implements BuyStrategyService {
         this.buyStrategyRepository = buyStrategyRepository;
         this.userRepository = userRepository;
         this.assetRepository = assetRepository;
+    }
+
+    @Override
+    public List<BuyStrategyResponse> list(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        return buyStrategyRepository.findAllByUser_IdOrderByUpdatedAtDesc(userId).stream()
+            .map(BuyStrategyServiceImpl::toResponse)
+            .toList();
     }
 
     @Override
@@ -76,15 +85,19 @@ public class BuyStrategyServiceImpl implements BuyStrategyService {
         strategy.setUpdatedAt(now);
 
         BuyStrategy saved = buyStrategyRepository.save(strategy);
+        return toResponse(saved);
+    }
+
+    private static BuyStrategyResponse toResponse(BuyStrategy strategy) {
         return new BuyStrategyResponse(
-            saved.getId(),
-            saved.getUser().getId(),
-            saved.getAsset().getId(),
-            saved.getDipThresholdPercent(),
-            saved.getBuyAmountUsd(),
-            saved.getActive(),
-            saved.getCreatedAt(),
-            saved.getUpdatedAt()
+            strategy.getId(),
+            strategy.getUser().getId(),
+            strategy.getAsset().getId(),
+            strategy.getDipThresholdPercent(),
+            strategy.getBuyAmountUsd(),
+            strategy.getActive(),
+            strategy.getCreatedAt(),
+            strategy.getUpdatedAt()
         );
     }
 }
