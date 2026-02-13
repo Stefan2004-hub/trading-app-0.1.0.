@@ -1,0 +1,83 @@
+package com.trading.service.strategy;
+
+import com.trading.domain.entity.Asset;
+import com.trading.domain.entity.SellStrategy;
+import com.trading.domain.entity.User;
+import com.trading.domain.repository.AssetRepository;
+import com.trading.domain.repository.SellStrategyRepository;
+import com.trading.domain.repository.UserRepository;
+import com.trading.dto.strategy.SellStrategyResponse;
+import com.trading.dto.strategy.UpsertSellStrategyRequest;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.Objects;
+import java.util.UUID;
+
+@Service
+@ConditionalOnBean({SellStrategyRepository.class, UserRepository.class, AssetRepository.class})
+public class SellStrategyServiceImpl implements SellStrategyService {
+
+    private static final BigDecimal ZERO = BigDecimal.ZERO;
+
+    private final SellStrategyRepository sellStrategyRepository;
+    private final UserRepository userRepository;
+    private final AssetRepository assetRepository;
+
+    public SellStrategyServiceImpl(
+        SellStrategyRepository sellStrategyRepository,
+        UserRepository userRepository,
+        AssetRepository assetRepository
+    ) {
+        this.sellStrategyRepository = sellStrategyRepository;
+        this.userRepository = userRepository;
+        this.assetRepository = assetRepository;
+    }
+
+    @Override
+    public SellStrategyResponse upsert(UUID userId, UpsertSellStrategyRequest request) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(request.assetId(), "assetId is required");
+        Objects.requireNonNull(request.thresholdPercent(), "thresholdPercent is required");
+        if (request.thresholdPercent().compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException("thresholdPercent must be positive");
+        }
+
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        Asset asset = assetRepository.findById(request.assetId())
+            .orElseThrow(() -> new IllegalArgumentException("Asset not found: " + request.assetId()));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        SellStrategy strategy = sellStrategyRepository.findByUser_IdAndAsset_Id(userId, request.assetId())
+            .orElseGet(() -> {
+                SellStrategy created = new SellStrategy();
+                created.setUser(user);
+                created.setAsset(asset);
+                created.setCreatedAt(now);
+                return created;
+            });
+
+        strategy.setThresholdPercent(request.thresholdPercent());
+        if (request.active() != null) {
+            strategy.setActive(request.active());
+        } else if (strategy.getActive() == null) {
+            strategy.setActive(Boolean.TRUE);
+        }
+        strategy.setUpdatedAt(now);
+
+        SellStrategy saved = sellStrategyRepository.save(strategy);
+        return new SellStrategyResponse(
+            saved.getId(),
+            saved.getUser().getId(),
+            saved.getAsset().getId(),
+            saved.getThresholdPercent(),
+            saved.getActive(),
+            saved.getCreatedAt(),
+            saved.getUpdatedAt()
+        );
+    }
+}
