@@ -57,6 +57,19 @@ public class InMemoryAuthRegistrationService implements AuthRegistrationService 
         return usersByEmail.get(normalizeEmail(email));
     }
 
+    RegisteredUser findByIdentifier(String identifier) {
+        if (isBlank(identifier)) {
+            return null;
+        }
+
+        String normalized = identifier.trim().toLowerCase(Locale.ROOT);
+        RegisteredUser byEmail = usersByEmail.get(normalized);
+        if (byEmail != null) {
+            return byEmail;
+        }
+        return usersByUsername.get(normalized);
+    }
+
     private static void validateRequest(RegisterRequest request) {
         Objects.requireNonNull(request, "request is required");
         if (isBlank(request.email())) {

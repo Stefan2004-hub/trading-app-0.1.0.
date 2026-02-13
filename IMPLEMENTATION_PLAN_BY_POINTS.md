@@ -118,7 +118,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: duplicate checks and successful registration tests pass.
 
-20. Implement login flow with `identifier` (email or username).
+20. [x] Implement login flow with `identifier` (email or username).
    - Estimate: 20m
    - Done when: both identifier modes authenticate successfully.
 
