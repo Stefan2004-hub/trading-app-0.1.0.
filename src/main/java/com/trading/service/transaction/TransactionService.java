@@ -4,9 +4,12 @@ import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 
+import java.util.List;
 import java.util.UUID;
 
 public interface TransactionService {
+
+    List<TransactionResponse> list(UUID userId);
 
     TransactionResponse buy(UUID userId, BuyTransactionRequest request);
 

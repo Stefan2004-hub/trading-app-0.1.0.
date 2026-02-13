@@ -1,10 +1,12 @@
 package com.trading.controller;
 
 import com.trading.security.UserPrincipal;
+import com.trading.service.transaction.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -29,6 +31,9 @@ class CurrentUserProviderIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private TransactionService transactionService;
 
     @Test
     void protectedEndpointExposesCurrentUserIdFromSecurityContext() throws Exception {
