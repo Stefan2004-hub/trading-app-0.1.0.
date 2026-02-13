@@ -182,7 +182,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: alert record appears for triggered condition.
 
-36. Implement portfolio aggregation/performance service.
+36. [x] Implement portfolio aggregation/performance service.
    - Estimate: 25m
    - Done when: response includes invested/current/unrealized metrics.
 
