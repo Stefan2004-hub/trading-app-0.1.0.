@@ -4,7 +4,6 @@ import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.portfolio.PortfolioService;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,7 +14,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/portfolio")
-@ConditionalOnBean(PortfolioService.class)
 public class PortfolioController {
 
     private final PortfolioService portfolioService;

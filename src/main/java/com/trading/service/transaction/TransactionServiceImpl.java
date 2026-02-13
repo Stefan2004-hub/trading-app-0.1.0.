@@ -12,7 +12,6 @@ import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,12 +24,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-@ConditionalOnBean({
-    TransactionRepository.class,
-    UserRepository.class,
-    AssetRepository.class,
-    ExchangeRepository.class
-})
 public class TransactionServiceImpl implements TransactionService {
 
     private static final String USD = "USD";

@@ -1,0 +1,26 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://ep-lingering-cloud-agupkl9f.c-2.eu-central-1.aws.neon.tech:5432/neondb?sslmode=require
+    username: neondb_owner
+    password: npg_XyBcuVF6aI2Y
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+
+app:
+  security:
+    jwt:
+      secret: your-jwt-secret-change-this-in-production
+      access-token-ttl-minutes: 15
+      refresh-token-ttl-days: 30
+  cors:
+    allowed-origin: http://localhost:5173
