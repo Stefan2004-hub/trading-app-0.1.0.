@@ -4,6 +4,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/config/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/AuthController.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/RouteProbeController.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/TransactionController.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/AccumulationTrade.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/Asset.java

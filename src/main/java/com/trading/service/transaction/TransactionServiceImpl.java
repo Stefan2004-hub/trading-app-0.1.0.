@@ -54,6 +54,14 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public List<TransactionResponse> list(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        return transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId).stream()
+            .map(TransactionServiceImpl::toResponse)
+            .toList();
+    }
+
+    @Override
     public TransactionResponse buy(UUID userId, BuyTransactionRequest request) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(request, "request is required");
@@ -102,21 +110,7 @@ public class TransactionServiceImpl implements TransactionService {
         tx.setTransactionDate(request.transactionDate() == null ? OffsetDateTime.now() : request.transactionDate());
 
         Transaction saved = transactionRepository.save(tx);
-        return new TransactionResponse(
-            saved.getId(),
-            saved.getUser().getId(),
-            saved.getAsset().getId(),
-            saved.getExchange().getId(),
-            saved.getTransactionType(),
-            saved.getGrossAmount(),
-            saved.getFeeAmount(),
-            saved.getFeeCurrency(),
-            saved.getNetAmount(),
-            saved.getUnitPriceUsd(),
-            saved.getTotalSpentUsd(),
-            saved.getRealizedPnl(),
-            saved.getTransactionDate()
-        );
+        return toResponse(saved);
     }
 
     @Override
@@ -186,21 +180,7 @@ public class TransactionServiceImpl implements TransactionService {
         tx.setTransactionDate(request.transactionDate() == null ? OffsetDateTime.now() : request.transactionDate());
 
         Transaction saved = transactionRepository.save(tx);
-        return new TransactionResponse(
-            saved.getId(),
-            saved.getUser().getId(),
-            saved.getAsset().getId(),
-            saved.getExchange().getId(),
-            saved.getTransactionType(),
-            saved.getGrossAmount(),
-            saved.getFeeAmount(),
-            saved.getFeeCurrency(),
-            saved.getNetAmount(),
-            saved.getUnitPriceUsd(),
-            saved.getTotalSpentUsd(),
-            saved.getRealizedPnl(),
-            saved.getTransactionDate()
-        );
+        return toResponse(saved);
     }
 
     private static void validateRequest(BuyTransactionRequest request) {
@@ -246,6 +226,24 @@ public class TransactionServiceImpl implements TransactionService {
             return null;
         }
         return feeCurrency.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static TransactionResponse toResponse(Transaction transaction) {
+        return new TransactionResponse(
+            transaction.getId(),
+            transaction.getUser().getId(),
+            transaction.getAsset().getId(),
+            transaction.getExchange().getId(),
+            transaction.getTransactionType(),
+            transaction.getGrossAmount(),
+            transaction.getFeeAmount(),
+            transaction.getFeeCurrency(),
+            transaction.getNetAmount(),
+            transaction.getUnitPriceUsd(),
+            transaction.getTotalSpentUsd(),
+            transaction.getRealizedPnl(),
+            transaction.getTransactionDate()
+        );
     }
 
     private PositionState calculateCurrentPosition(UUID userId, UUID assetId) {

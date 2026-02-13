@@ -190,7 +190,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: endpoint tests for register/login/refresh/logout/me pass.
 
-38. Implement `TransactionController` endpoints.
+38. [x] Implement `TransactionController` endpoints.
    - Estimate: 25m
    - Done when: list/buy/sell endpoints return expected status + payload.
 
