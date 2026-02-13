@@ -46,4 +46,38 @@ class InMemoryAuthLoginServiceTest {
             () -> loginService.login(new LoginRequest("satoshi", "WrongPass1!"))
         );
     }
+
+    @Test
+    void unknownIdentifierIsRejected() {
+        registrationService.register(new RegisterRequest("trader@example.com", "satoshi", "Secret123!"));
+
+        assertThrows(
+            InvalidCredentialsException.class,
+            () -> loginService.login(new LoginRequest("unknown", "Secret123!"))
+        );
+    }
+
+    @Test
+    void blankIdentifierOrPasswordIsRejected() {
+        registrationService.register(new RegisterRequest("trader@example.com", "satoshi", "Secret123!"));
+
+        assertThrows(
+            InvalidCredentialsException.class,
+            () -> loginService.login(new LoginRequest("   ", "Secret123!"))
+        );
+        assertThrows(
+            InvalidCredentialsException.class,
+            () -> loginService.login(new LoginRequest("satoshi", "   "))
+        );
+    }
+
+    @Test
+    void identifierMatchingIsTrimmedAndCaseInsensitive() {
+        registrationService.register(new RegisterRequest("trader@example.com", "satoshi", "Secret123!"));
+
+        LoginResponse response = loginService.login(new LoginRequest("  TRADER@EXAMPLE.COM  ", "Secret123!"));
+
+        assertEquals("trader@example.com", response.email());
+        assertEquals("satoshi", response.username());
+    }
 }

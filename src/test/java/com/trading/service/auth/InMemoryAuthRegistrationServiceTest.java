@@ -56,4 +56,20 @@ class InMemoryAuthRegistrationServiceTest {
             () -> service.register(new RegisterRequest("another@example.com", "SATOSHI", "AnotherPass1!"))
         );
     }
+
+    @Test
+    void blankRegisterFieldsAreRejected() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.register(new RegisterRequest(" ", "satoshi", "Secret123!"))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.register(new RegisterRequest("trader@example.com", " ", "Secret123!"))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.register(new RegisterRequest("trader@example.com", "satoshi", " "))
+        );
+    }
 }
