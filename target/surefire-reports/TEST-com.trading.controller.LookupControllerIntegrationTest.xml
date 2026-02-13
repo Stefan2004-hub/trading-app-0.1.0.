@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.CurrentUserProviderIntegrationTest" time="12.998" tests="2" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.LookupControllerIntegrationTest" time="0.351" tests="3" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -63,9 +63,9 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[trading-app] "/>
   </properties>
-  <testcase name="protectedEndpointRequiresAuthentication" classname="com.trading.controller.CurrentUserProviderIntegrationTest" time="0.047">
-    <system-out><![CDATA[13:45:05.004 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.trading.controller.CurrentUserProviderIntegrationTest]: CurrentUserProviderIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-13:45:05.149 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.CurrentUserProviderIntegrationTest
+  <testcase name="exchangesEndpointReturnsSeededStyleList" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.011">
+    <system-out><![CDATA[2026-02-13T13:45:18.347+02:00  INFO 476287 --- [trading-app] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.trading.controller.LookupControllerIntegrationTest]: LookupControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-13T13:45:18.350+02:00  INFO 476287 --- [trading-app] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.LookupControllerIntegrationTest
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -76,15 +76,14 @@
 
  :: Spring Boot ::                (v3.4.2)
 
-2026-02-13T13:45:05.476+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.CurrentUserProviderIntegrationTest : Starting CurrentUserProviderIntegrationTest using Java 25 with PID 476287 (started by dstefan in /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0.)
-2026-02-13T13:45:05.477+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.CurrentUserProviderIntegrationTest : No active profile set, falling back to 1 default profile: "default"
-2026-02-13T13:45:17.732+02:00  INFO 476287 --- [trading-app] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
-2026-02-13T13:45:17.732+02:00  INFO 476287 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
-2026-02-13T13:45:17.733+02:00  INFO 476287 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 1 ms
-2026-02-13T13:45:17.753+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.CurrentUserProviderIntegrationTest : Started CurrentUserProviderIntegrationTest in 12.515 seconds (process running for 13.264)
+2026-02-13T13:45:18.380+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : Starting LookupControllerIntegrationTest using Java 25 with PID 476287 (started by dstefan in /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0.)
+2026-02-13T13:45:18.380+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : No active profile set, falling back to 1 default profile: "default"
+2026-02-13T13:45:18.663+02:00  INFO 476287 --- [trading-app] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-02-13T13:45:18.663+02:00  INFO 476287 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-02-13T13:45:18.663+02:00  INFO 476287 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
+2026-02-13T13:45:18.669+02:00  INFO 476287 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : Started LookupControllerIntegrationTest in 0.316 seconds (process running for 14.18)
 ]]></system-out>
-    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build what is described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org/mockito/Mockito.html#0.3
-]]></system-err>
   </testcase>
-  <testcase name="protectedEndpointExposesCurrentUserIdFromSecurityContext" classname="com.trading.controller.CurrentUserProviderIntegrationTest" time="0.069"/>
+  <testcase name="assetsEndpointReturnsSeededStyleList" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.007"/>
+  <testcase name="lookupEndpointsRequireAuthentication" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.004"/>
 </testsuite>

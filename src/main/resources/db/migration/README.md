@@ -17,3 +17,7 @@ This folder stores ordered Flyway SQL migrations.
 - `V4__indexes_and_constraints.sql`
   - Query-path indexes and supporting constraints
   - Auth lookup and tenant-scoped read/write index paths
+
+- `V5__seed_assets_and_exchanges.sql`
+  - Seed lookup reference data
+  - Canonical `assets` and `exchanges` rows for API lookups

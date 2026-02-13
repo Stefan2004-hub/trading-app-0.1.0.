@@ -202,7 +202,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: acknowledge changes status and timestamps.
 
-41. Implement lookup endpoints (`assets`, `exchanges`).
+41. [x] Implement lookup endpoints (`assets`, `exchanges`).
    - Estimate: 15m
    - Done when: endpoints return seeded data lists.
 
