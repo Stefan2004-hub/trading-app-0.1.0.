@@ -250,11 +250,11 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: expired token auto-refreshes and request retries once.
 
-53. Add MVP acceptance checklist section.
+53. [x] Add MVP acceptance checklist section.
    - Estimate: 20m
    - Done when: all baseline acceptance criteria are measurable.
 
-54. Add delivery mapping by week/sprint from these points.
+54. [x] Add delivery mapping by week/sprint from these points.
    - Estimate: 25m
    - Done when: every point is assigned to a sequence window.
 
@@ -270,6 +270,30 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
 - Portfolio and opportunities are user-scoped.
 - Alert acknowledge updates status and timestamps.
 - Flyway migrations `V1..V4` apply cleanly.
+
+## MVP Acceptance Checklist
+- [ ] Local register: `POST /api/auth/register` returns `201`; duplicate email/username returns 4xx with validation/error payload.
+- [ ] Local login: `POST /api/auth/login` with `identifier` as email and username returns `200` with non-empty `accessToken` and `refreshToken`.
+- [ ] Google entrypoint: frontend login view has “Continue with Google” action and `/api/auth/oauth2/google` is reachable.
+- [ ] Protected routes: unauthenticated navigation to `/dashboard`, `/transactions`, `/strategies` redirects to `/login`.
+- [ ] JWT attach + refresh: expired access token triggers exactly one `POST /api/auth/refresh` and original protected request is retried once.
+- [ ] Trading UI submit: buy/sell forms validate required fields (`assetId`, `exchangeId`, `grossAmount`, `unitPriceUsd`) before submit.
+- [ ] Transaction persistence: successful buy/sell appears in `GET /api/transactions` and in frontend transaction history table.
+- [ ] Portfolio summary: `GET /api/portfolio/summary` values render in frontend summary cards.
+- [ ] Strategy CRUD: upsert buy/sell strategy forms persist via `POST /api/strategies/buy|sell` and appear in configured strategies table.
+- [ ] Alert acknowledge: pending alerts from `GET /api/strategies/alerts` can be acknowledged via `POST /api/strategies/alerts/{id}/acknowledge`.
+- [ ] Multi-tenant isolation: user A cannot read/write user B transactions, portfolio, strategies, or alerts (integration test pass required).
+- [ ] Migration integrity: Flyway migrations `V1..V5` apply cleanly in integration tests.
+
+## Delivery Mapping by Week/Sprint
+- Week 1 (Sprint 1): Points `1..8` (project scaffold, dependencies, env matrix, Flyway baseline and initial DDL migration chunks).
+- Week 2 (Sprint 1): Points `9..15` (remaining domain DDL/views/triggers + auth schema + tenant/view/index migration updates).
+- Week 3 (Sprint 2): Points `16..23` (security route matrix, JWT + refresh rotation, local auth, Google callback, principal extraction).
+- Week 4 (Sprint 2): Points `24..28` (entity mappings, ownership relations, constrained repositories, projections, auth contracts).
+- Week 5 (Sprint 3): Points `29..36` (transaction, accumulation trade, strategy, alert generation, portfolio service implementations).
+- Week 6 (Sprint 3): Points `37..42` (controller layer completion, lookup endpoints, request validation, unified API errors).
+- Week 7 (Sprint 4): Points `43..48` (unit and integration test hardening: auth, math/PnL, strategy triggers, Flyway, security, isolation).
+- Week 8 (Sprint 4): Points `49..54` (frontend auth/trading/strategy slices, API token refresh-retry, MVP checklist, delivery mapping closure).
 
 ## Assumptions
 - OAuth provider for this scope is Google only.
