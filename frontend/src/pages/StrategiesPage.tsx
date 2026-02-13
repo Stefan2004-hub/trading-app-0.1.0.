@@ -1,0 +1,65 @@
+import { useEffect } from 'react';
+import { AppHeader } from '../components/AppHeader';
+import { StrategyAlertList } from '../components/StrategyAlertList';
+import { StrategyForms } from '../components/StrategyForms';
+import { StrategyTable } from '../components/StrategyTable';
+import {
+  acknowledgeStrategyAlert,
+  clearStrategyError,
+  loadStrategyData,
+  upsertBuyStrategy,
+  upsertSellStrategy
+} from '../store/strategySlice';
+import { useAppDispatch, useAppSelector } from '../store/hooks';
+
+export function StrategiesPage(): JSX.Element {
+  const dispatch = useAppDispatch();
+  const { assets, sellStrategies, buyStrategies, alerts, loading, submitting, error } = useAppSelector(
+    (state) => state.strategy
+  );
+
+  useEffect(() => {
+    if (loading || assets.length > 0) {
+      return;
+    }
+    void dispatch(loadStrategyData());
+  }, [assets.length, dispatch, loading]);
+
+  return (
+    <main className="workspace-shell">
+      <AppHeader />
+      <section className="workspace-panel">
+        <h1>Strategies</h1>
+        {error ? <p className="auth-error">{error}</p> : null}
+
+        <StrategyForms
+          assets={assets}
+          submitting={submitting}
+          onSubmitSell={async (payload) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(upsertSellStrategy(payload));
+            return upsertSellStrategy.fulfilled.match(action);
+          }}
+          onSubmitBuy={async (payload) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(upsertBuyStrategy(payload));
+            return upsertBuyStrategy.fulfilled.match(action);
+          }}
+        />
+
+        <StrategyAlertList
+          alerts={alerts}
+          assets={assets}
+          submitting={submitting}
+          onAcknowledge={async (alertId) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(acknowledgeStrategyAlert(alertId));
+            return acknowledgeStrategyAlert.fulfilled.match(action);
+          }}
+        />
+
+        <StrategyTable assets={assets} sellStrategies={sellStrategies} buyStrategies={buyStrategies} />
+      </section>
+    </main>
+  );
+}

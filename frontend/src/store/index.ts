@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './authSlice';
+import strategyReducer from './strategySlice';
 import tradingReducer from './tradingSlice';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    trading: tradingReducer
+    trading: tradingReducer,
+    strategy: strategyReducer
   }
 });
 

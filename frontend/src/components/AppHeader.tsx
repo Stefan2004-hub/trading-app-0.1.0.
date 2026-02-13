@@ -18,6 +18,9 @@ export function AppHeader(): JSX.Element {
         <Link className={location.pathname === '/transactions' ? 'active' : ''} to="/transactions">
           Transactions
         </Link>
+        <Link className={location.pathname === '/strategies' ? 'active' : ''} to="/strategies">
+          Strategies
+        </Link>
       </nav>
       <div className="header-right">
         <span>{user?.username}</span>
