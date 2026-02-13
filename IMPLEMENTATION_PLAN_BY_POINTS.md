@@ -214,7 +214,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: auth service test suite passes.
 
-44. Add unit tests for transaction math and PnL.
+44. [x] Add unit tests for transaction math and PnL.
    - Estimate: 30m
    - Done when: all fee/PnL permutations pass.
 
