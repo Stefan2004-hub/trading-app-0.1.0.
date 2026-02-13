@@ -174,7 +174,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: one active strategy per asset is enforced.
 
-34. Implement buy strategy create/update flow.
+34. [x] Implement buy strategy create/update flow.
    - Estimate: 20m
    - Done when: threshold/amount validations pass.
 
