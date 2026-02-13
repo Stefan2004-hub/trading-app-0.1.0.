@@ -142,11 +142,11 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: ownership FK mappings are validated at startup.
 
-26. Implement repositories with mandatory `user_id` constrained methods.
+26. [x] Implement repositories with mandatory `user_id` constrained methods.
    - Estimate: 25m
    - Done when: repository methods return only current user rows in tests.
 
-27. Implement projection models for performance/opportunity views.
+27. [x] Implement projection models for performance/opportunity views.
    - Estimate: 20m
    - Done when: native queries map cleanly to projection types.
 
