@@ -130,11 +130,11 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: OAuth callback returns valid auth response.
 
-23. Implement `UserPrincipal` + security-context user extraction helper.
+23. [x] Implement `UserPrincipal` + security-context user extraction helper.
    - Estimate: 20m
    - Done when: current user id is available in protected controllers.
 
-24. Map JPA entities for core domain tables.
+24. [x] Map JPA entities for core domain tables.
    - Estimate: 30m
    - Done when: app boots with entity scan and schema validate mode.
 
