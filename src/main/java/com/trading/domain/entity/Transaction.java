@@ -58,8 +58,9 @@ public class Transaction {
     @Column(name = "realized_pnl", precision = 20, scale = 18)
     private BigDecimal realizedPnl;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "transaction_date")
     private OffsetDateTime transactionDate;
@@ -152,12 +153,12 @@ public class Transaction {
         this.realizedPnl = realizedPnl;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public User getUser() {
+        return user;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public OffsetDateTime getTransactionDate() {

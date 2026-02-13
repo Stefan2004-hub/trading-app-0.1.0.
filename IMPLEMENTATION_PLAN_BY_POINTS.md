@@ -138,7 +138,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: app boots with entity scan and schema validate mode.
 
-25. Add `@ManyToOne User` ownership mappings to user-owned entities.
+25. [x] Add `@ManyToOne User` ownership mappings to user-owned entities.
    - Estimate: 25m
    - Done when: ownership FK mappings are validated at startup.
 

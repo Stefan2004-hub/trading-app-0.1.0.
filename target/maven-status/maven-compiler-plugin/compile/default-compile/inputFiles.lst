@@ -13,6 +13,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/SellStrategy.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/StrategyAlert.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/Transaction.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/User.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/AccumulationTradeStatus.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/AuthProvider.java
