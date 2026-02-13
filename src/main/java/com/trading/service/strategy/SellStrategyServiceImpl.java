@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -34,6 +35,14 @@ public class SellStrategyServiceImpl implements SellStrategyService {
         this.sellStrategyRepository = sellStrategyRepository;
         this.userRepository = userRepository;
         this.assetRepository = assetRepository;
+    }
+
+    @Override
+    public List<SellStrategyResponse> list(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        return sellStrategyRepository.findAllByUser_IdOrderByUpdatedAtDesc(userId).stream()
+            .map(SellStrategyServiceImpl::toResponse)
+            .toList();
     }
 
     @Override
@@ -70,14 +79,18 @@ public class SellStrategyServiceImpl implements SellStrategyService {
         strategy.setUpdatedAt(now);
 
         SellStrategy saved = sellStrategyRepository.save(strategy);
+        return toResponse(saved);
+    }
+
+    private static SellStrategyResponse toResponse(SellStrategy strategy) {
         return new SellStrategyResponse(
-            saved.getId(),
-            saved.getUser().getId(),
-            saved.getAsset().getId(),
-            saved.getThresholdPercent(),
-            saved.getActive(),
-            saved.getCreatedAt(),
-            saved.getUpdatedAt()
+            strategy.getId(),
+            strategy.getUser().getId(),
+            strategy.getAsset().getId(),
+            strategy.getThresholdPercent(),
+            strategy.getActive(),
+            strategy.getCreatedAt(),
+            strategy.getUpdatedAt()
         );
     }
 }
