@@ -194,7 +194,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: list/buy/sell endpoints return expected status + payload.
 
-39. Implement `PortfolioController` endpoints.
+39. [x] Implement `PortfolioController` endpoints.
    - Estimate: 20m
    - Done when: summary/performance endpoints return user-scoped data.
 

@@ -3,6 +3,7 @@ package com.trading.controller;
 import com.trading.domain.enums.TransactionType;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.transaction.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,9 @@ class TransactionControllerIntegrationTest {
 
     @MockBean
     private TransactionService transactionService;
+
+    @MockBean
+    private PortfolioService portfolioService;
 
     @Test
     void listEndpointReturnsExpectedPayload() throws Exception {
