@@ -102,51 +102,51 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: index DDL parses and matches query patterns.
 
-16. Security route matrix (`/api/auth/**` public, trading APIs protected).
+16. [x] Security route matrix (`/api/auth/**` public, trading APIs protected).
    - Estimate: 20m
    - Done when: unauthorized access returns 401 on protected endpoints.
 
-17. Implement JWT access token issue/validate service.
+17. [x] Implement JWT access token issue/validate service.
    - Estimate: 25m
    - Done when: token roundtrip validation passes unit test.
 
-18. Implement refresh token hash storage and rotation.
+18. [x] Implement refresh token hash storage and rotation.
    - Estimate: 25m
    - Done when: old refresh token is rejected after rotation.
 
-19. Implement register flow (email + username uniqueness, BCrypt).
+19. [x] Implement register flow (email + username uniqueness, BCrypt).
    - Estimate: 25m
    - Done when: duplicate checks and successful registration tests pass.
 
-20. Implement login flow with `identifier` (email or username).
+20. [x] Implement login flow with `identifier` (email or username).
    - Estimate: 20m
    - Done when: both identifier modes authenticate successfully.
 
-21. Implement logout flow with refresh token revoke.
+21. [x] Implement logout flow with refresh token revoke.
    - Estimate: 15m
    - Done when: revoked token cannot refresh session.
 
-22. Implement Google OAuth callback user create/link behavior.
+22. [x] Implement Google OAuth callback user create/link behavior.
    - Estimate: 25m
    - Done when: OAuth callback returns valid auth response.
 
-23. Implement `UserPrincipal` + security-context user extraction helper.
+23. [x] Implement `UserPrincipal` + security-context user extraction helper.
    - Estimate: 20m
    - Done when: current user id is available in protected controllers.
 
-24. Map JPA entities for core domain tables.
+24. [x] Map JPA entities for core domain tables.
    - Estimate: 30m
    - Done when: app boots with entity scan and schema validate mode.
 
-25. Add `@ManyToOne User` ownership mappings to user-owned entities.
+25. [x] Add `@ManyToOne User` ownership mappings to user-owned entities.
    - Estimate: 25m
    - Done when: ownership FK mappings are validated at startup.
 
-26. Implement repositories with mandatory `user_id` constrained methods.
+26. [x] Implement repositories with mandatory `user_id` constrained methods.
    - Estimate: 25m
    - Done when: repository methods return only current user rows in tests.
 
-27. Implement projection models for performance/opportunity views.
+27. [x] Implement projection models for performance/opportunity views.
    - Estimate: 20m
    - Done when: native queries map cleanly to projection types.
 

@@ -1,0 +1,7 @@
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/CurrentUserProviderIntegrationTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/security/JwtServiceImplTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/security/RefreshTokenServiceImplTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthLoginServiceTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthLogoutServiceTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthOAuthServiceTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthRegistrationServiceTest.java
