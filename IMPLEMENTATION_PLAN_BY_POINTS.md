@@ -222,7 +222,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: trigger thresholds produce expected alerts.
 
-46. Add integration test: Flyway migrations clean apply.
+46. [x] Add integration test: Flyway migrations clean apply.
    - Estimate: 25m
    - Done when: test DB starts and migrates without errors.
 

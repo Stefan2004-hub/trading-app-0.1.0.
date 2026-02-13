@@ -4,6 +4,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/PortfolioControllerIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/StrategyControllerIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/TransactionControllerIntegrationTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/migration/FlywayMigrationIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/security/JwtServiceImplTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/security/RefreshTokenServiceImplTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/AuthServiceImplTest.java

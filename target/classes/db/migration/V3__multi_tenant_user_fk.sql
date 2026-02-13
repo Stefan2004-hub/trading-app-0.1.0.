@@ -16,7 +16,8 @@ ALTER TABLE strategy_alerts
 ALTER TABLE price_peaks
     ADD COLUMN user_id UUID NOT NULL REFERENCES users(id);
 
-CREATE OR REPLACE VIEW user_portfolio_performance AS
+DROP VIEW IF EXISTS user_portfolio_performance;
+CREATE VIEW user_portfolio_performance AS
 SELECT
     t.user_id,
     a.symbol,
@@ -34,7 +35,8 @@ JOIN assets a ON t.asset_id = a.id
 JOIN exchanges e ON t.exchange_id = e.id
 GROUP BY t.user_id, a.symbol, e.name;
 
-CREATE OR REPLACE VIEW sell_opportunities AS
+DROP VIEW IF EXISTS sell_opportunities;
+CREATE VIEW sell_opportunities AS
 SELECT
     t.user_id,
     t.id AS transaction_id,
@@ -54,7 +56,8 @@ JOIN sell_strategies ss
 WHERE t.transaction_type = 'BUY'
   AND ss.threshold_percent IS NOT NULL;
 
-CREATE OR REPLACE VIEW buy_opportunities AS
+DROP VIEW IF EXISTS buy_opportunities;
+CREATE VIEW buy_opportunities AS
 SELECT
     bs.user_id,
     a.id AS asset_id,
