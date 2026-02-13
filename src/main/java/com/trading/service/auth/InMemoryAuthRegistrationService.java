@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -68,6 +69,14 @@ public class InMemoryAuthRegistrationService implements AuthRegistrationService 
             return byEmail;
         }
         return usersByUsername.get(normalized);
+    }
+
+    RegisteredUser findByUserId(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        Optional<RegisteredUser> found = usersByEmail.values().stream()
+            .filter(user -> user.id().equals(userId))
+            .findFirst();
+        return found.orElse(null);
     }
 
     synchronized RegisteredUser getOrCreateGoogleUser(String email, String preferredUsername) {
