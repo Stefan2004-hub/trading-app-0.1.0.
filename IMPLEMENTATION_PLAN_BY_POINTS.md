@@ -186,7 +186,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: response includes invested/current/unrealized metrics.
 
-37. Implement `AuthController` endpoints.
+37. [x] Implement `AuthController` endpoints.
    - Estimate: 25m
    - Done when: endpoint tests for register/login/refresh/logout/me pass.
 
