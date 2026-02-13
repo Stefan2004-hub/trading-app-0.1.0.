@@ -26,3 +26,8 @@ replay_pid*
 # Frontend build/runtime artifacts
 frontend/node_modules/
 frontend/dist/
+
+# Local configuration with credentials
+src/main/resources/application-local.yml
+.env
+.env.local
