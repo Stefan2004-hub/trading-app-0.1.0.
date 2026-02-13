@@ -178,7 +178,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: threshold/amount validations pass.
 
-35. Implement strategy alert generation path.
+35. [x] Implement strategy alert generation path.
    - Estimate: 30m
    - Done when: alert record appears for triggered condition.
 
