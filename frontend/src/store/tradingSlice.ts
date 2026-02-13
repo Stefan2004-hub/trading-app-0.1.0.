@@ -8,7 +8,6 @@ import type {
   TradeFormPayload,
   TransactionItem
 } from '../types/trading';
-import type { RootState } from './index';
 
 interface TradingState {
   assets: AssetOption[];
@@ -32,51 +31,27 @@ const initialState: TradingState = {
   error: null
 };
 
-function requireToken(state: RootState): string {
-  const token = state.auth.accessToken;
-  if (!token) {
-    throw new Error('Missing access token');
-  }
-  return token;
-}
+export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', async () => {
+  const [assets, exchanges, transactions, summary, performance] = await Promise.all([
+    tradingApi.listAssets(),
+    tradingApi.listExchanges(),
+    tradingApi.listTransactions(),
+    tradingApi.getPortfolioSummary(),
+    tradingApi.getPortfolioPerformance()
+  ]);
 
-export const loadTradingBootstrap = createAsyncThunk(
-  'trading/loadBootstrap',
-  async (_, { getState }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
+  return { assets, exchanges, transactions, summary, performance };
+});
 
-    const [assets, exchanges, transactions, summary, performance] = await Promise.all([
-      tradingApi.listAssets(),
-      tradingApi.listExchanges(),
-      tradingApi.listTransactions({ accessToken }),
-      tradingApi.getPortfolioSummary({ accessToken }),
-      tradingApi.getPortfolioPerformance({ accessToken })
-    ]);
+export const submitBuyTrade = createAsyncThunk('trading/submitBuy', async (payload: TradeFormPayload, { dispatch }) => {
+  await tradingApi.buy(payload);
+  await dispatch(loadTradingBootstrap()).unwrap();
+});
 
-    return { assets, exchanges, transactions, summary, performance };
-  }
-);
-
-export const submitBuyTrade = createAsyncThunk(
-  'trading/submitBuy',
-  async (payload: TradeFormPayload, { getState, dispatch }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
-    await tradingApi.buy(payload, { accessToken });
-    await dispatch(loadTradingBootstrap()).unwrap();
-  }
-);
-
-export const submitSellTrade = createAsyncThunk(
-  'trading/submitSell',
-  async (payload: TradeFormPayload, { getState, dispatch }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
-    await tradingApi.sell(payload, { accessToken });
-    await dispatch(loadTradingBootstrap()).unwrap();
-  }
-);
+export const submitSellTrade = createAsyncThunk('trading/submitSell', async (payload: TradeFormPayload, { dispatch }) => {
+  await tradingApi.sell(payload);
+  await dispatch(loadTradingBootstrap()).unwrap();
+});
 
 const tradingSlice = createSlice({
   name: 'trading',

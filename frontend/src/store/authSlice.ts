@@ -53,8 +53,8 @@ export const register = createAsyncThunk('auth/register', async (payload: Regist
   return authApi.register(payload);
 });
 
-export const fetchMe = createAsyncThunk('auth/me', async (accessToken: string) => {
-  return authApi.me(accessToken);
+export const fetchMe = createAsyncThunk('auth/me', async () => {
+  return authApi.me();
 });
 
 const authSlice = createSlice({

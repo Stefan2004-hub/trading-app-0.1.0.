@@ -8,53 +8,40 @@ import type {
 } from '../types/strategy';
 import type { AssetOption } from '../types/trading';
 
-interface AuthorizedRequestOptions {
-  accessToken: string;
-}
-
 export const strategyApi = {
   listAssets(): Promise<AssetOption[]> {
-    return request<AssetOption[]>('/api/assets');
+    return request<AssetOption[]>('/api/assets', { auth: false });
   },
 
-  listSellStrategies({ accessToken }: AuthorizedRequestOptions): Promise<SellStrategyItem[]> {
-    return request<SellStrategyItem[]>('/api/strategies/sell', { accessToken });
+  listSellStrategies(): Promise<SellStrategyItem[]> {
+    return request<SellStrategyItem[]>('/api/strategies/sell');
   },
 
-  upsertSellStrategy(
-    payload: UpsertSellStrategyPayload,
-    { accessToken }: AuthorizedRequestOptions
-  ): Promise<SellStrategyItem> {
+  upsertSellStrategy(payload: UpsertSellStrategyPayload): Promise<SellStrategyItem> {
     return request<SellStrategyItem>('/api/strategies/sell', {
       method: 'POST',
-      body: payload,
-      accessToken
+      body: payload
     });
   },
 
-  listBuyStrategies({ accessToken }: AuthorizedRequestOptions): Promise<BuyStrategyItem[]> {
-    return request<BuyStrategyItem[]>('/api/strategies/buy', { accessToken });
+  listBuyStrategies(): Promise<BuyStrategyItem[]> {
+    return request<BuyStrategyItem[]>('/api/strategies/buy');
   },
 
-  upsertBuyStrategy(
-    payload: UpsertBuyStrategyPayload,
-    { accessToken }: AuthorizedRequestOptions
-  ): Promise<BuyStrategyItem> {
+  upsertBuyStrategy(payload: UpsertBuyStrategyPayload): Promise<BuyStrategyItem> {
     return request<BuyStrategyItem>('/api/strategies/buy', {
       method: 'POST',
-      body: payload,
-      accessToken
+      body: payload
     });
   },
 
-  listAlerts({ accessToken }: AuthorizedRequestOptions): Promise<StrategyAlertItem[]> {
-    return request<StrategyAlertItem[]>('/api/strategies/alerts', { accessToken });
+  listAlerts(): Promise<StrategyAlertItem[]> {
+    return request<StrategyAlertItem[]>('/api/strategies/alerts');
   },
 
-  acknowledgeAlert(alertId: string, { accessToken }: AuthorizedRequestOptions): Promise<StrategyAlertItem> {
+  acknowledgeAlert(alertId: string): Promise<StrategyAlertItem> {
     return request<StrategyAlertItem>(`/api/strategies/alerts/${alertId}/acknowledge`, {
-      method: 'POST',
-      accessToken
+      method: 'POST'
     });
   }
 };

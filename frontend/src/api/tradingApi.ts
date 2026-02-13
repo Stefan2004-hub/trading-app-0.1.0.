@@ -8,10 +8,6 @@ import type {
   TransactionItem
 } from '../types/trading';
 
-interface AuthorizedRequestOptions {
-  accessToken: string;
-}
-
 function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
   return {
     assetId: payload.assetId,
@@ -26,38 +22,36 @@ function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
 
 export const tradingApi = {
   listAssets(): Promise<AssetOption[]> {
-    return request<AssetOption[]>('/api/assets');
+    return request<AssetOption[]>('/api/assets', { auth: false });
   },
 
   listExchanges(): Promise<ExchangeOption[]> {
-    return request<ExchangeOption[]>('/api/exchanges');
+    return request<ExchangeOption[]>('/api/exchanges', { auth: false });
   },
 
-  listTransactions({ accessToken }: AuthorizedRequestOptions): Promise<TransactionItem[]> {
-    return request<TransactionItem[]>('/api/transactions', { accessToken });
+  listTransactions(): Promise<TransactionItem[]> {
+    return request<TransactionItem[]>('/api/transactions');
   },
 
-  getPortfolioSummary({ accessToken }: AuthorizedRequestOptions): Promise<PortfolioSummary> {
-    return request<PortfolioSummary>('/api/portfolio/summary', { accessToken });
+  getPortfolioSummary(): Promise<PortfolioSummary> {
+    return request<PortfolioSummary>('/api/portfolio/summary');
   },
 
-  getPortfolioPerformance({ accessToken }: AuthorizedRequestOptions): Promise<PortfolioAssetPerformance[]> {
-    return request<PortfolioAssetPerformance[]>('/api/portfolio/performance', { accessToken });
+  getPortfolioPerformance(): Promise<PortfolioAssetPerformance[]> {
+    return request<PortfolioAssetPerformance[]>('/api/portfolio/performance');
   },
 
-  buy(payload: TradeFormPayload, { accessToken }: AuthorizedRequestOptions): Promise<TransactionItem> {
+  buy(payload: TradeFormPayload): Promise<TransactionItem> {
     return request<TransactionItem>('/api/transactions/buy', {
       method: 'POST',
-      body: toTradeRequest(payload),
-      accessToken
+      body: toTradeRequest(payload)
     });
   },
 
-  sell(payload: TradeFormPayload, { accessToken }: AuthorizedRequestOptions): Promise<TransactionItem> {
+  sell(payload: TradeFormPayload): Promise<TransactionItem> {
     return request<TransactionItem>('/api/transactions/sell', {
       method: 'POST',
-      body: toTradeRequest(payload),
-      accessToken
+      body: toTradeRequest(payload)
     });
   }
 };
