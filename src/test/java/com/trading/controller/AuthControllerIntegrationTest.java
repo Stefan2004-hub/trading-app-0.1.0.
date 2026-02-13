@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.blankOrNullString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -142,6 +143,30 @@ class AuthControllerIntegrationTest {
     void meEndpointRequiresAuthentication() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void invalidRegisterPayloadReturnsStructuredValidationError() throws Exception {
+        mockMvc.perform(
+                post("/api/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "email": "",
+                          "username": "",
+                          "password": "123"
+                        }
+                        """)
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.message").value("Validation failed"))
+            .andExpect(jsonPath("$.path").value("/api/auth/register"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.violations[*].field", hasItem("email")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("username")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("password")));
     }
 
     private static Authentication authenticationFor(UUID userId) {

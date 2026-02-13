@@ -5,6 +5,7 @@ import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.transaction.TransactionService;
+import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,13 +41,13 @@ public class TransactionController {
     }
 
     @PostMapping("/buy")
-    public ResponseEntity<TransactionResponse> buy(@RequestBody BuyTransactionRequest request) {
+    public ResponseEntity<TransactionResponse> buy(@Valid @RequestBody BuyTransactionRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(transactionService.buy(userId, request));
     }
 
     @PostMapping("/sell")
-    public ResponseEntity<TransactionResponse> sell(@RequestBody SellTransactionRequest request) {
+    public ResponseEntity<TransactionResponse> sell(@Valid @RequestBody SellTransactionRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(transactionService.sell(userId, request));
     }

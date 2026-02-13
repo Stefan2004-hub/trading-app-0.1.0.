@@ -13,6 +13,7 @@ import com.trading.dto.auth.RegisterResponse;
 import com.trading.security.RefreshTokenService;
 import com.trading.security.UserPrincipal;
 import com.trading.service.auth.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -40,12 +41,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse login = authService.login(request);
         String refreshToken = refreshTokenService.issueToken(login.userId());
         RefreshResponse refreshResponse = authService.refresh(login.userId(), new RefreshRequest(refreshToken));
@@ -79,13 +80,13 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshResponse> refresh(@RequestBody RefreshRequest request, Authentication authentication) {
+    public ResponseEntity<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request, Authentication authentication) {
         UUID userId = extractUserId(authentication);
         return ResponseEntity.ok(authService.refresh(userId, request));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody LogoutRequest request, Authentication authentication) {
+    public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request, Authentication authentication) {
         UUID userId = extractUserId(authentication);
         authService.logout(userId, request);
         return ResponseEntity.noContent().build();
