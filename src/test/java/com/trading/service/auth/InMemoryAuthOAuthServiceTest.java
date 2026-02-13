@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InMemoryAuthOAuthServiceTest {
@@ -56,5 +57,33 @@ class InMemoryAuthOAuthServiceTest {
         assertTrue(jwtService.isTokenValid(response.accessToken()));
         assertTrue(refreshTokenService.isTokenValid(response.userId(), response.refreshToken()));
         assertTrue(oauthService.isGoogleLinked("google-sub-2", localUser.userId()));
+    }
+
+    @Test
+    void callbackRejectsMissingRequiredFields() {
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> oauthService.handleGoogleCallback(new OAuthCallbackRequest(" ", "google-sub-3", "user"))
+        );
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> oauthService.handleGoogleCallback(new OAuthCallbackRequest("google@example.com", " ", "user"))
+        );
+    }
+
+    @Test
+    void blankPreferredUsernameFallsBackToEmailPrefixAndEnsuresUniqueness() {
+        AuthResponse first = oauthService.handleGoogleCallback(
+            new OAuthCallbackRequest("alpha@example.com", "google-sub-4", " ")
+        );
+        AuthResponse second = oauthService.handleGoogleCallback(
+            new OAuthCallbackRequest("alpha@another.com", "google-sub-5", null)
+        );
+
+        InMemoryAuthRegistrationService.RegisteredUser firstUser = registrationService.findByEmail(first.email());
+        InMemoryAuthRegistrationService.RegisteredUser secondUser = registrationService.findByEmail(second.email());
+
+        assertEquals("alpha", firstUser.username());
+        assertEquals("alpha1", secondUser.username());
     }
 }

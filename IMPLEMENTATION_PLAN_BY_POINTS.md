@@ -210,7 +210,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: invalid payloads return structured 4xx errors.
 
-43. Add unit tests for auth logic and edge cases.
+43. [x] Add unit tests for auth logic and edge cases.
    - Estimate: 30m
    - Done when: auth service test suite passes.
 
