@@ -242,7 +242,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: forms validate and render persisted data.
 
-51. Implement frontend strategy slices (forms + pending alerts).
+51. [x] Implement frontend strategy slices (forms + pending alerts).
    - Estimate: 30m
    - Done when: strategy CRUD + alert acknowledge work from UI.
 

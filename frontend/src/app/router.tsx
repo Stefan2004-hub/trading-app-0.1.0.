@@ -5,6 +5,7 @@ import { GoogleEntryPage } from '../pages/GoogleEntryPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { StrategiesPage } from '../pages/StrategiesPage';
 import { TransactionsPage } from '../pages/TransactionsPage';
 
 export const router = createBrowserRouter([
@@ -37,6 +38,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <TransactionsPage />
+      </RequireAuth>
+    )
+  },
+  {
+    path: '/strategies',
+    element: (
+      <RequireAuth>
+        <StrategiesPage />
       </RequireAuth>
     )
   },
