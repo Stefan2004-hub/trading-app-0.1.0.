@@ -46,59 +46,59 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: package tree compiles and app starts.
 
-2. Add backend dependencies (`web`, `data-jpa`, `security`, `oauth2-client`, `validation`, `flyway`, `postgresql`).
+2. [x] Add backend dependencies (`web`, `data-jpa`, `security`, `oauth2-client`, `validation`, `flyway`, `postgresql`).
    - Estimate: 20m
    - Done when: dependency resolution succeeds.
 
-3. Add environment variable matrix for backend/frontend configs.
+3. [x] Add environment variable matrix for backend/frontend configs.
    - Estimate: 20m
    - Done when: sample config loads without missing required keys.
 
-4. Create Flyway migration map (`V1`..`V4`) and file stubs.
+4. [x] Create Flyway migration map (`V1`..`V4`) and file stubs.
    - Estimate: 25m
    - Done when: all migration files exist in expected path.
 
-5. Move base DDL for `btc_historic_data`, `assets`, `exchanges` into `V1` plan section.
+5. [x] Move base DDL for `btc_historic_data`, `assets`, `exchanges` into `V1` plan section.
    - Estimate: 25m
    - Done when: SQL section compiles in PostgreSQL parser.
 
-6. Move `transactions` table and `realized_pnl` alteration into `V1` plan section.
+6. [x] Move `transactions` table and `realized_pnl` alteration into `V1` plan section.
    - Estimate: 20m
    - Done when: SQL syntax validates.
 
-7. Move `user_portfolio_performance` view into `V1` plan section.
+7. [x] Move `user_portfolio_performance` view into `V1` plan section.
    - Estimate: 20m
    - Done when: view references valid tables/columns.
 
-8. Move `accumulation_trades` + indexes into `V1` plan section.
+8. [x] Move `accumulation_trades` + indexes into `V1` plan section.
    - Estimate: 20m
    - Done when: SQL syntax validates.
 
-9. Move strategy tables (`sell_strategies`, `buy_strategies`, `strategy_alerts`, `price_peaks`) into `V1` plan section.
+9. [x] Move strategy tables (`sell_strategies`, `buy_strategies`, `strategy_alerts`, `price_peaks`) into `V1` plan section.
    - Estimate: 25m
    - Done when: all tables + indexes parse correctly.
 
-10. Move `sell_opportunities` and `buy_opportunities` views into `V1` plan section.
+10. [x] Move `sell_opportunities` and `buy_opportunities` views into `V1` plan section.
    - Estimate: 25m
    - Done when: both views compile against schema.
 
-11. Move peak reset function + trigger into `V1` plan section.
+11. [x] Move peak reset function + trigger into `V1` plan section.
    - Estimate: 20m
    - Done when: function and trigger create successfully.
 
-12. Define `V2` auth schema (`users`, `oauth_accounts`, `refresh_tokens`).
+12. [x] Define `V2` auth schema (`users`, `oauth_accounts`, `refresh_tokens`).
    - Estimate: 25m
    - Done when: all auth tables parse and FK constraints are valid.
 
-13. Define `V3` multi-tenant `user_id` additions on user-owned tables.
+13. [x] Define `V3` multi-tenant `user_id` additions on user-owned tables.
    - Estimate: 25m
    - Done when: all required tables include `user_id` + FK.
 
-14. Define `V3` view updates to enforce user scoping.
+14. [x] Define `V3` view updates to enforce user scoping.
    - Estimate: 20m
    - Done when: updated views include `user_id` in output/filter path.
 
-15. Define `V4` indexes for auth lookup and `user_id` query paths.
+15. [x] Define `V4` indexes for auth lookup and `user_id` query paths.
    - Estimate: 20m
    - Done when: index DDL parses and matches query patterns.
 
