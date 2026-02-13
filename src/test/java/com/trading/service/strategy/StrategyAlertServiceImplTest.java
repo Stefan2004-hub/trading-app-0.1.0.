@@ -32,9 +32,12 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -143,6 +146,26 @@ class StrategyAlertServiceImplTest {
     }
 
     @Test
+    void generateCreatesSellAlertAtExactTargetBoundary() {
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.SELL, StrategyAlertStatus.PENDING
+        )).thenReturn(false);
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.BUY, StrategyAlertStatus.PENDING
+        )).thenReturn(true);
+
+        List<StrategyAlertResponse> generated = strategyAlertService.generate(
+            userId,
+            new GenerateStrategyAlertsRequest(assetId, new BigDecimal("110.00"))
+        );
+
+        assertEquals(1, generated.size());
+        assertEquals(StrategyType.SELL, generated.get(0).strategyType());
+        assertEquals(0, generated.get(0).referencePrice().compareTo(new BigDecimal("100.00")));
+        assertEquals(0, generated.get(0).thresholdPercent().compareTo(new BigDecimal("10.00")));
+    }
+
+    @Test
     void generateCreatesBuyAlertWhenDipIsReached() {
         lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
             userId, assetId, StrategyType.SELL, StrategyAlertStatus.PENDING
@@ -163,6 +186,26 @@ class StrategyAlertServiceImplTest {
     }
 
     @Test
+    void generateCreatesBuyAlertAtExactDipBoundary() {
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.SELL, StrategyAlertStatus.PENDING
+        )).thenReturn(true);
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.BUY, StrategyAlertStatus.PENDING
+        )).thenReturn(false);
+
+        List<StrategyAlertResponse> generated = strategyAlertService.generate(
+            userId,
+            new GenerateStrategyAlertsRequest(assetId, new BigDecimal("108.00"))
+        );
+
+        assertEquals(1, generated.size());
+        assertEquals(StrategyType.BUY, generated.get(0).strategyType());
+        assertEquals(0, generated.get(0).referencePrice().compareTo(new BigDecimal("120.00")));
+        assertEquals(0, generated.get(0).thresholdPercent().compareTo(new BigDecimal("10.00")));
+    }
+
+    @Test
     void generateSkipsWhenPendingAlertAlreadyExists() {
         lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
             userId, assetId, StrategyType.SELL, StrategyAlertStatus.PENDING
@@ -177,6 +220,57 @@ class StrategyAlertServiceImplTest {
         );
 
         assertTrue(generated.isEmpty());
+    }
+
+    @Test
+    void generateSkipsSellAlertWhenNoBuyHistoryExists() {
+        when(transactionRepository.findAllByUser_IdAndAsset_IdAndTransactionTypeOrderByTransactionDateDesc(
+            userId,
+            assetId,
+            TransactionType.BUY
+        )).thenReturn(List.of());
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.BUY, StrategyAlertStatus.PENDING
+        )).thenReturn(true);
+
+        List<StrategyAlertResponse> generated = strategyAlertService.generate(
+            userId,
+            new GenerateStrategyAlertsRequest(assetId, new BigDecimal("150.00"))
+        );
+
+        assertTrue(generated.isEmpty());
+        verify(strategyAlertRepository, never()).save(any(StrategyAlert.class));
+    }
+
+    @Test
+    void generateSkipsBuyAlertWhenNoActivePricePeak() {
+        when(pricePeakRepository.findByUser_IdAndAsset_IdAndActiveTrue(userId, assetId)).thenReturn(Optional.empty());
+        lenient().when(strategyAlertRepository.existsByUser_IdAndAsset_IdAndStrategyTypeAndStatus(
+            userId, assetId, StrategyType.SELL, StrategyAlertStatus.PENDING
+        )).thenReturn(true);
+
+        List<StrategyAlertResponse> generated = strategyAlertService.generate(
+            userId,
+            new GenerateStrategyAlertsRequest(assetId, new BigDecimal("108.00"))
+        );
+
+        assertTrue(generated.isEmpty());
+        verify(strategyAlertRepository, never()).save(any(StrategyAlert.class));
+    }
+
+    @Test
+    void generateRejectsNonPositiveCurrentPrice() {
+        IllegalArgumentException zeroEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> strategyAlertService.generate(userId, new GenerateStrategyAlertsRequest(assetId, BigDecimal.ZERO))
+        );
+        assertEquals("currentPriceUsd must be positive", zeroEx.getMessage());
+
+        IllegalArgumentException negativeEx = assertThrows(
+            IllegalArgumentException.class,
+            () -> strategyAlertService.generate(userId, new GenerateStrategyAlertsRequest(assetId, new BigDecimal("-1")))
+        );
+        assertEquals("currentPriceUsd must be positive", negativeEx.getMessage());
     }
 
     @Test
