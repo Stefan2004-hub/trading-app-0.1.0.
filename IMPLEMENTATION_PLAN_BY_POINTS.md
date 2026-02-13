@@ -162,7 +162,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: realized PnL unit tests pass.
 
-31. Implement accumulation trade open flow.
+31. [x] Implement accumulation trade open flow.
    - Estimate: 25m
    - Done when: open trade is persisted and linked to sell tx.
 
