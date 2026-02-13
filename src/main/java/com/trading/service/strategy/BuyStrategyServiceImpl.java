@@ -8,7 +8,6 @@ import com.trading.domain.repository.BuyStrategyRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.strategy.BuyStrategyResponse;
 import com.trading.dto.strategy.UpsertBuyStrategyRequest;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,7 +17,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-@ConditionalOnBean({BuyStrategyRepository.class, UserRepository.class, AssetRepository.class})
 public class BuyStrategyServiceImpl implements BuyStrategyService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;

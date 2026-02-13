@@ -6,7 +6,6 @@ import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.transaction.TransactionService;
 import jakarta.validation.Valid;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,7 +19,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/transactions")
-@ConditionalOnBean(TransactionService.class)
 public class TransactionController {
 
     private final TransactionService transactionService;

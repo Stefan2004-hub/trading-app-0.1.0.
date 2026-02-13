@@ -6,7 +6,6 @@ import com.trading.domain.projection.UserPortfolioPerformanceProjection;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -18,7 +17,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@ConditionalOnBean(TransactionRepository.class)
 public class PortfolioServiceImpl implements PortfolioService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;

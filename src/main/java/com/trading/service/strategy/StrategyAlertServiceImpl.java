@@ -15,7 +15,6 @@ import com.trading.domain.repository.StrategyAlertRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.strategy.GenerateStrategyAlertsRequest;
 import com.trading.dto.strategy.StrategyAlertResponse;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -26,13 +25,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-@ConditionalOnBean({
-    StrategyAlertRepository.class,
-    SellStrategyRepository.class,
-    BuyStrategyRepository.class,
-    TransactionRepository.class,
-    PricePeakRepository.class
-})
 public class StrategyAlertServiceImpl implements StrategyAlertService {
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;

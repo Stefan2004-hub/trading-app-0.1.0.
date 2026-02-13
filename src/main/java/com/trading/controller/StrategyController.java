@@ -11,7 +11,6 @@ import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
 import jakarta.validation.Valid;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,7 +25,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/strategies")
-@ConditionalOnBean({SellStrategyService.class, BuyStrategyService.class, StrategyAlertService.class})
 public class StrategyController {
 
     private final SellStrategyService sellStrategyService;
