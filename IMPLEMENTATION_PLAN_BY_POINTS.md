@@ -166,7 +166,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: open trade is persisted and linked to sell tx.
 
-32. Implement accumulation trade close flow.
+32. [x] Implement accumulation trade close flow.
    - Estimate: 25m
    - Done when: close updates delta and status correctly.
 

@@ -7,10 +7,12 @@ import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.transaction.AccumulationTradeResponse;
+import com.trading.dto.transaction.CloseAccumulationTradeRequest;
 import com.trading.dto.transaction.OpenAccumulationTradeRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -63,21 +65,66 @@ public class AccumulationTradeServiceImpl implements AccumulationTradeService {
         trade.setPredictionNotes(request.predictionNotes());
 
         AccumulationTrade saved = accumulationTradeRepository.save(trade);
+        return toResponse(saved);
+    }
+
+    @Override
+    public AccumulationTradeResponse close(UUID userId, CloseAccumulationTradeRequest request) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(request.accumulationTradeId(), "accumulationTradeId is required");
+        Objects.requireNonNull(request.reentryTransactionId(), "reentryTransactionId is required");
+
+        AccumulationTrade trade = accumulationTradeRepository.findByIdAndUser_Id(request.accumulationTradeId(), userId)
+            .orElseThrow(() -> new IllegalArgumentException("Accumulation trade not found for user"));
+
+        if (trade.getStatus() != AccumulationTradeStatus.OPEN) {
+            throw new IllegalArgumentException("Only OPEN accumulation trades can be closed");
+        }
+
+        Transaction reentryTransaction = transactionRepository.findByIdAndUser_Id(request.reentryTransactionId(), userId)
+            .orElseThrow(() -> new IllegalArgumentException("Reentry transaction not found for user"));
+
+        if (reentryTransaction.getTransactionType() != TransactionType.BUY) {
+            throw new IllegalArgumentException("Reentry transaction must be BUY");
+        }
+        if (!trade.getAsset().getId().equals(reentryTransaction.getAsset().getId())) {
+            throw new IllegalArgumentException("Reentry transaction asset must match accumulation trade asset");
+        }
+
+        trade.setReentryTransaction(reentryTransaction);
+        trade.setNewCoinAmount(reentryTransaction.getNetAmount());
+        trade.setReentryPriceUsd(reentryTransaction.getUnitPriceUsd());
+        trade.setStatus(AccumulationTradeStatus.CLOSED);
+        trade.setClosedAt(OffsetDateTime.now());
+        if (request.predictionNotes() != null) {
+            trade.setPredictionNotes(request.predictionNotes());
+        }
+
+        AccumulationTrade saved = accumulationTradeRepository.save(trade);
+        return toResponse(saved);
+    }
+
+    private static AccumulationTradeResponse toResponse(AccumulationTrade trade) {
+        BigDecimal derivedDelta = trade.getAccumulationDelta();
+        if (derivedDelta == null && trade.getOldCoinAmount() != null && trade.getNewCoinAmount() != null) {
+            derivedDelta = trade.getNewCoinAmount().subtract(trade.getOldCoinAmount());
+        }
         return new AccumulationTradeResponse(
-            saved.getId(),
-            saved.getUser().getId(),
-            saved.getAsset().getId(),
-            saved.getExitTransaction().getId(),
-            saved.getReentryTransaction() == null ? null : saved.getReentryTransaction().getId(),
-            saved.getOldCoinAmount(),
-            saved.getNewCoinAmount(),
-            saved.getAccumulationDelta(),
-            saved.getStatus(),
-            saved.getExitPriceUsd(),
-            saved.getReentryPriceUsd(),
-            saved.getCreatedAt(),
-            saved.getClosedAt(),
-            saved.getPredictionNotes()
+            trade.getId(),
+            trade.getUser().getId(),
+            trade.getAsset().getId(),
+            trade.getExitTransaction().getId(),
+            trade.getReentryTransaction() == null ? null : trade.getReentryTransaction().getId(),
+            trade.getOldCoinAmount(),
+            trade.getNewCoinAmount(),
+            derivedDelta,
+            trade.getStatus(),
+            trade.getExitPriceUsd(),
+            trade.getReentryPriceUsd(),
+            trade.getCreatedAt(),
+            trade.getClosedAt(),
+            trade.getPredictionNotes()
         );
     }
 }
