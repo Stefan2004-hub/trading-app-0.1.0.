@@ -1,6 +1,7 @@
 package com.trading.controller;
 
 import com.trading.security.UserPrincipal;
+import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.transaction.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class CurrentUserProviderIntegrationTest {
 
     @MockBean
     private TransactionService transactionService;
+
+    @MockBean
+    private PortfolioService portfolioService;
 
     @Test
     void protectedEndpointExposesCurrentUserIdFromSecurityContext() throws Exception {
