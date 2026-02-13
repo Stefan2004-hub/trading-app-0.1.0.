@@ -5,3 +5,4 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthLogoutServiceTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthOAuthServiceTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthRegistrationServiceTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/transaction/TransactionServiceImplTest.java
