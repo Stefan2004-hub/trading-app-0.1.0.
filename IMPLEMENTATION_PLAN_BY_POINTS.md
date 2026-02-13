@@ -154,7 +154,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: controller compiles against DTO contracts.
 
-29. Implement buy transaction service flow (gross/net/fees/spend).
+29. [x] Implement buy transaction service flow (gross/net/fees/spend).
    - Estimate: 30m
    - Done when: fee scenario unit tests pass.
 
