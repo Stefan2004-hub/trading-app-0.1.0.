@@ -122,11 +122,11 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 20m
    - Done when: both identifier modes authenticate successfully.
 
-21. Implement logout flow with refresh token revoke.
+21. [x] Implement logout flow with refresh token revoke.
    - Estimate: 15m
    - Done when: revoked token cannot refresh session.
 
-22. Implement Google OAuth callback user create/link behavior.
+22. [x] Implement Google OAuth callback user create/link behavior.
    - Estimate: 25m
    - Done when: OAuth callback returns valid auth response.
 

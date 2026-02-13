@@ -70,6 +70,33 @@ public class InMemoryAuthRegistrationService implements AuthRegistrationService 
         return usersByUsername.get(normalized);
     }
 
+    synchronized RegisteredUser getOrCreateGoogleUser(String email, String preferredUsername) {
+        if (isBlank(email)) {
+            throw new IllegalArgumentException("email is required");
+        }
+
+        RegisteredUser existing = usersByEmail.get(normalizeEmail(email));
+        if (existing != null) {
+            return existing;
+        }
+
+        String rawUsername = isBlank(preferredUsername) ? defaultUsernameFromEmail(email) : preferredUsername;
+        String baseUsername = normalizeUsername(rawUsername);
+        String uniqueUsername = ensureUniqueUsername(baseUsername);
+
+        RegisteredUser created = new RegisteredUser(
+            UUID.randomUUID(),
+            email.trim(),
+            uniqueUsername,
+            null,
+            AuthProvider.GOOGLE
+        );
+
+        usersByEmail.put(normalizeEmail(email), created);
+        usersByUsername.put(uniqueUsername, created);
+        return created;
+    }
+
     private static void validateRequest(RegisterRequest request) {
         Objects.requireNonNull(request, "request is required");
         if (isBlank(request.email())) {
@@ -93,6 +120,21 @@ public class InMemoryAuthRegistrationService implements AuthRegistrationService 
 
     private static boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String ensureUniqueUsername(String baseUsername) {
+        String candidate = baseUsername;
+        int suffix = 1;
+        while (usersByUsername.containsKey(candidate)) {
+            candidate = baseUsername + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private static String defaultUsernameFromEmail(String email) {
+        String localPart = email.split("@")[0].trim();
+        return isBlank(localPart) ? "google_user" : localPart;
     }
 
     record RegisteredUser(
