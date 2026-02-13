@@ -158,7 +158,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: fee scenario unit tests pass.
 
-30. Implement sell transaction service flow (balance + realized PnL).
+30. [x] Implement sell transaction service flow (balance + realized PnL).
    - Estimate: 30m
    - Done when: realized PnL unit tests pass.
 
