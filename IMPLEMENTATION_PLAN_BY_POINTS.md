@@ -226,7 +226,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: test DB starts and migrates without errors.
 
-47. Add integration test: security rules on protected endpoints.
+47. [x] Add integration test: security rules on protected endpoints.
    - Estimate: 25m
    - Done when: 401/403 matrix behaves as expected.
 
