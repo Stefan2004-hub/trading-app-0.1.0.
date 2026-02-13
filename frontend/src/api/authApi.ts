@@ -12,19 +12,19 @@ const GOOGLE_AUTH_START_URL =
 
 export const authApi = {
   login(payload: LoginPayload): Promise<AuthResponse> {
-    return request<AuthResponse>('/api/auth/login', { method: 'POST', body: payload });
+    return request<AuthResponse>('/api/auth/login', { method: 'POST', body: payload, auth: false });
   },
 
   register(payload: RegisterPayload): Promise<RegisterResponse> {
-    return request<RegisterResponse>('/api/auth/register', { method: 'POST', body: payload });
+    return request<RegisterResponse>('/api/auth/register', { method: 'POST', body: payload, auth: false });
   },
 
-  me(accessToken: string): Promise<UserProfile> {
-    return request<UserProfile>('/api/auth/me', { accessToken });
+  me(): Promise<UserProfile> {
+    return request<UserProfile>('/api/auth/me');
   },
 
   async resolveGoogleAuthorizationUrl(): Promise<string> {
-    const response = await request<GoogleStartResponse>('/api/auth/oauth2/google');
+    const response = await request<GoogleStartResponse>('/api/auth/oauth2/google', { auth: false });
     if (response.authorizationUrl.startsWith('http')) {
       return response.authorizationUrl;
     }

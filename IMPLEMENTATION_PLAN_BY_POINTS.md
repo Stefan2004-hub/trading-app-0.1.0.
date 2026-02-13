@@ -246,7 +246,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: strategy CRUD + alert acknowledge work from UI.
 
-52. Implement frontend API client token attach + refresh retry.
+52. [x] Implement frontend API client token attach + refresh retry.
    - Estimate: 25m
    - Done when: expired token auto-refreshes and request retries once.
 

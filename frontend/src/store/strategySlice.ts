@@ -8,7 +8,6 @@ import type {
   UpsertSellStrategyPayload
 } from '../types/strategy';
 import type { AssetOption } from '../types/trading';
-import type { RootState } from './index';
 
 interface StrategyState {
   assets: AssetOption[];
@@ -30,23 +29,12 @@ const initialState: StrategyState = {
   error: null
 };
 
-function requireToken(state: RootState): string {
-  const token = state.auth.accessToken;
-  if (!token) {
-    throw new Error('Missing access token');
-  }
-  return token;
-}
-
-export const loadStrategyData = createAsyncThunk('strategy/loadData', async (_, { getState }) => {
-  const state = getState() as RootState;
-  const accessToken = requireToken(state);
-
+export const loadStrategyData = createAsyncThunk('strategy/loadData', async () => {
   const [assets, sellStrategies, buyStrategies, alerts] = await Promise.all([
     strategyApi.listAssets(),
-    strategyApi.listSellStrategies({ accessToken }),
-    strategyApi.listBuyStrategies({ accessToken }),
-    strategyApi.listAlerts({ accessToken })
+    strategyApi.listSellStrategies(),
+    strategyApi.listBuyStrategies(),
+    strategyApi.listAlerts()
   ]);
 
   return { assets, sellStrategies, buyStrategies, alerts };
@@ -54,30 +42,24 @@ export const loadStrategyData = createAsyncThunk('strategy/loadData', async (_, 
 
 export const upsertSellStrategy = createAsyncThunk(
   'strategy/upsertSell',
-  async (payload: UpsertSellStrategyPayload, { getState, dispatch }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
-    await strategyApi.upsertSellStrategy(payload, { accessToken });
+  async (payload: UpsertSellStrategyPayload, { dispatch }) => {
+    await strategyApi.upsertSellStrategy(payload);
     await dispatch(loadStrategyData()).unwrap();
   }
 );
 
 export const upsertBuyStrategy = createAsyncThunk(
   'strategy/upsertBuy',
-  async (payload: UpsertBuyStrategyPayload, { getState, dispatch }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
-    await strategyApi.upsertBuyStrategy(payload, { accessToken });
+  async (payload: UpsertBuyStrategyPayload, { dispatch }) => {
+    await strategyApi.upsertBuyStrategy(payload);
     await dispatch(loadStrategyData()).unwrap();
   }
 );
 
 export const acknowledgeStrategyAlert = createAsyncThunk(
   'strategy/acknowledgeAlert',
-  async (alertId: string, { getState, dispatch }) => {
-    const state = getState() as RootState;
-    const accessToken = requireToken(state);
-    await strategyApi.acknowledgeAlert(alertId, { accessToken });
+  async (alertId: string, { dispatch }) => {
+    await strategyApi.acknowledgeAlert(alertId);
     await dispatch(loadStrategyData()).unwrap();
   }
 );
