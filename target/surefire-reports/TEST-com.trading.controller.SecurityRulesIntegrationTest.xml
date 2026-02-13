@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.LookupControllerIntegrationTest" time="0.383" tests="3" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.trading.controller.SecurityRulesIntegrationTest" time="0.025" tests="4" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -63,27 +63,12 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[trading-app] "/>
   </properties>
-  <testcase name="exchangesEndpointReturnsSeededStyleList" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.025">
-    <system-out><![CDATA[2026-02-13T14:17:54.375+02:00  INFO 518333 --- [trading-app] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.trading.controller.LookupControllerIntegrationTest]: LookupControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-2026-02-13T14:17:54.379+02:00  INFO 518333 --- [trading-app] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.LookupControllerIntegrationTest
-
-  .   ____          _            __ _ _
- /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
-( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
- \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
-  '  |____| .__|_| |_|_| |_\__, | / / / /
- =========|_|==============|___/=/_/_/_/
-
- :: Spring Boot ::                (v3.4.2)
-
-2026-02-13T14:17:54.419+02:00  INFO 518333 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : Starting LookupControllerIntegrationTest using Java 25 with PID 518333 (started by dstefan in /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0.)
-2026-02-13T14:17:54.420+02:00  INFO 518333 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : No active profile set, falling back to 1 default profile: "default"
-2026-02-13T14:17:54.707+02:00  INFO 518333 --- [trading-app] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
-2026-02-13T14:17:54.707+02:00  INFO 518333 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
-2026-02-13T14:17:54.707+02:00  INFO 518333 --- [trading-app] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 0 ms
-2026-02-13T14:17:54.713+02:00  INFO 518333 --- [trading-app] [           main] c.t.c.LookupControllerIntegrationTest    : Started LookupControllerIntegrationTest in 0.329 seconds (process running for 14.085)
+  <testcase name="authPingIsPublic" classname="com.trading.controller.SecurityRulesIntegrationTest" time="0.004">
+    <system-out><![CDATA[2026-02-13T14:17:54.929+02:00  INFO 518333 --- [trading-app] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.trading.controller.SecurityRulesIntegrationTest]: SecurityRulesIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-02-13T14:17:54.931+02:00  INFO 518333 --- [trading-app] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.trading.TradingApplication for test class com.trading.controller.SecurityRulesIntegrationTest
 ]]></system-out>
   </testcase>
-  <testcase name="assetsEndpointReturnsSeededStyleList" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.008"/>
-  <testcase name="lookupEndpointsRequireAuthentication" classname="com.trading.controller.LookupControllerIntegrationTest" time="0.005"/>
+  <testcase name="protectedEndpointsRequireAuthentication" classname="com.trading.controller.SecurityRulesIntegrationTest" time="0.003"/>
+  <testcase name="protectedEndpointsAllowRoleUser" classname="com.trading.controller.SecurityRulesIntegrationTest" time="0.007"/>
+  <testcase name="protectedEndpointsRejectAuthenticatedUsersWithoutRoleUser" classname="com.trading.controller.SecurityRulesIntegrationTest" time="0.003"/>
 </testsuite>
