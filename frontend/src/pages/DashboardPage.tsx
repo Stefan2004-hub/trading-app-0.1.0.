@@ -1,26 +1,27 @@
-import { logout } from '../store/authSlice';
+import { useEffect } from 'react';
+import { AppHeader } from '../components/AppHeader';
+import { PortfolioSummaryCards } from '../components/PortfolioSummaryCards';
+import { loadTradingBootstrap } from '../store/tradingSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function DashboardPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const user = useAppSelector((state) => state.auth.user);
+  const { summary, loading, error } = useAppSelector((state) => state.trading);
+
+  useEffect(() => {
+    if (summary || loading) {
+      return;
+    }
+    void dispatch(loadTradingBootstrap());
+  }, [dispatch, loading, summary]);
 
   return (
-    <main className="dashboard-shell">
-      <section className="dashboard-panel">
-        <h1>Dashboard</h1>
-        <p>
-          Signed in as <strong>{user?.username}</strong> ({user?.email})
-        </p>
-        <button
-          className="secondary"
-          type="button"
-          onClick={() => {
-            dispatch(logout());
-          }}
-        >
-          Sign out
-        </button>
+    <main className="workspace-shell">
+      <AppHeader />
+      <section className="workspace-panel">
+        <h1>Portfolio Overview</h1>
+        {error ? <p className="auth-error">{error}</p> : null}
+        <PortfolioSummaryCards summary={summary} />
       </section>
     </main>
   );

@@ -238,7 +238,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 30m
    - Done when: unauthenticated users are redirected and login succeeds.
 
-50. Implement frontend trading slices (buy/sell forms, history, summary cards).
+50. [x] Implement frontend trading slices (buy/sell forms, history, summary cards).
    - Estimate: 30m
    - Done when: forms validate and render persisted data.
 
