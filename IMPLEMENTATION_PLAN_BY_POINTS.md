@@ -230,7 +230,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 25m
    - Done when: 401/403 matrix behaves as expected.
 
-48. Add integration test: strict multi-tenant isolation.
+48. [x] Add integration test: strict multi-tenant isolation.
    - Estimate: 25m
    - Done when: user A cannot read/write user B data.
 
