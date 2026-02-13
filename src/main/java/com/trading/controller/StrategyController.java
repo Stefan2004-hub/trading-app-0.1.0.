@@ -10,6 +10,7 @@ import com.trading.security.CurrentUserProvider;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
+import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -52,7 +53,7 @@ public class StrategyController {
     }
 
     @PostMapping("/sell")
-    public ResponseEntity<SellStrategyResponse> upsertSellStrategy(@RequestBody UpsertSellStrategyRequest request) {
+    public ResponseEntity<SellStrategyResponse> upsertSellStrategy(@Valid @RequestBody UpsertSellStrategyRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(sellStrategyService.upsert(userId, request));
     }
@@ -64,7 +65,7 @@ public class StrategyController {
     }
 
     @PostMapping("/buy")
-    public ResponseEntity<BuyStrategyResponse> upsertBuyStrategy(@RequestBody UpsertBuyStrategyRequest request) {
+    public ResponseEntity<BuyStrategyResponse> upsertBuyStrategy(@Valid @RequestBody UpsertBuyStrategyRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(buyStrategyService.upsert(userId, request));
     }
@@ -76,7 +77,7 @@ public class StrategyController {
     }
 
     @PostMapping("/alerts/generate")
-    public ResponseEntity<List<StrategyAlertResponse>> generateAlerts(@RequestBody GenerateStrategyAlertsRequest request) {
+    public ResponseEntity<List<StrategyAlertResponse>> generateAlerts(@Valid @RequestBody GenerateStrategyAlertsRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(strategyAlertService.generate(userId, request));
     }

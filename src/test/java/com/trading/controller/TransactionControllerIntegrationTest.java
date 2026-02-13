@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -156,6 +157,33 @@ class TransactionControllerIntegrationTest {
 
         mockMvc.perform(post("/api/transactions/sell").contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void invalidBuyPayloadReturnsStructuredValidationError() throws Exception {
+        Authentication auth = authenticationFor(UUID.randomUUID());
+
+        mockMvc.perform(
+                post("/api/transactions/buy")
+                    .with(authentication(auth))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "grossAmount": 0,
+                          "unitPriceUsd": 0
+                        }
+                        """)
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.message").value("Validation failed"))
+            .andExpect(jsonPath("$.path").value("/api/transactions/buy"))
+            .andExpect(jsonPath("$.timestamp").exists())
+            .andExpect(jsonPath("$.violations[*].field", hasItem("assetId")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("exchangeId")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("grossAmount")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("unitPriceUsd")));
     }
 
     private static Authentication authenticationFor(UUID userId) {

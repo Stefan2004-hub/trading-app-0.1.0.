@@ -206,7 +206,7 @@ Each point below is capped at 30 minutes and includes a concrete completion chec
    - Estimate: 15m
    - Done when: endpoints return seeded data lists.
 
-42. Add request validation and unified error response contract.
+42. [x] Add request validation and unified error response contract.
    - Estimate: 20m
    - Done when: invalid payloads return structured 4xx errors.
 
