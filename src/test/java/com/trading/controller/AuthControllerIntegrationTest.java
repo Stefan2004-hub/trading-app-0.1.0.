@@ -3,6 +3,7 @@ package com.trading.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -61,6 +62,9 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+
+    @MockBean
+    private LookupService lookupService;
 
     @Test
     void registerLoginRefreshLogoutAndMeEndpointsPass() throws Exception {

@@ -6,6 +6,7 @@ import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.ExchangeRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "app.lookup.seed.enabled", havingValue = "true")
 public class LookupSeedInitializer implements ApplicationRunner {
 
     private final AssetRepository assetRepository;

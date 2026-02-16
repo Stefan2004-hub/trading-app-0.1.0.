@@ -24,6 +24,9 @@ server:
   port: 8080
 
 app:
+  lookup:
+    seed:
+      enabled: true
   security:
     jwt:
       secret: your-jwt-secret-change-this-in-production

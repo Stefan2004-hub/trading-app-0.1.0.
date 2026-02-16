@@ -1,6 +1,7 @@
 package com.trading.controller;
 
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -49,6 +50,9 @@ class SecurityRulesIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+
+    @MockBean
+    private LookupService lookupService;
 
     @Test
     void protectedEndpointsRequireAuthentication() throws Exception {
