@@ -1,6 +1,5 @@
 import { FormEvent, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi';
 import { AuthLayout } from '../components/AuthLayout';
 import { clearAuthError, login } from '../store/authSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
@@ -22,6 +21,7 @@ export function LoginPage(): JSX.Element {
 
   const state = location.state as LocationState | null;
   const redirectPath = state?.from?.pathname ?? '/dashboard';
+  const oauthError = new URLSearchParams(location.search).get('oauthError');
 
   if (status === 'authenticated') {
     return <Navigate to={redirectPath} replace />;
@@ -59,7 +59,7 @@ export function LoginPage(): JSX.Element {
           autoComplete="current-password"
         />
 
-        {error ? <p className="auth-error">{error}</p> : null}
+        {error || oauthError ? <p className="auth-error">{error ?? oauthError}</p> : null}
 
         <button type="submit" disabled={status === 'loading'}>
           {status === 'loading' ? 'Signing in...' : 'Sign in'}
@@ -70,7 +70,7 @@ export function LoginPage(): JSX.Element {
         className="secondary"
         type="button"
         onClick={() => {
-          authApi.startGoogleAuth();
+          navigate('/auth/google');
         }}
       >
         Continue with Google

@@ -1,4 +1,11 @@
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "1006892634882-o1b6b458pu3sl8f3nnms2g91tudbf98k.apps.googleusercontent.com"
+            client-secret: "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"
   datasource:
     url: jdbc:postgresql://ep-lingering-cloud-agupkl9f.c-2.eu-central-1.aws.neon.tech:5432/neondb?sslmode=require
     username: neondb_owner
@@ -17,6 +24,9 @@ server:
   port: 8080
 
 app:
+  lookup:
+    seed:
+      enabled: true
   security:
     jwt:
       secret: your-jwt-secret-change-this-in-production

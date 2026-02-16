@@ -6,6 +6,7 @@ import com.trading.dto.strategy.BuyStrategyResponse;
 import com.trading.dto.strategy.SellStrategyResponse;
 import com.trading.dto.strategy.StrategyAlertResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -59,6 +60,8 @@ class StrategyControllerIntegrationTest {
     private TransactionService transactionService;
     @MockBean
     private PortfolioService portfolioService;
+    @MockBean
+    private LookupService lookupService;
 
     @Test
     void strategyEndpointsReturnExpectedStatusAndPayload() throws Exception {

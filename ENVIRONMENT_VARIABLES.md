@@ -16,6 +16,7 @@
 | `GOOGLE_CLIENT_ID` | Yes (Google login) | sample value in `application.yml` | Google OAuth client id |
 | `GOOGLE_CLIENT_SECRET` | Yes (Google login) | sample value in `application.yml` | Google OAuth client secret |
 | `CORS_ALLOWED_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin |
+| `APP_FRONTEND_BASE_URL` | No | `http://localhost:5173` | Frontend base URL for OAuth2 success/failure redirects |
 
 ## Frontend (frontend/.env.example)
 | Variable | Required | Default | Purpose |

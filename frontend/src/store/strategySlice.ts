@@ -14,6 +14,7 @@ interface StrategyState {
   sellStrategies: SellStrategyItem[];
   buyStrategies: BuyStrategyItem[];
   alerts: StrategyAlertItem[];
+  dataAttempted: boolean;
   loading: boolean;
   submitting: boolean;
   error: string | null;
@@ -24,6 +25,7 @@ const initialState: StrategyState = {
   sellStrategies: [],
   buyStrategies: [],
   alerts: [],
+  dataAttempted: false,
   loading: false,
   submitting: false,
   error: null
@@ -79,6 +81,7 @@ const strategySlice = createSlice({
     });
     builder.addCase(loadStrategyData.fulfilled, (state, action) => {
       state.loading = false;
+      state.dataAttempted = true;
       state.assets = action.payload.assets;
       state.sellStrategies = action.payload.sellStrategies;
       state.buyStrategies = action.payload.buyStrategies;
@@ -86,6 +89,7 @@ const strategySlice = createSlice({
     });
     builder.addCase(loadStrategyData.rejected, (state, action) => {
       state.loading = false;
+      state.dataAttempted = true;
       state.error = action.error.message ?? 'Failed to load strategy data';
     });
 

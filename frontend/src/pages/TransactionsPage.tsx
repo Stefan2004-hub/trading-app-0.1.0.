@@ -8,16 +8,16 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function TransactionsPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const { assets, exchanges, transactions, summary, loading, submitting, error } = useAppSelector(
+  const { assets, exchanges, transactions, summary, loading, bootstrapAttempted, submitting, error } = useAppSelector(
     (state) => state.trading
   );
 
   useEffect(() => {
-    if (loading || summary) {
+    if (loading || bootstrapAttempted) {
       return;
     }
     void dispatch(loadTradingBootstrap());
-  }, [dispatch, loading, summary]);
+  }, [bootstrapAttempted, dispatch, loading]);
 
   return (
     <main className="workspace-shell">

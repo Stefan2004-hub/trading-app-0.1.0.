@@ -10,7 +10,7 @@ import type { AssetOption } from '../types/trading';
 
 export const strategyApi = {
   listAssets(): Promise<AssetOption[]> {
-    return request<AssetOption[]>('/api/assets', { auth: false });
+    return request<AssetOption[]>('/api/assets');
   },
 
   listSellStrategies(): Promise<SellStrategyItem[]> {

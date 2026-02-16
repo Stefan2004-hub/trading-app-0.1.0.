@@ -15,6 +15,7 @@ interface TradingState {
   transactions: TransactionItem[];
   summary: PortfolioSummary | null;
   performance: PortfolioAssetPerformance[];
+  bootstrapAttempted: boolean;
   loading: boolean;
   submitting: boolean;
   error: string | null;
@@ -26,6 +27,7 @@ const initialState: TradingState = {
   transactions: [],
   summary: null,
   performance: [],
+  bootstrapAttempted: false,
   loading: false,
   submitting: false,
   error: null
@@ -68,6 +70,7 @@ const tradingSlice = createSlice({
     });
     builder.addCase(loadTradingBootstrap.fulfilled, (state, action) => {
       state.loading = false;
+      state.bootstrapAttempted = true;
       state.assets = action.payload.assets;
       state.exchanges = action.payload.exchanges;
       state.transactions = action.payload.transactions;
@@ -76,6 +79,7 @@ const tradingSlice = createSlice({
     });
     builder.addCase(loadTradingBootstrap.rejected, (state, action) => {
       state.loading = false;
+      state.bootstrapAttempted = true;
       state.error = action.error.message ?? 'Failed to load trading data';
     });
 

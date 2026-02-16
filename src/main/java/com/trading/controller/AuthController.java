@@ -64,7 +64,7 @@ public class AuthController {
 
     @GetMapping("/oauth2/google")
     public ResponseEntity<Map<String, String>> googleOauthEntrypoint() {
-        return ResponseEntity.ok(Map.of("authorizationUrl", "/api/auth/oauth2/callback"));
+        return ResponseEntity.ok(Map.of("authorizationUrl", "/oauth2/authorization/google"));
     }
 
     @GetMapping("/oauth2/callback")

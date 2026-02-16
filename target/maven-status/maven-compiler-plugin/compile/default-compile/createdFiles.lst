@@ -8,6 +8,7 @@ com/trading/dto/auth/RegisterRequest.class
 com/trading/dto/portfolio/PortfolioAssetPerformanceResponse.class
 com/trading/service/transaction/TransactionServiceImpl$PositionState.class
 com/trading/dto/transaction/CloseAccumulationTradeRequest.class
+com/trading/service/lookup/LookupSeedInitializer$SeedExchange.class
 com/trading/controller/StrategyController.class
 com/trading/exception/DuplicateEmailException.class
 com/trading/domain/projection/SellOpportunityProjection.class
@@ -19,6 +20,7 @@ com/trading/domain/entity/PricePeak.class
 com/trading/domain/projection/package-info.class
 com/trading/config/SecurityConfig.class
 com/trading/domain/repository/TransactionRepository.class
+com/trading/service/lookup/LookupSeedInitializer.class
 com/trading/domain/repository/SellStrategyRepository.class
 com/trading/dto/auth/MeResponse.class
 com/trading/service/auth/InMemoryAuthOAuthService.class
@@ -38,6 +40,7 @@ com/trading/service/strategy/SellStrategyServiceImpl.class
 com/trading/dto/auth/RefreshRequest.class
 com/trading/dto/strategy/BuyStrategyResponse.class
 com/trading/config/PasswordConfig.class
+com/trading/service/lookup/LookupSeedInitializer$SeedAsset.class
 com/trading/security/UserPrincipal.class
 com/trading/domain/entity/Transaction.class
 com/trading/security/package-info.class
@@ -111,6 +114,7 @@ com/trading/domain/repository/ExchangeRepository.class
 com/trading/dto/auth/LogoutRequest.class
 com/trading/service/lookup/LookupService.class
 com/trading/controller/LookupController.class
+com/trading/security/JwtAuthenticationFilter.class
 com/trading/domain/entity/BtcHistoricData.class
 com/trading/domain/projection/BuyOpportunityProjection.class
 com/trading/dto/strategy/StrategyAlertResponse.class

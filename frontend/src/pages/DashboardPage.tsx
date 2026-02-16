@@ -6,14 +6,14 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function DashboardPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const { summary, loading, error } = useAppSelector((state) => state.trading);
+  const { loading, bootstrapAttempted, error, summary } = useAppSelector((state) => state.trading);
 
   useEffect(() => {
-    if (summary || loading) {
+    if (loading || bootstrapAttempted) {
       return;
     }
     void dispatch(loadTradingBootstrap());
-  }, [dispatch, loading, summary]);
+  }, [bootstrapAttempted, dispatch, loading]);
 
   return (
     <main className="workspace-shell">

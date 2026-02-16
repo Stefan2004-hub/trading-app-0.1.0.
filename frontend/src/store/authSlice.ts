@@ -71,6 +71,19 @@ const authSlice = createSlice({
     },
     clearAuthError(state) {
       state.error = null;
+    },
+    completeOAuthLogin(state, action: PayloadAction<AuthResponse>) {
+      persistSession(action.payload);
+      state.status = 'authenticated';
+      state.user = {
+        userId: action.payload.userId,
+        email: action.payload.email,
+        username: action.payload.username,
+        authProvider: action.payload.authProvider
+      };
+      state.accessToken = action.payload.accessToken;
+      state.refreshToken = action.payload.refreshToken;
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -133,5 +146,5 @@ const authSlice = createSlice({
   }
 });
 
-export const { logout, clearAuthError } = authSlice.actions;
+export const { logout, clearAuthError, completeOAuthLogin } = authSlice.actions;
 export default authSlice.reducer;

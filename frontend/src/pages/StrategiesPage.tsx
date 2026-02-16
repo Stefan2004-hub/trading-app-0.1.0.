@@ -14,16 +14,16 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function StrategiesPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const { assets, sellStrategies, buyStrategies, alerts, loading, submitting, error } = useAppSelector(
+  const { assets, sellStrategies, buyStrategies, alerts, loading, dataAttempted, submitting, error } = useAppSelector(
     (state) => state.strategy
   );
 
   useEffect(() => {
-    if (loading || assets.length > 0) {
+    if (loading || dataAttempted) {
       return;
     }
     void dispatch(loadStrategyData());
-  }, [assets.length, dispatch, loading]);
+  }, [dataAttempted, dispatch, loading]);
 
   return (
     <main className="workspace-shell">
