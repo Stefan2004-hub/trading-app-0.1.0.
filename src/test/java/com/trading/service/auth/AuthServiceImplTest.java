@@ -1,6 +1,8 @@
 package com.trading.service.auth;
 
+import com.trading.domain.entity.User;
 import com.trading.domain.enums.AuthProvider;
+import com.trading.domain.repository.UserRepository;
 import com.trading.dto.auth.AuthResponse;
 import com.trading.dto.auth.LoginRequest;
 import com.trading.dto.auth.LoginResponse;
@@ -43,6 +45,8 @@ class AuthServiceImplTest {
     private RefreshTokenService refreshTokenService;
     @Mock
     private InMemoryAuthRegistrationService registrationService;
+    @Mock
+    private UserRepository userRepository;
 
     private AuthServiceImpl authService;
 
@@ -58,7 +62,8 @@ class AuthServiceImplTest {
             authLogoutService,
             jwtService,
             refreshTokenService,
-            registrationService
+            registrationService,
+            userRepository
         );
     }
 
@@ -168,9 +173,28 @@ class AuthServiceImplTest {
     @Test
     void meRejectsUnknownUser() {
         when(registrationService.findByUserId(userId)).thenReturn(null);
+        when(userRepository.findById(userId)).thenReturn(java.util.Optional.empty());
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> authService.me(userId));
 
         assertEquals("User not found: " + userId, ex.getMessage());
+    }
+
+    @Test
+    void meFallsBackToDatabaseUserWhenMissingInMemoryStore() {
+        when(registrationService.findByUserId(userId)).thenReturn(null);
+        User dbUser = new User();
+        dbUser.setId(userId);
+        dbUser.setEmail("google@example.com");
+        dbUser.setUsername("googleuser");
+        dbUser.setAuthProvider(AuthProvider.GOOGLE);
+        when(userRepository.findById(userId)).thenReturn(java.util.Optional.of(dbUser));
+
+        MeResponse response = authService.me(userId);
+
+        assertEquals(userId, response.userId());
+        assertEquals("google@example.com", response.email());
+        assertEquals("googleuser", response.username());
+        assertEquals(AuthProvider.GOOGLE, response.authProvider());
     }
 }

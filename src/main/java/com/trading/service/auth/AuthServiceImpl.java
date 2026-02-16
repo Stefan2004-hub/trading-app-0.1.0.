@@ -1,5 +1,7 @@
 package com.trading.service.auth;
 
+import com.trading.domain.entity.User;
+import com.trading.domain.repository.UserRepository;
 import com.trading.dto.auth.AuthResponse;
 import com.trading.dto.auth.LoginRequest;
 import com.trading.dto.auth.LoginResponse;
@@ -12,6 +14,7 @@ import com.trading.dto.auth.RegisterRequest;
 import com.trading.dto.auth.RegisterResponse;
 import com.trading.security.JwtService;
 import com.trading.security.RefreshTokenService;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
@@ -27,6 +30,8 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final InMemoryAuthRegistrationService registrationService;
+    @Nullable
+    private final UserRepository userRepository;
 
     public AuthServiceImpl(
         AuthRegistrationService authRegistrationService,
@@ -35,7 +40,8 @@ public class AuthServiceImpl implements AuthService {
         AuthLogoutService authLogoutService,
         JwtService jwtService,
         RefreshTokenService refreshTokenService,
-        InMemoryAuthRegistrationService registrationService
+        InMemoryAuthRegistrationService registrationService,
+        @Nullable UserRepository userRepository
     ) {
         this.authRegistrationService = authRegistrationService;
         this.authLoginService = authLoginService;
@@ -44,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.registrationService = registrationService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -85,9 +92,17 @@ public class AuthServiceImpl implements AuthService {
     public MeResponse me(UUID userId) {
         Objects.requireNonNull(userId, "userId is required");
         InMemoryAuthRegistrationService.RegisteredUser user = registrationService.findByUserId(userId);
-        if (user == null) {
+        if (user != null) {
+            return new MeResponse(user.id(), user.email(), user.username(), user.authProvider());
+        }
+
+        if (userRepository == null) {
             throw new IllegalArgumentException("User not found: " + userId);
         }
-        return new MeResponse(user.id(), user.email(), user.username(), user.authProvider());
+
+        User dbUser = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        return new MeResponse(dbUser.getId(), dbUser.getEmail(), dbUser.getUsername(), dbUser.getAuthProvider());
     }
 }

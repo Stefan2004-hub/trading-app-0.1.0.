@@ -5,6 +5,8 @@ import com.trading.dto.auth.AuthResponse;
 import com.trading.dto.auth.OAuthCallbackRequest;
 import com.trading.security.JwtService;
 import com.trading.security.RefreshTokenService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class InMemoryAuthOAuthService implements AuthOAuthService {
+    private static final Logger log = LoggerFactory.getLogger(InMemoryAuthOAuthService.class);
 
     private final InMemoryAuthRegistrationService registrationService;
     private final JwtService jwtService;
@@ -36,6 +39,7 @@ public class InMemoryAuthOAuthService implements AuthOAuthService {
         if (isBlank(request.email()) || isBlank(request.providerUserId())) {
             throw new IllegalArgumentException("email and providerUserId are required");
         }
+        log.warn("Google OAuth handled via InMemoryAuthOAuthService for email={}", request.email().trim());
 
         InMemoryAuthRegistrationService.RegisteredUser user =
             registrationService.getOrCreateGoogleUser(request.email(), request.preferredUsername());
