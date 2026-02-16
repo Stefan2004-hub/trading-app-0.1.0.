@@ -116,6 +116,14 @@ public class ApiExceptionHandler {
         return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
     }
 
+    @ExceptionHandler(OAuthEmailConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleOAuthEmailConflict(
+        OAuthEmailConflictException ex,
+        HttpServletRequest request
+    ) {
+        return build(HttpStatus.CONFLICT, ex.getMessage(), request, List.of());
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
         InvalidCredentialsException ex,

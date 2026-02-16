@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.trading.service.auth.AuthServiceImplTest
 -------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.97 s -- in com.trading.service.auth.AuthServiceImplTest
+Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.06 s -- in com.trading.service.auth.AuthServiceImplTest
