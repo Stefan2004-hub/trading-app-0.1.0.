@@ -7,8 +7,13 @@ interface GoogleStartResponse {
   authorizationUrl: string;
 }
 
-const GOOGLE_AUTH_START_URL =
-  import.meta.env.VITE_GOOGLE_AUTH_START_URL ?? 'http://localhost:8080/api/auth/oauth2/google';
+const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+const DEFAULT_GOOGLE_AUTH_START_URL = `${DEFAULT_API_BASE_URL}/api/auth/oauth2/google`;
+
+function envOrDefault(value: string | undefined, fallback: string): string {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
 
 export const authApi = {
   login(payload: LoginPayload): Promise<AuthResponse> {
@@ -28,10 +33,10 @@ export const authApi = {
     if (response.authorizationUrl.startsWith('http')) {
       return response.authorizationUrl;
     }
-    return `${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'}${response.authorizationUrl}`;
+    return `${envOrDefault(import.meta.env.VITE_API_BASE_URL, DEFAULT_API_BASE_URL)}${response.authorizationUrl}`;
   },
 
   startGoogleAuth(): void {
-    window.location.assign(GOOGLE_AUTH_START_URL);
+    window.location.assign(envOrDefault(import.meta.env.VITE_GOOGLE_AUTH_START_URL, DEFAULT_GOOGLE_AUTH_START_URL));
   }
 };

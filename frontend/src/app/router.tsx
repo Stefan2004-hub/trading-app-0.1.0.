@@ -1,6 +1,7 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { RequireAuth } from '../components/RequireAuth';
 import { DashboardPage } from '../pages/DashboardPage';
+import { GoogleCallbackPage } from '../pages/GoogleCallbackPage';
 import { GoogleEntryPage } from '../pages/GoogleEntryPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -24,6 +25,10 @@ export const router = createBrowserRouter([
   {
     path: '/auth/google',
     element: <GoogleEntryPage />
+  },
+  {
+    path: '/auth/google/callback',
+    element: <GoogleCallbackPage />
   },
   {
     path: '/dashboard',

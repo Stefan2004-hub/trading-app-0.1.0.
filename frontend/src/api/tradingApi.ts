@@ -22,11 +22,11 @@ function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
 
 export const tradingApi = {
   listAssets(): Promise<AssetOption[]> {
-    return request<AssetOption[]>('/api/assets', { auth: false });
+    return request<AssetOption[]>('/api/assets');
   },
 
   listExchanges(): Promise<ExchangeOption[]> {
-    return request<ExchangeOption[]>('/api/exchanges', { auth: false });
+    return request<ExchangeOption[]>('/api/exchanges');
   },
 
   listTransactions(): Promise<TransactionItem[]> {
