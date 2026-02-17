@@ -1,18 +1,16 @@
 @baseUrl = http://localhost:8080
-@cookie = XSRF-TOKEN=74150c76-ff1a-4702-a6a5-f7861341a0d0;_sid=34433DF08B89C4CA76AA60F3FAFEDC51
+@accessToken = replace-with-real-access-token
 @assetId = 11111111-1111-1111-1111-111111111111
 @exchangeId = 33333333-3333-3333-3333-333333333333
 
 ### List transactions
-# @no-cookie-jar
 GET {{baseUrl}}/api/transactions
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 ### Buy transaction
-# @no-cookie-jar
 POST {{baseUrl}}/api/transactions/buy
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "assetId": "{{assetId}}",
@@ -25,10 +23,9 @@ Cookie: {{cookie}}
 }
 
 ### Sell transaction
-# @no-cookie-jar
 POST {{baseUrl}}/api/transactions/sell
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "assetId": "{{assetId}}",

@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8080
-@cookie = XSRF-TOKEN=74150c76-ff1a-4702-a6a5-f7861341a0d0;_sid=34433DF08B89C4CA76AA60F3FAFEDC51
+@accessToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjA3YzQwNS01NTc1LTRjMjAtOTE5MS1hMmZlN2JlOGIxOWQiLCJlbWFpbCI6ImpvaW50LnN0ZWYyMDEyQGdtYWlsLmNvbSIsImlhdCI6MTc3MTMxODM0OSwiZXhwIjoxNzcxMzE5MjQ5fQ._mb8oFFoMWR0392fKEv0egthW62zJQwVDLIW44jXu3A
 
 ### Register
 POST {{baseUrl}}/api/auth/register
@@ -27,26 +27,23 @@ GET {{baseUrl}}/api/auth/oauth2/google
 GET {{baseUrl}}/api/auth/oauth2/callback?email=test.user@example.com&providerUserId=google-123&preferredUsername=testuser
 
 ### Refresh token
-# @no-cookie-jar
 POST {{baseUrl}}/api/auth/refresh
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "refreshToken": "replace-with-real-refresh-token"
 }
 
 ### Logout
-# @no-cookie-jar
 POST {{baseUrl}}/api/auth/logout
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "refreshToken": "replace-with-real-refresh-token"
 }
 
 ### Current user
-# @no-cookie-jar
 GET {{baseUrl}}/api/auth/me
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}

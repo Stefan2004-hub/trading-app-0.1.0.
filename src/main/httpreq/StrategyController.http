@@ -1,18 +1,16 @@
 @baseUrl = http://localhost:8080
-@cookie = XSRF-TOKEN=74150c76-ff1a-4702-a6a5-f7861341a0d0;_sid=34433DF08B89C4CA76AA60F3FAFEDC51
+@accessToken = replace-with-real-access-token
 @assetId = 11111111-1111-1111-1111-111111111111
 @alertId = 22222222-2222-2222-2222-222222222222
 
 ### List sell strategies
-# @no-cookie-jar
 GET {{baseUrl}}/api/strategies/sell
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 ### Upsert sell strategy
-# @no-cookie-jar
 POST {{baseUrl}}/api/strategies/sell
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "assetId": "{{assetId}}",
@@ -21,15 +19,13 @@ Cookie: {{cookie}}
 }
 
 ### List buy strategies
-# @no-cookie-jar
 GET {{baseUrl}}/api/strategies/buy
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 ### Upsert buy strategy
-# @no-cookie-jar
 POST {{baseUrl}}/api/strategies/buy
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "assetId": "{{assetId}}",
@@ -39,15 +35,13 @@ Cookie: {{cookie}}
 }
 
 ### List strategy alerts
-# @no-cookie-jar
 GET {{baseUrl}}/api/strategies/alerts
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 ### Generate strategy alerts
-# @no-cookie-jar
 POST {{baseUrl}}/api/strategies/alerts/generate
 Content-Type: application/json
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
 
 {
   "assetId": "{{assetId}}",
@@ -55,6 +49,5 @@ Cookie: {{cookie}}
 }
 
 ### Acknowledge alert
-# @no-cookie-jar
 POST {{baseUrl}}/api/strategies/alerts/{{alertId}}/acknowledge
-Cookie: {{cookie}}
+Authorization: Bearer {{accessToken}}
