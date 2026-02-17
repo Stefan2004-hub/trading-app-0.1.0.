@@ -1,11 +1,10 @@
 services:
   - type: web
     name: trading-app-backend
-    runtime: java
+    runtime: docker
     plan: free
     branch: main
-    buildCommand: mvn clean package -DskipTests
-    startCommand: java -jar target/trading-app-0.1.0.jar
+    dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: APP_NAME
