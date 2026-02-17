@@ -18,11 +18,25 @@
 | `CORS_ALLOWED_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin |
 | `APP_FRONTEND_BASE_URL` | No | `http://localhost:5173` | Frontend base URL for OAuth2 success/failure redirects |
 
-## Frontend (frontend/.env.example)
+## Frontend (frontend/.env.example, local values in frontend/.env.local)
 | Variable | Required | Default | Purpose |
 |---|---|---|---|
-| `VITE_API_BASE_URL` | Yes | `http://localhost:8080` | Backend API base URL |
-| `VITE_GOOGLE_AUTH_START_URL` | No | `http://localhost:8080/api/auth/oauth2/google` | OAuth login entry URL |
+| `VITE_API_BASE_URL` | No | `http://localhost:8080` | Backend API base URL |
+| `VITE_GOOGLE_AUTH_START_URL` | No | `${VITE_API_BASE_URL}/api/auth/oauth2/google` | OAuth login entry URL |
+
+## Frontend Local Setup (Vite)
+Use `frontend/.env.example` as the template and keep machine-specific values in `frontend/.env.local`:
+
+```bash
+cd frontend
+cp .env.example .env.local
+```
+
+Then edit `frontend/.env.local` and start the app:
+
+```bash
+npm run dev
+```
 
 ## Config Validation Command
 Use this command to validate that sample config loads without missing keys:

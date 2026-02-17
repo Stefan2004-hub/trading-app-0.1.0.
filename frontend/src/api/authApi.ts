@@ -1,18 +1,11 @@
 import { request } from './http';
+import { env } from '../config/env';
 import type { AuthResponse, LoginPayload, RegisterPayload, UserProfile } from '../types/auth';
 
 interface RegisterResponse extends UserProfile {}
 
 interface GoogleStartResponse {
   authorizationUrl: string;
-}
-
-const DEFAULT_API_BASE_URL = 'http://localhost:8080';
-const DEFAULT_GOOGLE_AUTH_START_URL = `${DEFAULT_API_BASE_URL}/api/auth/oauth2/google`;
-
-function envOrDefault(value: string | undefined, fallback: string): string {
-  const trimmed = value?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
 
 export const authApi = {
@@ -33,10 +26,10 @@ export const authApi = {
     if (response.authorizationUrl.startsWith('http')) {
       return response.authorizationUrl;
     }
-    return `${envOrDefault(import.meta.env.VITE_API_BASE_URL, DEFAULT_API_BASE_URL)}${response.authorizationUrl}`;
+    return `${env.apiBaseUrl}${response.authorizationUrl}`;
   },
 
   startGoogleAuth(): void {
-    window.location.assign(envOrDefault(import.meta.env.VITE_GOOGLE_AUTH_START_URL, DEFAULT_GOOGLE_AUTH_START_URL));
+    window.location.assign(env.googleAuthStartUrl);
   }
 };
