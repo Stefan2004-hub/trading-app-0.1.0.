@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: trading-app-backend
+    runtime: java
+    plan: free
+    branch: main
+    buildCommand: mvn clean package -DskipTests
+    startCommand: java -jar target/trading-app-0.1.0.jar
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: trading-app
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: FLYWAY_ENABLED
+        value: true
+      - key: JWT_ACCESS_TOKEN_TTL_MINUTES
+        value: 15
+      - key: JWT_REFRESH_TOKEN_TTL_DAYS
+        value: 30
