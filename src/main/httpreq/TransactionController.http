@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8080
-@accessToken = replace-with-real-access-token
+@accessToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjA3YzQwNS01NTc1LTRjMjAtOTE5MS1hMmZlN2JlOGIxOWQiLCJlbWFpbCI6ImpvaW50LnN0ZWYyMDEyQGdtYWlsLmNvbSIsImlhdCI6MTc3MTMzNzE2MSwiZXhwIjoxNzcxMzM4MDYxfQ.o6LHmc5EkakYAiQ3QvIopdtIy7qfyeelZnN8K0zrs9E
 @assetId = 11111111-1111-1111-1111-111111111111
 @exchangeId = 33333333-3333-3333-3333-333333333333
 
@@ -20,6 +20,20 @@ Authorization: Bearer {{accessToken}}
   "feeCurrency": "BTC",
   "unitPriceUsd": 45000.0,
   "transactionDate": "2026-02-17T10:00:00Z"
+}
+### Buy transaction2
+POST {{baseUrl}}/api/transactions/buy
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "assetId": "64550529-dc7d-45ee-9c31-28056debb553",
+    "exchangeId": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+    "grossAmount": "1.32",
+    "feeAmount": "0.1",
+    "feeCurrency": "USD",
+    "unitPriceUsd": "4.878",
+    "transactionDate": null
 }
 
 ### Sell transaction
