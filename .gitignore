@@ -31,3 +31,5 @@ frontend/dist/
 src/main/resources/application-local.yml
 .env
 .env.local
+frontend/.env.local
+frontend/.env.*.local

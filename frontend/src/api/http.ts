@@ -1,6 +1,7 @@
 import { sessionStorageUtil } from '../utils/storage';
+import { env } from '../config/env';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
+const API_BASE_URL = env.apiBaseUrl;
 const AUTH_EXPIRED_EVENT = 'trading:auth-expired';
 
 interface RequestOptions {
