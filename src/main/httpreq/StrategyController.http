@@ -1,0 +1,60 @@
+@baseUrl = http://localhost:8080
+@cookie = XSRF-TOKEN=74150c76-ff1a-4702-a6a5-f7861341a0d0;_sid=34433DF08B89C4CA76AA60F3FAFEDC51
+@assetId = 11111111-1111-1111-1111-111111111111
+@alertId = 22222222-2222-2222-2222-222222222222
+
+### List sell strategies
+# @no-cookie-jar
+GET {{baseUrl}}/api/strategies/sell
+Cookie: {{cookie}}
+
+### Upsert sell strategy
+# @no-cookie-jar
+POST {{baseUrl}}/api/strategies/sell
+Content-Type: application/json
+Cookie: {{cookie}}
+
+{
+  "assetId": "{{assetId}}",
+  "thresholdPercent": 5.0,
+  "active": true
+}
+
+### List buy strategies
+# @no-cookie-jar
+GET {{baseUrl}}/api/strategies/buy
+Cookie: {{cookie}}
+
+### Upsert buy strategy
+# @no-cookie-jar
+POST {{baseUrl}}/api/strategies/buy
+Content-Type: application/json
+Cookie: {{cookie}}
+
+{
+  "assetId": "{{assetId}}",
+  "dipThresholdPercent": 7.5,
+  "buyAmountUsd": 100.0,
+  "active": true
+}
+
+### List strategy alerts
+# @no-cookie-jar
+GET {{baseUrl}}/api/strategies/alerts
+Cookie: {{cookie}}
+
+### Generate strategy alerts
+# @no-cookie-jar
+POST {{baseUrl}}/api/strategies/alerts/generate
+Content-Type: application/json
+Cookie: {{cookie}}
+
+{
+  "assetId": "{{assetId}}",
+  "currentPriceUsd": 42000.12
+}
+
+### Acknowledge alert
+# @no-cookie-jar
+POST {{baseUrl}}/api/strategies/alerts/{{alertId}}/acknowledge
+Cookie: {{cookie}}

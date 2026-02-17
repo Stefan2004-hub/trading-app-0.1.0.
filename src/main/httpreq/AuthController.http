@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:8080
+@cookie = XSRF-TOKEN=74150c76-ff1a-4702-a6a5-f7861341a0d0;_sid=34433DF08B89C4CA76AA60F3FAFEDC51
+
+### Register
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test.user@example.com",
+  "username": "testuser",
+  "password": "ChangeMe123!"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "test.user@example.com",
+  "password": "ChangeMe123!"
+}
+
+### Google OAuth entrypoint
+GET {{baseUrl}}/api/auth/oauth2/google
+
+### Google OAuth callback (mock params)
+GET {{baseUrl}}/api/auth/oauth2/callback?email=test.user@example.com&providerUserId=google-123&preferredUsername=testuser
+
+### Refresh token
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+Cookie: {{cookie}}
+
+{
+  "refreshToken": "replace-with-real-refresh-token"
+}
+
+### Logout
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/logout
+Content-Type: application/json
+Cookie: {{cookie}}
+
+{
+  "refreshToken": "replace-with-real-refresh-token"
+}
+
+### Current user
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/me
+Cookie: {{cookie}}
