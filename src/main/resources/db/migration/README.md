@@ -21,3 +21,11 @@ This folder stores ordered Flyway SQL migrations.
 - `V5__seed_assets_and_exchanges.sql`
   - Seed lookup reference data
   - Canonical `assets` and `exchanges` rows for API lookups
+
+- `V6__fix_price_peaks_trigger_for_multi_tenant.sql`
+  - Make `reset_price_peak_on_buy` trigger multi-tenant aware
+  - Upsert by `(asset_id, user_id)` for `price_peaks`
+
+- `V7__fix_user_portfolio_performance_pnl.sql`
+  - Fix `user_portfolio_performance` balance and cost basis math
+  - Use net amount consistently and reduce invested basis on SELL rows
