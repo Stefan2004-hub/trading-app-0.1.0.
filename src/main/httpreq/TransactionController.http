@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:8080
-@accessToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjA3YzQwNS01NTc1LTRjMjAtOTE5MS1hMmZlN2JlOGIxOWQiLCJlbWFpbCI6ImpvaW50LnN0ZWYyMDEyQGdtYWlsLmNvbSIsImlhdCI6MTc3MTMzNzE2MSwiZXhwIjoxNzcxMzM4MDYxfQ.o6LHmc5EkakYAiQ3QvIopdtIy7qfyeelZnN8K0zrs9E
+@accessToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhMjA3YzQwNS01NTc1LTRjMjAtOTE5MS1hMmZlN2JlOGIxOWQiLCJlbWFpbCI6ImpvaW50LnN0ZWYyMDEyQGdtYWlsLmNvbSIsImlhdCI6MTc3MTQxOTgxNywiZXhwIjoxNzcxNDIwNzE3fQ.mVyupecpgiuyPrFAGfCBjLd2NUqcWoRyKgPWP5uHbRg
 @assetId = 11111111-1111-1111-1111-111111111111
 @exchangeId = 33333333-3333-3333-3333-333333333333
 
@@ -33,6 +33,20 @@ Authorization: Bearer {{accessToken}}
     "feeAmount": "0.1",
     "feeCurrency": "USD",
     "unitPriceUsd": "4.878",
+    "transactionDate": null
+}
+### Buy transaction3
+POST {{baseUrl}}/api/transactions/buy
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "assetId": "11111111-1111-1111-1111-111111111111",
+    "exchangeId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "grossAmount": "10",
+    "feeAmount": "0.01",
+    "feeCurrency": "BTC",
+    "unitPriceUsd": "50000",
     "transactionDate": null
 }
 

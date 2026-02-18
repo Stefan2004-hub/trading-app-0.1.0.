@@ -37,25 +37,25 @@ public class Transaction {
     @Column(name = "transaction_type", length = 4)
     private TransactionType transactionType;
 
-    @Column(name = "gross_amount", nullable = false, precision = 20, scale = 18)
+    @Column(name = "gross_amount", nullable = false, precision = 38, scale = 18)
     private BigDecimal grossAmount;
 
-    @Column(name = "fee_amount", precision = 20, scale = 18)
+    @Column(name = "fee_amount", precision = 38, scale = 18)
     private BigDecimal feeAmount;
 
     @Column(name = "fee_currency", length = 10)
     private String feeCurrency;
 
-    @Column(name = "net_amount", nullable = false, precision = 20, scale = 18)
+    @Column(name = "net_amount", nullable = false, precision = 38, scale = 18)
     private BigDecimal netAmount;
 
-    @Column(name = "unit_price_usd", nullable = false, precision = 20, scale = 18)
+    @Column(name = "unit_price_usd", nullable = false, precision = 38, scale = 18)
     private BigDecimal unitPriceUsd;
 
-    @Column(name = "total_spent_usd", nullable = false, precision = 20, scale = 18)
+    @Column(name = "total_spent_usd", nullable = false, precision = 38, scale = 18)
     private BigDecimal totalSpentUsd;
 
-    @Column(name = "realized_pnl", precision = 20, scale = 18)
+    @Column(name = "realized_pnl", precision = 38, scale = 18)
     private BigDecimal realizedPnl;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -13,7 +13,7 @@ const INITIAL_FORM: TradeFormPayload = {
   assetId: '',
   exchangeId: '',
   grossAmount: '',
-  feeAmount: '',
+  feePercentage: '',
   feeCurrency: 'USD',
   unitPriceUsd: ''
 };
@@ -25,14 +25,14 @@ export function TradeForm({ title, assets, exchanges, submitting, onSubmit }: Tr
     event.preventDefault();
     const ok = await onSubmit({
       ...form,
-      feeAmount: form.feeAmount?.trim() ? form.feeAmount.trim() : undefined,
+      feePercentage: form.feePercentage?.trim() ? form.feePercentage.trim() : undefined,
       feeCurrency: form.feeCurrency?.trim() ? form.feeCurrency.trim().toUpperCase() : undefined
     });
     if (ok) {
       setForm((current) => ({
         ...current,
         grossAmount: '',
-        feeAmount: '',
+        feePercentage: '',
         unitPriceUsd: ''
       }));
     }
@@ -94,15 +94,19 @@ export function TradeForm({ title, assets, exchanges, submitting, onSubmit }: Tr
         required
       />
 
-      <label htmlFor={`${title}-feeAmount`}>Fee Amount (optional)</label>
-      <input
-        id={`${title}-feeAmount`}
-        type="number"
-        min="0"
-        step="any"
-        value={form.feeAmount ?? ''}
-        onChange={(event) => setForm((current) => ({ ...current, feeAmount: event.target.value }))}
-      />
+      <label htmlFor={`${title}-feePercentage`}>Fee Percentage (optional)</label>
+      <div className="input-with-suffix">
+        <input
+          id={`${title}-feePercentage`}
+          type="number"
+          min="0"
+          step="any"
+          value={form.feePercentage ?? ''}
+          onChange={(event) => setForm((current) => ({ ...current, feePercentage: event.target.value }))}
+        />
+        <span className="input-suffix">%</span>
+      </div>
+      <p className="field-help">Enter 1 for 1% (stored as 0.01)</p>
 
       <label htmlFor={`${title}-feeCurrency`}>Fee Currency (optional)</label>
       <input

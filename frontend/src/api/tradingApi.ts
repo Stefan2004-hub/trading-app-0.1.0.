@@ -9,11 +9,17 @@ import type {
 } from '../types/trading';
 
 function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
+  const feePercentage = payload.feePercentage ? Number(payload.feePercentage) : null;
+  const feeAmount =
+    feePercentage !== null && Number.isFinite(feePercentage)
+      ? (feePercentage / 100).toString()
+      : null;
+
   return {
     assetId: payload.assetId,
     exchangeId: payload.exchangeId,
     grossAmount: payload.grossAmount,
-    feeAmount: payload.feeAmount ? payload.feeAmount : null,
+    feeAmount,
     feeCurrency: payload.feeCurrency ? payload.feeCurrency : null,
     unitPriceUsd: payload.unitPriceUsd,
     transactionDate: payload.transactionDate ? payload.transactionDate : null

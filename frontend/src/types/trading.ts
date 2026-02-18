@@ -55,7 +55,7 @@ export interface TradeFormPayload {
   assetId: string;
   exchangeId: string;
   grossAmount: string;
-  feeAmount?: string;
+  feePercentage?: string;
   feeCurrency?: string;
   unitPriceUsd: string;
   transactionDate?: string;
