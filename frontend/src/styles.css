@@ -96,6 +96,30 @@ p {
   gap: 0.6rem;
 }
 
+.input-with-suffix {
+  position: relative;
+}
+
+.input-with-suffix input {
+  padding-right: 2rem;
+}
+
+.input-suffix {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  color: #475569;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.field-help {
+  margin: -0.35rem 0 0.15rem;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
