@@ -12,7 +12,7 @@ function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
   const feePercentage = payload.feePercentage ? Number(payload.feePercentage) : null;
   const feeAmount =
     feePercentage !== null && Number.isFinite(feePercentage)
-      ? (feePercentage / 100).toString()
+      ? (feePercentage / 10).toString()
       : null;
 
   return {
