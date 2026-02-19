@@ -14,6 +14,7 @@ public record TransactionResponse(
     TransactionType transactionType,
     BigDecimal grossAmount,
     BigDecimal feeAmount,
+    BigDecimal feePercentage,
     String feeCurrency,
     BigDecimal netAmount,
     BigDecimal unitPriceUsd,

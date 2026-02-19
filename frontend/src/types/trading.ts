@@ -10,6 +10,7 @@ export interface ExchangeOption {
 }
 
 export type TransactionType = 'BUY' | 'SELL';
+export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
 
 export interface TransactionItem {
   id: string;
@@ -19,6 +20,7 @@ export interface TransactionItem {
   transactionType: TransactionType;
   grossAmount: string;
   feeAmount: string | null;
+  feePercentage: string | null;
   feeCurrency: string | null;
   netAmount: string;
   unitPriceUsd: string;
@@ -54,7 +56,10 @@ export interface PortfolioSummary {
 export interface TradeFormPayload {
   assetId: string;
   exchangeId: string;
-  grossAmount: string;
+  grossAmount?: string;
+  usdAmount?: string;
+  inputMode?: BuyInputMode;
+  feeAmount?: string;
   feePercentage?: string;
   feeCurrency?: string;
   unitPriceUsd: string;

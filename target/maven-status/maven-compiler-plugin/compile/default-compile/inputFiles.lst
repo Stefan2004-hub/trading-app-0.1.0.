@@ -9,6 +9,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/RouteProbeController.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/StrategyController.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/TransactionController.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/UserPreferenceController.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/controller/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/AccumulationTrade.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/Asset.java
@@ -20,9 +21,11 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/StrategyAlert.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/Transaction.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/User.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/UserPreference.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/entity/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/AccumulationTradeStatus.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/AuthProvider.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/BuyInputMode.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/StrategyAlertStatus.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/StrategyType.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/enums/TransactionType.java
@@ -40,6 +43,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/SellStrategyRepository.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/StrategyAlertRepository.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/TransactionRepository.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/UserPreferenceRepository.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/UserRepository.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/domain/repository/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/auth/AuthResponse.java
@@ -73,6 +77,8 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/transaction/SellTransactionRequest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/transaction/TransactionResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/transaction/package-info.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/user/UpdateUserPreferenceRequest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/user/UserPreferenceResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/exception/ApiErrorResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/exception/ApiExceptionHandler.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/exception/ApiFieldViolation.java
@@ -116,3 +122,5 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/AccumulationTradeServiceImpl.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/TransactionService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/transaction/TransactionServiceImpl.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/user/UserPreferenceService.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/user/UserPreferenceServiceImpl.java

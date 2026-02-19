@@ -4,6 +4,7 @@ import com.trading.domain.entity.Asset;
 import com.trading.domain.entity.Exchange;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
+import com.trading.domain.enums.BuyInputMode;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.ExchangeRepository;
@@ -15,6 +16,7 @@ import com.trading.dto.transaction.TransactionResponse;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +30,8 @@ public class TransactionServiceImpl implements TransactionService {
 
     private static final String USD = "USD";
     private static final BigDecimal ZERO = BigDecimal.ZERO;
+    private static final int DIVISION_SCALE = 18;
+    private static final int FEE_PERCENTAGE_SCALE = 6;
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
@@ -67,24 +71,30 @@ public class TransactionServiceImpl implements TransactionService {
         Exchange exchange = exchangeRepository.findById(request.exchangeId())
             .orElseThrow(() -> new IllegalArgumentException("Exchange not found: " + request.exchangeId()));
 
-        BigDecimal feeAmount = normalizeFee(request.feeAmount());
-        String normalizedFeeCurrency = normalizeFeeCurrency(request.feeCurrency());
+        BigDecimal grossAmount = resolveBuyGrossAmount(request);
+        FeeState feeState = resolveFeeState(
+            grossAmount,
+            asset.getSymbol(),
+            request.feeAmount(),
+            request.feePercentage(),
+            request.feeCurrency()
+        );
 
-        BigDecimal netAmount = request.grossAmount();
-        BigDecimal totalSpentUsd = request.grossAmount().multiply(request.unitPriceUsd());
+        BigDecimal netAmount = grossAmount;
+        BigDecimal totalSpentUsd = grossAmount.multiply(request.unitPriceUsd());
 
-        if (feeAmount.compareTo(ZERO) > 0) {
-            if (USD.equals(normalizedFeeCurrency)) {
-                totalSpentUsd = totalSpentUsd.add(feeAmount);
-            } else if (asset.getSymbol().equalsIgnoreCase(normalizedFeeCurrency)) {
-                netAmount = request.grossAmount().subtract(feeAmount);
+        if (feeState.feeAmount().compareTo(ZERO) > 0) {
+            if (USD.equals(feeState.feeCurrency())) {
+                totalSpentUsd = totalSpentUsd.add(feeState.feeAmount());
+            } else if (asset.getSymbol().equalsIgnoreCase(feeState.feeCurrency())) {
+                netAmount = grossAmount.subtract(feeState.feeAmount());
                 if (netAmount.compareTo(ZERO) <= 0) {
                     throw new IllegalArgumentException("netAmount must be positive after asset-denominated fee");
                 }
             } else {
                 throw new IllegalArgumentException("Unsupported fee currency: " + request.feeCurrency());
             }
-        } else if (normalizedFeeCurrency != null && !normalizedFeeCurrency.isBlank()) {
+        } else if (feeState.feeCurrency() != null && !feeState.feeCurrency().isBlank()) {
             throw new IllegalArgumentException("feeCurrency requires feeAmount greater than zero");
         }
 
@@ -93,9 +103,10 @@ public class TransactionServiceImpl implements TransactionService {
         tx.setAsset(asset);
         tx.setExchange(exchange);
         tx.setTransactionType(TransactionType.BUY);
-        tx.setGrossAmount(request.grossAmount());
-        tx.setFeeAmount(feeAmount);
-        tx.setFeeCurrency(normalizedFeeCurrency);
+        tx.setGrossAmount(grossAmount);
+        tx.setFeeAmount(feeState.feeAmount());
+        tx.setFeePercentage(feeState.feePercentage());
+        tx.setFeeCurrency(feeState.feeCurrency());
         tx.setNetAmount(netAmount);
         tx.setUnitPriceUsd(request.unitPriceUsd());
         tx.setTotalSpentUsd(totalSpentUsd);
@@ -119,8 +130,13 @@ public class TransactionServiceImpl implements TransactionService {
         Exchange exchange = exchangeRepository.findById(request.exchangeId())
             .orElseThrow(() -> new IllegalArgumentException("Exchange not found: " + request.exchangeId()));
 
-        BigDecimal feeAmount = normalizeFee(request.feeAmount());
-        String normalizedFeeCurrency = normalizeFeeCurrency(request.feeCurrency());
+        FeeState feeState = resolveFeeState(
+            request.grossAmount(),
+            asset.getSymbol(),
+            request.feeAmount(),
+            request.feePercentage(),
+            request.feeCurrency()
+        );
 
         PositionState currentPosition = calculateCurrentPosition(userId, asset.getId());
         if (currentPosition.quantity().compareTo(request.grossAmount()) < 0) {
@@ -129,18 +145,18 @@ public class TransactionServiceImpl implements TransactionService {
 
         BigDecimal proceedsUsd = request.grossAmount().multiply(request.unitPriceUsd());
         BigDecimal netAmount = request.grossAmount();
-        if (feeAmount.compareTo(ZERO) > 0) {
-            if (USD.equals(normalizedFeeCurrency)) {
-                proceedsUsd = proceedsUsd.subtract(feeAmount);
-            } else if (asset.getSymbol().equalsIgnoreCase(normalizedFeeCurrency)) {
-                netAmount = request.grossAmount().subtract(feeAmount);
+        if (feeState.feeAmount().compareTo(ZERO) > 0) {
+            if (USD.equals(feeState.feeCurrency())) {
+                proceedsUsd = proceedsUsd.subtract(feeState.feeAmount());
+            } else if (asset.getSymbol().equalsIgnoreCase(feeState.feeCurrency())) {
+                netAmount = request.grossAmount().subtract(feeState.feeAmount());
                 if (netAmount.compareTo(ZERO) <= 0) {
                     throw new IllegalArgumentException("netAmount must be positive after asset-denominated fee");
                 }
             } else {
                 throw new IllegalArgumentException("Unsupported fee currency: " + request.feeCurrency());
             }
-        } else if (normalizedFeeCurrency != null && !normalizedFeeCurrency.isBlank()) {
+        } else if (feeState.feeCurrency() != null && !feeState.feeCurrency().isBlank()) {
             throw new IllegalArgumentException("feeCurrency requires feeAmount greater than zero");
         }
 
@@ -164,8 +180,9 @@ public class TransactionServiceImpl implements TransactionService {
         tx.setExchange(exchange);
         tx.setTransactionType(TransactionType.SELL);
         tx.setGrossAmount(request.grossAmount());
-        tx.setFeeAmount(feeAmount);
-        tx.setFeeCurrency(normalizedFeeCurrency);
+        tx.setFeeAmount(feeState.feeAmount());
+        tx.setFeePercentage(feeState.feePercentage());
+        tx.setFeeCurrency(feeState.feeCurrency());
         tx.setNetAmount(netAmount);
         tx.setUnitPriceUsd(request.unitPriceUsd());
         tx.setTotalSpentUsd(proceedsUsd);
@@ -179,17 +196,39 @@ public class TransactionServiceImpl implements TransactionService {
     private static void validateRequest(BuyTransactionRequest request) {
         Objects.requireNonNull(request.assetId(), "assetId is required");
         Objects.requireNonNull(request.exchangeId(), "exchangeId is required");
-        Objects.requireNonNull(request.grossAmount(), "grossAmount is required");
+        Objects.requireNonNull(request.inputMode(), "inputMode is required");
         Objects.requireNonNull(request.unitPriceUsd(), "unitPriceUsd is required");
 
-        if (request.grossAmount().compareTo(ZERO) <= 0) {
-            throw new IllegalArgumentException("grossAmount must be positive");
+        if (request.inputMode() == BuyInputMode.COIN_AMOUNT) {
+            Objects.requireNonNull(request.grossAmount(), "grossAmount is required when inputMode is COIN_AMOUNT");
+            if (request.grossAmount().compareTo(ZERO) <= 0) {
+                throw new IllegalArgumentException("grossAmount must be positive");
+            }
+        } else {
+            Objects.requireNonNull(request.usdAmount(), "usdAmount is required when inputMode is USD_AMOUNT");
+            if (request.usdAmount().compareTo(ZERO) <= 0) {
+                throw new IllegalArgumentException("usdAmount must be positive");
+            }
         }
         if (request.unitPriceUsd().compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException("unitPriceUsd must be positive");
         }
-        if (request.feeAmount() != null && request.feeAmount().compareTo(ZERO) < 0) {
+        validateFeeFields(request.feeAmount(), request.feePercentage());
+    }
+
+    private static BigDecimal resolveBuyGrossAmount(BuyTransactionRequest request) {
+        if (request.inputMode() == BuyInputMode.USD_AMOUNT) {
+            return request.usdAmount().divide(request.unitPriceUsd(), DIVISION_SCALE, RoundingMode.HALF_UP);
+        }
+        return request.grossAmount();
+    }
+
+    private static void validateFeeFields(BigDecimal feeAmount, BigDecimal feePercentage) {
+        if (feeAmount != null && feeAmount.compareTo(ZERO) < 0) {
             throw new IllegalArgumentException("feeAmount must be zero or positive");
+        }
+        if (feePercentage != null && feePercentage.compareTo(ZERO) < 0) {
+            throw new IllegalArgumentException("feePercentage must be zero or positive");
         }
     }
 
@@ -205,9 +244,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (request.unitPriceUsd().compareTo(ZERO) <= 0) {
             throw new IllegalArgumentException("unitPriceUsd must be positive");
         }
-        if (request.feeAmount() != null && request.feeAmount().compareTo(ZERO) < 0) {
-            throw new IllegalArgumentException("feeAmount must be zero or positive");
-        }
+        validateFeeFields(request.feeAmount(), request.feePercentage());
     }
 
     private static BigDecimal normalizeFee(BigDecimal feeAmount) {
@@ -221,6 +258,36 @@ public class TransactionServiceImpl implements TransactionService {
         return feeCurrency.trim().toUpperCase(Locale.ROOT);
     }
 
+    private static FeeState resolveFeeState(
+        BigDecimal grossAmount,
+        String assetSymbol,
+        BigDecimal feeAmountRequest,
+        BigDecimal feePercentageRequest,
+        String feeCurrencyRequest
+    ) {
+        BigDecimal feeAmount = normalizeFee(feeAmountRequest);
+        String feeCurrency = normalizeFeeCurrency(feeCurrencyRequest);
+        BigDecimal feePercentage = feePercentageRequest;
+
+        if (feePercentage != null) {
+            if (feeCurrency == null) {
+                feeCurrency = assetSymbol.toUpperCase(Locale.ROOT);
+            }
+            if (!assetSymbol.equalsIgnoreCase(feeCurrency)) {
+                throw new IllegalArgumentException("feePercentage requires asset-denominated feeCurrency");
+            }
+            feeAmount = grossAmount.multiply(feePercentage);
+        } else if (feeAmount.compareTo(ZERO) > 0 && feeCurrency == null) {
+            feeCurrency = assetSymbol.toUpperCase(Locale.ROOT);
+        }
+
+        if (feePercentage == null && feeAmount.compareTo(ZERO) > 0 && assetSymbol.equalsIgnoreCase(feeCurrency)) {
+            feePercentage = feeAmount.divide(grossAmount, FEE_PERCENTAGE_SCALE, RoundingMode.HALF_UP);
+        }
+
+        return new FeeState(feeAmount, feePercentage, feeCurrency);
+    }
+
     private static TransactionResponse toResponse(Transaction transaction) {
         return new TransactionResponse(
             transaction.getId(),
@@ -230,6 +297,7 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.getTransactionType(),
             transaction.getGrossAmount(),
             transaction.getFeeAmount(),
+            transaction.getFeePercentage(),
             transaction.getFeeCurrency(),
             transaction.getNetAmount(),
             transaction.getUnitPriceUsd(),
@@ -277,5 +345,8 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private record PositionState(BigDecimal quantity, BigDecimal costBasisUsd) {
+    }
+
+    private record FeeState(BigDecimal feeAmount, BigDecimal feePercentage, String feeCurrency) {
     }
 }
