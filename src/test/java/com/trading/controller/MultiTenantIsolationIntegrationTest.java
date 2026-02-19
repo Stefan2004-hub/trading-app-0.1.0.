@@ -12,6 +12,7 @@ import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
 import com.trading.service.transaction.TransactionService;
+import com.trading.service.user.UserPreferenceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -65,6 +66,9 @@ class MultiTenantIsolationIntegrationTest {
 
     @MockBean
     private LookupService lookupService;
+
+    @MockBean
+    private UserPreferenceService userPreferenceService;
 
     @Test
     void userCannotReadAnotherUsersTransactions() throws Exception {
@@ -132,6 +136,7 @@ class MultiTenantIsolationIntegrationTest {
             TransactionType.BUY,
             new BigDecimal("0.3"),
             BigDecimal.ZERO,
+            null,
             null,
             new BigDecimal("0.3"),
             new BigDecimal("60000"),

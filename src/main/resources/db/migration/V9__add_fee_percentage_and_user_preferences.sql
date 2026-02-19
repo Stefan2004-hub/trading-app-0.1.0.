@@ -1,0 +1,11 @@
+ALTER TABLE transactions
+    ADD COLUMN fee_percentage NUMERIC(10, 6);
+
+CREATE TABLE user_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    default_buy_input_mode VARCHAR(20) NOT NULL DEFAULT 'COIN_AMOUNT'
+        CHECK (default_buy_input_mode IN ('COIN_AMOUNT', 'USD_AMOUNT')),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

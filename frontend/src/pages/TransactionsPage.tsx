@@ -3,14 +3,19 @@ import { AppHeader } from '../components/AppHeader';
 import { PortfolioSummaryCards } from '../components/PortfolioSummaryCards';
 import { TradeForm } from '../components/TradeForm';
 import { TransactionHistoryTable } from '../components/TransactionHistoryTable';
-import { clearTradingError, loadTradingBootstrap, submitBuyTrade, submitSellTrade } from '../store/tradingSlice';
+import {
+  clearTradingError,
+  loadTradingBootstrap,
+  submitBuyTrade,
+  submitSellTrade,
+  updateDefaultBuyInputMode
+} from '../store/tradingSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function TransactionsPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const { assets, exchanges, transactions, summary, loading, bootstrapAttempted, submitting, error } = useAppSelector(
-    (state) => state.trading
-  );
+  const { assets, exchanges, transactions, summary, loading, bootstrapAttempted, submitting, error, userPreferences } =
+    useAppSelector((state) => state.trading);
 
   useEffect(() => {
     if (loading || bootstrapAttempted) {
@@ -31,9 +36,14 @@ export function TransactionsPage(): JSX.Element {
         <section className="forms-grid">
           <TradeForm
             title="Buy"
+            tradeType="BUY"
             assets={assets}
             exchanges={exchanges}
             submitting={submitting}
+            defaultBuyInputMode={userPreferences?.defaultBuyInputMode}
+            onBuyInputModeChange={(mode) => {
+              void dispatch(updateDefaultBuyInputMode(mode));
+            }}
             onSubmit={async (payload) => {
               dispatch(clearTradingError());
               const action = await dispatch(submitBuyTrade(payload));
@@ -43,6 +53,7 @@ export function TransactionsPage(): JSX.Element {
 
           <TradeForm
             title="Sell"
+            tradeType="SELL"
             assets={assets}
             exchanges={exchanges}
             submitting={submitting}

@@ -19,6 +19,8 @@ public record SellTransactionRequest(
     BigDecimal grossAmount,
     @PositiveOrZero(message = "feeAmount must be zero or positive")
     BigDecimal feeAmount,
+    @PositiveOrZero(message = "feePercentage must be zero or positive")
+    BigDecimal feePercentage,
     @Size(max = 10, message = "feeCurrency must be at most 10 characters")
     String feeCurrency,
     @NotNull(message = "unitPriceUsd is required")

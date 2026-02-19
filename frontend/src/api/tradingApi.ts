@@ -8,18 +8,18 @@ import type {
   TransactionItem
 } from '../types/trading';
 
-function toTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
-  const feePercentage = payload.feePercentage ? Number(payload.feePercentage) : null;
-  const feeAmount =
-    feePercentage !== null && Number.isFinite(feePercentage)
-      ? (feePercentage / 10).toString()
+function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
+  const feePercentage =
+    payload.feePercentage && Number.isFinite(Number(payload.feePercentage))
+      ? (Number(payload.feePercentage) / 100).toString()
       : null;
+  const feeAmount = payload.feeAmount?.trim() ? payload.feeAmount.trim() : null;
 
   return {
     assetId: payload.assetId,
     exchangeId: payload.exchangeId,
-    grossAmount: payload.grossAmount,
     feeAmount,
+    feePercentage,
     feeCurrency: payload.feeCurrency ? payload.feeCurrency : null,
     unitPriceUsd: payload.unitPriceUsd,
     transactionDate: payload.transactionDate ? payload.transactionDate : null
@@ -48,16 +48,26 @@ export const tradingApi = {
   },
 
   buy(payload: TradeFormPayload): Promise<TransactionItem> {
+    const base = toBaseTradeRequest(payload);
     return request<TransactionItem>('/api/transactions/buy', {
       method: 'POST',
-      body: toTradeRequest(payload)
+      body: {
+        ...base,
+        grossAmount: payload.grossAmount ? payload.grossAmount : null,
+        usdAmount: payload.usdAmount ? payload.usdAmount : null,
+        inputMode: payload.inputMode ? payload.inputMode : 'COIN_AMOUNT'
+      }
     });
   },
 
   sell(payload: TradeFormPayload): Promise<TransactionItem> {
+    const base = toBaseTradeRequest(payload);
     return request<TransactionItem>('/api/transactions/sell', {
       method: 'POST',
-      body: toTradeRequest(payload)
+      body: {
+        ...base,
+        grossAmount: payload.grossAmount
+      }
     });
   }
 };

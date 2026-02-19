@@ -34,6 +34,8 @@ export function TransactionHistoryTable({
                 <th>Asset</th>
                 <th>Exchange</th>
                 <th>Amount</th>
+                <th>Fee Amount</th>
+                <th>Fee %</th>
                 <th>Price</th>
                 <th>Total</th>
                 <th>Realized PnL</th>
@@ -47,6 +49,11 @@ export function TransactionHistoryTable({
                   <td>{labelAsset(tx.assetId, assets)}</td>
                   <td>{labelExchange(tx.exchangeId, exchanges)}</td>
                   <td>{formatNumber(tx.netAmount)}</td>
+                  <td>
+                    {formatNumber(tx.feeAmount)}
+                    {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
+                  </td>
+                  <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
                   <td>{formatUsd(tx.unitPriceUsd)}</td>
                   <td>{formatUsd(tx.totalSpentUsd)}</td>
                   <td>{formatUsd(tx.realizedPnl)}</td>
