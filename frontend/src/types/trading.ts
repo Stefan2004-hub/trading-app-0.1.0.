@@ -65,3 +65,10 @@ export interface TradeFormPayload {
   unitPriceUsd: string;
   transactionDate?: string;
 }
+
+export interface UpdateTransactionPayload {
+  grossAmount: string;
+  feeAmount?: string;
+  feePercentage?: string;
+  unitPriceUsd: string;
+}

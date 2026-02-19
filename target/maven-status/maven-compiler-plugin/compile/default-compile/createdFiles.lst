@@ -6,7 +6,6 @@ com/trading/exception/DuplicateUsernameException.class
 com/trading/domain/repository/PricePeakRepository.class
 com/trading/dto/auth/RegisterRequest.class
 com/trading/dto/portfolio/PortfolioAssetPerformanceResponse.class
-com/trading/service/transaction/TransactionServiceImpl$PositionState.class
 com/trading/dto/transaction/CloseAccumulationTradeRequest.class
 com/trading/service/lookup/LookupSeedInitializer$SeedExchange.class
 com/trading/controller/StrategyController.class
