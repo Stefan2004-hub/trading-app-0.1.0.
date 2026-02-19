@@ -76,10 +76,12 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal grossAmount = resolveBuyGrossAmount(request);
         FeeState feeState = resolveFeeState(
             grossAmount,
+            request.unitPriceUsd(),
             asset.getSymbol(),
             request.feeAmount(),
             request.feePercentage(),
-            request.feeCurrency()
+            request.feeCurrency(),
+            false
         );
 
         AmountState amountState = calculateBuyAmounts(grossAmount, request.unitPriceUsd(), feeState, asset.getSymbol());
@@ -122,10 +124,12 @@ public class TransactionServiceImpl implements TransactionService {
 
         FeeState feeState = resolveFeeState(
             request.grossAmount(),
+            request.unitPriceUsd(),
             asset.getSymbol(),
             request.feeAmount(),
             request.feePercentage(),
-            request.feeCurrency()
+            request.feeCurrency(),
+            true
         );
 
         AmountState amountState = calculateSellAmounts(request.grossAmount(), request.unitPriceUsd(), feeState, asset.getSymbol());
@@ -257,23 +261,35 @@ public class TransactionServiceImpl implements TransactionService {
 
     private static FeeState resolveFeeState(
         BigDecimal grossAmount,
+        BigDecimal unitPriceUsd,
         String assetSymbol,
         BigDecimal feeAmountRequest,
         BigDecimal feePercentageRequest,
-        String feeCurrencyRequest
+        String feeCurrencyRequest,
+        boolean isSell
     ) {
         BigDecimal feeAmount = normalizeFee(feeAmountRequest);
         String feeCurrency = normalizeFeeCurrency(feeCurrencyRequest);
         BigDecimal feePercentage = feePercentageRequest;
 
         if (feePercentage != null) {
-            if (feeCurrency == null) {
-                feeCurrency = assetSymbol.toUpperCase(Locale.ROOT);
+            if (isSell) {
+                if (feeCurrency == null) {
+                    feeCurrency = USD;
+                }
+                if (!USD.equalsIgnoreCase(feeCurrency)) {
+                    throw new IllegalArgumentException("sell feePercentage requires USD feeCurrency");
+                }
+                feeAmount = grossAmount.multiply(unitPriceUsd).multiply(feePercentage);
+            } else {
+                if (feeCurrency == null) {
+                    feeCurrency = assetSymbol.toUpperCase(Locale.ROOT);
+                }
+                if (!assetSymbol.equalsIgnoreCase(feeCurrency)) {
+                    throw new IllegalArgumentException("buy feePercentage requires asset-denominated feeCurrency");
+                }
+                feeAmount = grossAmount.multiply(feePercentage);
             }
-            if (!assetSymbol.equalsIgnoreCase(feeCurrency)) {
-                throw new IllegalArgumentException("feePercentage requires asset-denominated feeCurrency");
-            }
-            feeAmount = grossAmount.multiply(feePercentage);
         } else if (feeAmount.compareTo(ZERO) > 0 && feeCurrency == null) {
             feeCurrency = assetSymbol.toUpperCase(Locale.ROOT);
         }
@@ -310,10 +326,12 @@ public class TransactionServiceImpl implements TransactionService {
         for (Transaction tx : history) {
             FeeState feeState = resolveFeeState(
                 tx.getGrossAmount(),
+                tx.getUnitPriceUsd(),
                 tx.getAsset().getSymbol(),
                 tx.getFeeAmount(),
                 tx.getFeePercentage(),
-                tx.getFeeCurrency()
+                tx.getFeeCurrency(),
+                tx.getTransactionType() == TransactionType.SELL
             );
             tx.setFeeAmount(feeState.feeAmount());
             tx.setFeePercentage(feeState.feePercentage());
@@ -345,14 +363,20 @@ public class TransactionServiceImpl implements TransactionService {
                 tx.setNetAmount(sellAmounts.netAmount());
                 tx.setTotalSpentUsd(sellAmounts.totalUsd());
 
-                BigDecimal averageCostPerUnit = runningQuantity.compareTo(ZERO) == 0
-                    ? ZERO
-                    : runningCostBasisUsd.divide(runningQuantity, COST_SCALE, RoundingMode.HALF_UP);
-                BigDecimal soldCostBasisUsd = averageCostPerUnit.multiply(tx.getGrossAmount());
+                BigDecimal soldCostBasisUsd;
+                if (runningQuantity.compareTo(tx.getGrossAmount()) == 0) {
+                    soldCostBasisUsd = runningCostBasisUsd;
+                    runningCostBasisUsd = ZERO;
+                } else {
+                    BigDecimal averageCostPerUnit = runningQuantity.compareTo(ZERO) == 0
+                        ? ZERO
+                        : runningCostBasisUsd.divide(runningQuantity, COST_SCALE, RoundingMode.HALF_UP);
+                    soldCostBasisUsd = averageCostPerUnit.multiply(tx.getGrossAmount());
+                    runningCostBasisUsd = runningCostBasisUsd.subtract(soldCostBasisUsd);
+                }
                 tx.setRealizedPnl(tx.getTotalSpentUsd().subtract(soldCostBasisUsd));
 
                 runningQuantity = runningQuantity.subtract(tx.getGrossAmount());
-                runningCostBasisUsd = runningCostBasisUsd.subtract(soldCostBasisUsd);
             }
         }
 

@@ -39,22 +39,31 @@ function formatCalculated(value: number): string {
   return Number.isFinite(value) ? value.toFixed(18).replace(/\.?0+$/, '') : '';
 }
 
+function asText(value: unknown): string {
+  return value == null ? '' : String(value);
+}
+
 function toInitialState(transaction: TransactionItem): SellFormState {
-  const gross = Number(transaction.grossAmount);
+  const sellQuantity = Number(transaction.netAmount);
+  const unitPrice = Number(transaction.unitPriceUsd ?? '0');
   const feeAmount = transaction.feeAmount ? Number(transaction.feeAmount) : null;
   const feePercentage = transaction.feePercentage ? Number(transaction.feePercentage) * 100 : null;
+  const notionalUsd = sellQuantity > 0 && unitPrice > 0 ? sellQuantity * unitPrice : 0;
 
-  const fallbackPercentage = feeAmount && gross > 0 ? (feeAmount / gross) * 100 : null;
+  const fallbackPercentage = feeAmount && notionalUsd > 0 ? (feeAmount / notionalUsd) * 100 : null;
 
   return {
     feeAmountUsd: transaction.feeAmount ?? '',
     feePercentage: formatCalculated(feePercentage ?? fallbackPercentage ?? 0),
-    unitPriceUsd: ''
+    unitPriceUsd: asText(transaction.unitPriceUsd)
   };
 }
 
 function syncFee(form: SellFormState, grossAmount: number, mode: 'PERCENTAGE' | 'AMOUNT'): SellFormState {
-  if (!mode || !Number.isFinite(grossAmount) || grossAmount <= 0) {
+  const unitPriceUsd = parsePositive(form.unitPriceUsd);
+  const notionalUsd = unitPriceUsd ? grossAmount * unitPriceUsd : null;
+
+  if (!mode || !Number.isFinite(grossAmount) || grossAmount <= 0 || !notionalUsd || notionalUsd <= 0) {
     return form;
   }
 
@@ -63,14 +72,14 @@ function syncFee(form: SellFormState, grossAmount: number, mode: 'PERCENTAGE' | 
     if (!percentage) {
       return { ...form, feeAmountUsd: '' };
     }
-    return { ...form, feeAmountUsd: formatCalculated((grossAmount * percentage) / 100) };
+    return { ...form, feeAmountUsd: formatCalculated((notionalUsd * percentage) / 100) };
   }
 
   const amount = parsePositive(form.feeAmountUsd);
   if (!amount) {
     return { ...form, feePercentage: '' };
   }
-  return { ...form, feePercentage: formatCalculated((amount / grossAmount) * 100) };
+  return { ...form, feePercentage: formatCalculated((amount / notionalUsd) * 100) };
 }
 
 export function SellTransactionModal({
@@ -92,7 +101,7 @@ export function SellTransactionModal({
     setForm(toInitialState(transaction));
   }, [open, transaction]);
 
-  const grossAmount = useMemo(() => Number(transaction?.grossAmount ?? '0'), [transaction]);
+  const sellQuantity = useMemo(() => Number(transaction?.netAmount ?? '0'), [transaction]);
 
   if (!open || !transaction) {
     return null;
@@ -101,14 +110,15 @@ export function SellTransactionModal({
 
   async function handleSubmit(): Promise<void> {
     setSaving(true);
+    const unitPriceUsd = asText(form.unitPriceUsd).trim();
     const payload: TradeFormPayload = {
       assetId: activeTransaction.assetId,
       exchangeId: activeTransaction.exchangeId,
-      grossAmount: activeTransaction.grossAmount,
+      grossAmount: activeTransaction.netAmount,
       feeAmount: form.feeAmountUsd.trim() ? form.feeAmountUsd.trim() : undefined,
-      feePercentage: undefined,
+      feePercentage: form.feePercentage.trim() ? form.feePercentage.trim() : undefined,
       feeCurrency: 'USD',
-      unitPriceUsd: form.unitPriceUsd
+      unitPriceUsd
     };
 
     const ok = await onSubmit(payload);
@@ -128,7 +138,7 @@ export function SellTransactionModal({
           <strong>Exchange:</strong> {exchangeLabel}
         </p>
         <p>
-          <strong>Amount:</strong> {activeTransaction.grossAmount} coins (fixed)
+          <strong>Amount:</strong> {activeTransaction.netAmount} coins (fixed)
         </p>
 
         <Label htmlFor="sell-fee-percentage">Fee Percentage</Label>
@@ -140,7 +150,7 @@ export function SellTransactionModal({
             step="any"
             value={form.feePercentage}
             onChange={(event) => {
-              setForm((current) => syncFee({ ...current, feePercentage: event.target.value }, grossAmount, 'PERCENTAGE'));
+              setForm((current) => syncFee({ ...current, feePercentage: event.target.value }, sellQuantity, 'PERCENTAGE'));
             }}
           />
           <span className="input-suffix">%</span>
@@ -154,7 +164,7 @@ export function SellTransactionModal({
           step="any"
             value={form.feeAmountUsd}
             onChange={(event) => {
-              setForm((current) => syncFee({ ...current, feeAmountUsd: event.target.value }, grossAmount, 'AMOUNT'));
+              setForm((current) => syncFee({ ...current, feeAmountUsd: event.target.value }, sellQuantity, 'AMOUNT'));
             }}
           />
 
@@ -164,8 +174,19 @@ export function SellTransactionModal({
           type="number"
           min="0.000000000000000001"
           step="any"
-          value={form.unitPriceUsd}
-          onChange={(event) => setForm((current) => ({ ...current, unitPriceUsd: event.target.value }))}
+          value={asText(form.unitPriceUsd)}
+          onChange={(event) =>
+            setForm((current) => {
+              const next = { ...current, unitPriceUsd: event.target.value };
+              if (next.feePercentage.trim()) {
+                return syncFee(next, sellQuantity, 'PERCENTAGE');
+              }
+              if (next.feeAmountUsd.trim()) {
+                return syncFee(next, sellQuantity, 'AMOUNT');
+              }
+              return next;
+            })
+          }
           required
         />
       </div>
@@ -180,7 +201,7 @@ export function SellTransactionModal({
           onClick={() => {
             void handleSubmit();
           }}
-          disabled={saving || !form.unitPriceUsd.trim()}
+          disabled={saving || !asText(form.unitPriceUsd).trim()}
         >
           {saving ? <span className="button-spinner" aria-hidden="true" /> : null}
           {saving ? 'Selling...' : 'Sell'}

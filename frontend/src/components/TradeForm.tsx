@@ -102,9 +102,11 @@ export function TradeForm({
 
   function syncFeeByMode(nextForm: LocalTradeFormState, mode: FeeInputMode): LocalTradeFormState {
     const grossAmount = effectiveGrossFrom(nextForm);
+    const unitPriceUsd = parsePositive(nextForm.unitPriceUsd);
+    const feeBaseAmount = tradeType === 'SELL' && grossAmount && unitPriceUsd ? grossAmount * unitPriceUsd : grossAmount;
     const nextAssetSymbol = assets.find((asset) => asset.id === nextForm.assetId)?.symbol ?? '';
-    const feeCurrency = nextForm.feeCurrency || nextAssetSymbol;
-    if (!mode || !grossAmount) {
+    const feeCurrency = nextForm.feeCurrency || (tradeType === 'SELL' ? 'USD' : nextAssetSymbol);
+    if (!mode || !feeBaseAmount) {
       return nextForm;
     }
 
@@ -115,7 +117,7 @@ export function TradeForm({
       }
       return {
         ...nextForm,
-        feeAmount: formatCalculated((grossAmount * percentage) / 100),
+        feeAmount: formatCalculated((feeBaseAmount * percentage) / 100),
         feeCurrency
       };
     }
@@ -127,7 +129,7 @@ export function TradeForm({
 
     return {
       ...nextForm,
-      feePercentage: formatCalculated((amount / grossAmount) * 100),
+      feePercentage: formatCalculated((amount / feeBaseAmount) * 100),
       feeCurrency
     };
   }

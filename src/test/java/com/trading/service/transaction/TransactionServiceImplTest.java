@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +30,8 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -187,16 +190,17 @@ class TransactionServiceImplTest {
     }
 
     @Test
-    void sellWithFeePercentageCalculatesCoinFeeAndNetAmount() {
+    void sellWithFeePercentageCalculatesUsdFeeAndReducesUsdProceeds() {
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of(existingBuy("1.0", "50000", "2026-02-12T10:00:00Z")));
 
         SellTransactionRequest request = sellRequest(new BigDecimal("0.4"), null, new BigDecimal("0.01"), null);
         TransactionResponse response = transactionService.sell(userId, request);
 
-        assertEquals(0, response.feeAmount().compareTo(new BigDecimal("0.004")));
-        assertEquals(0, response.netAmount().compareTo(new BigDecimal("0.396")));
-        assertEquals("BTC", response.feeCurrency());
+        assertEquals(0, response.feeAmount().compareTo(new BigDecimal("240.000")));
+        assertEquals(0, response.netAmount().compareTo(new BigDecimal("0.4")));
+        assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("23760.000")));
+        assertEquals("USD", response.feeCurrency());
     }
 
     @Test
@@ -244,6 +248,58 @@ class TransactionServiceImplTest {
         TransactionResponse response = transactionService.sell(userId, request);
         assertEquals(0, response.grossAmount().compareTo(new BigDecimal("0.2")));
         assertEquals(TransactionType.SELL, response.transactionType());
+    }
+
+    @Test
+    void fullSellConsumesExactCostBasisWithoutResidualInvestedOrBalance() {
+        List<Transaction> history = inMemoryHistory(
+            existingBuy("1", "0.4", "2026-02-10T10:00:00Z"),
+            existingBuy("2", "0.6", "2026-02-11T10:00:00Z")
+        );
+
+        SellTransactionRequest request = sellRequest(new BigDecimal("3"), null, null, null);
+        TransactionResponse response = transactionService.sell(userId, request);
+
+        assertEquals(0, response.realizedPnl().compareTo(new BigDecimal("179999")));
+        assertEquals(0, calculateRemainingInvestedUsd(history).compareTo(BigDecimal.ZERO));
+        assertEquals(0, calculateCurrentBalance(history).compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void finalSellAfterPartialSellLeavesNoResidualInvestedOrBalance() {
+        List<Transaction> history = inMemoryHistory(
+            existingBuy("1", "0.4", "2026-02-10T10:00:00Z"),
+            existingBuy("2", "0.6", "2026-02-11T10:00:00Z")
+        );
+
+        SellTransactionRequest firstSellRequest = new SellTransactionRequest(
+            assetId,
+            exchangeId,
+            new BigDecimal("1"),
+            null,
+            null,
+            null,
+            new BigDecimal("60000"),
+            OffsetDateTime.parse("2026-02-12T10:00:00Z")
+        );
+        SellTransactionRequest finalSellRequest = new SellTransactionRequest(
+            assetId,
+            exchangeId,
+            new BigDecimal("2"),
+            null,
+            null,
+            null,
+            new BigDecimal("60000"),
+            OffsetDateTime.parse("2026-02-13T10:00:00Z")
+        );
+
+        TransactionResponse firstSell = transactionService.sell(userId, firstSellRequest);
+        TransactionResponse finalSell = transactionService.sell(userId, finalSellRequest);
+
+        assertEquals(0, firstSell.realizedPnl().compareTo(new BigDecimal("59999.666666666666666667")));
+        assertEquals(0, finalSell.realizedPnl().compareTo(new BigDecimal("119999.333333333333333333")));
+        assertEquals(0, calculateRemainingInvestedUsd(history).compareTo(BigDecimal.ZERO));
+        assertEquals(0, calculateCurrentBalance(history).compareTo(BigDecimal.ZERO));
     }
 
     private BuyTransactionRequest buyRequest(
@@ -317,5 +373,50 @@ class TransactionServiceImplTest {
         tx.setTotalSpentUsd(new BigDecimal(proceedsUsd));
         tx.setTransactionDate(OffsetDateTime.parse(txDate));
         return tx;
+    }
+
+    private List<Transaction> inMemoryHistory(Transaction... initialTransactions) {
+        List<Transaction> history = new ArrayList<>(List.of(initialTransactions));
+
+        when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
+            .thenAnswer(invocation -> new ArrayList<>(history));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction tx = invocation.getArgument(0, Transaction.class);
+            if (tx.getId() == null) {
+                tx.setId(UUID.randomUUID());
+            }
+            history.add(tx);
+            return tx;
+        });
+        when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<Transaction> saved = invocation.getArgument(0);
+            history.clear();
+            history.addAll(saved);
+            return saved;
+        });
+        when(transactionRepository.findByIdAndUser_Id(any(UUID.class), eq(userId))).thenAnswer(invocation -> {
+            UUID id = invocation.getArgument(0, UUID.class);
+            return history.stream()
+                .filter(tx -> id.equals(tx.getId()))
+                .findFirst();
+        });
+
+        return history;
+    }
+
+    private static BigDecimal calculateRemainingInvestedUsd(List<Transaction> history) {
+        return history.stream()
+            .map(tx -> tx.getTransactionType() == TransactionType.BUY
+                ? tx.getTotalSpentUsd()
+                : tx.getTotalSpentUsd().subtract(tx.getRealizedPnl()).negate())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static BigDecimal calculateCurrentBalance(List<Transaction> history) {
+        return history.stream()
+            .map(tx -> tx.getTransactionType() == TransactionType.BUY
+                ? tx.getNetAmount()
+                : tx.getNetAmount().negate())
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
