@@ -43,6 +43,9 @@ public class Transaction {
     @Column(name = "fee_amount", precision = 38, scale = 18)
     private BigDecimal feeAmount;
 
+    @Column(name = "fee_percentage", precision = 10, scale = 6)
+    private BigDecimal feePercentage;
+
     @Column(name = "fee_currency", length = 10)
     private String feeCurrency;
 
@@ -111,6 +114,14 @@ public class Transaction {
 
     public void setFeeAmount(BigDecimal feeAmount) {
         this.feeAmount = feeAmount;
+    }
+
+    public BigDecimal getFeePercentage() {
+        return feePercentage;
+    }
+
+    public void setFeePercentage(BigDecimal feePercentage) {
+        this.feePercentage = feePercentage;
     }
 
     public String getFeeCurrency() {

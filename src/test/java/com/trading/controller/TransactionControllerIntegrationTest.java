@@ -9,6 +9,7 @@ import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
 import com.trading.service.transaction.TransactionService;
+import com.trading.service.user.UserPreferenceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -65,6 +66,9 @@ class TransactionControllerIntegrationTest {
     @MockBean
     private LookupService lookupService;
 
+    @MockBean
+    private UserPreferenceService userPreferenceService;
+
     @Test
     void listEndpointReturnsExpectedPayload() throws Exception {
         UUID userId = UUID.randomUUID();
@@ -102,6 +106,7 @@ class TransactionControllerIntegrationTest {
                           "assetId": "%s",
                           "exchangeId": "%s",
                           "grossAmount": 0.5,
+                          "inputMode": "COIN_AMOUNT",
                           "feeAmount": 10.0,
                           "feeCurrency": "USD",
                           "unitPriceUsd": 100000.0,
@@ -186,7 +191,7 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.timestamp").exists())
             .andExpect(jsonPath("$.violations[*].field", hasItem("assetId")))
             .andExpect(jsonPath("$.violations[*].field", hasItem("exchangeId")))
-            .andExpect(jsonPath("$.violations[*].field", hasItem("grossAmount")))
+            .andExpect(jsonPath("$.violations[*].field", hasItem("inputMode")))
             .andExpect(jsonPath("$.violations[*].field", hasItem("unitPriceUsd")));
     }
 
@@ -209,6 +214,7 @@ class TransactionControllerIntegrationTest {
             transactionType,
             new BigDecimal("0.5"),
             new BigDecimal("10"),
+            new BigDecimal("0.02"),
             "USD",
             new BigDecimal("0.5"),
             new BigDecimal("100000"),
