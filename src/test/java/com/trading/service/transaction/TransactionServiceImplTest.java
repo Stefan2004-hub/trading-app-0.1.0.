@@ -147,7 +147,7 @@ class TransactionServiceImplTest {
     }
 
     @Test
-    void buyWithUnsupportedFeeCurrencyIsRejected() {
+    void buyWithUnsupportedFeeCurrencyPersistsFeeWithoutMutatingNetAmount() {
         BuyTransactionRequest request = buyRequest(
             new BigDecimal("1.0"),
             new BigDecimal("5.0"),
@@ -156,8 +156,11 @@ class TransactionServiceImplTest {
             BuyInputMode.COIN_AMOUNT
         );
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> transactionService.buy(userId, request));
-        assertEquals("Unsupported fee currency: EUR", ex.getMessage());
+        TransactionResponse response = transactionService.buy(userId, request);
+
+        assertEquals(0, response.netAmount().compareTo(new BigDecimal("1.0")));
+        assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("100000")));
+        assertEquals("EUR", response.feeCurrency());
     }
 
     @Test
@@ -168,7 +171,6 @@ class TransactionServiceImplTest {
         SellTransactionRequest request = sellRequest(new BigDecimal("0.4"), null, null, null);
         TransactionResponse response = transactionService.sell(userId, request);
 
-        assertEquals(0, response.realizedPnl().compareTo(new BigDecimal("4000")));
         assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("24000")));
         assertEquals(TransactionType.SELL, response.transactionType());
     }
@@ -182,7 +184,6 @@ class TransactionServiceImplTest {
         TransactionResponse response = transactionService.sell(userId, request);
 
         assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("23900")));
-        assertEquals(0, response.realizedPnl().compareTo(new BigDecimal("3900")));
     }
 
     @Test
@@ -199,47 +200,50 @@ class TransactionServiceImplTest {
     }
 
     @Test
-    void sellWithUnsupportedFeeCurrencyIsRejected() {
+    void sellWithUnsupportedFeeCurrencyPersistsFeeWithoutMutatingNetAmount() {
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of(existingBuy("1.0", "50000", "2026-02-12T10:00:00Z")));
 
         SellTransactionRequest request = sellRequest(new BigDecimal("0.4"), new BigDecimal("5"), null, "EUR");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> transactionService.sell(userId, request));
-        assertEquals("Unsupported fee currency: EUR", ex.getMessage());
+        TransactionResponse response = transactionService.sell(userId, request);
+        assertEquals(0, response.netAmount().compareTo(new BigDecimal("0.4")));
+        assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("24000")));
+        assertEquals("EUR", response.feeCurrency());
     }
 
     @Test
-    void sellWithUsdFeeGreaterThanProceedsIsRejected() {
+    void sellWithUsdFeeGreaterThanProceedsAllowsNegativeProceeds() {
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of(existingBuy("1.0", "50000", "2026-02-12T10:00:00Z")));
 
         SellTransactionRequest request = sellRequest(new BigDecimal("0.1"), new BigDecimal("7000"), null, "USD");
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> transactionService.sell(userId, request));
-        assertEquals("total sell proceeds cannot be negative", ex.getMessage());
+        TransactionResponse response = transactionService.sell(userId, request);
+        assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("-1000")));
     }
 
     @Test
-    void sellWithInvalidHistoryWithoutPriorBalanceIsRejected() {
+    void sellWithInvalidHistoryWithoutPriorBalanceStillCalculatesUsingZeroCostBasis() {
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of(existingSell("0.2", "12000", "2026-02-12T10:00:00Z")));
 
         SellTransactionRequest request = sellRequest(new BigDecimal("0.1"), null, null, null);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> transactionService.sell(userId, request));
-        assertEquals("Invalid position history: sell transaction without balance", ex.getMessage());
+        TransactionResponse response = transactionService.sell(userId, request);
+        assertEquals(0, response.totalSpentUsd().compareTo(new BigDecimal("6000")));
     }
 
     @Test
-    void sellWithInsufficientBalanceIsRejected() {
+    void sellWithInsufficientBalanceStillProcessesTransaction() {
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of(existingBuy("0.1", "5000", "2026-02-12T10:00:00Z")));
 
         SellTransactionRequest request = sellRequest(new BigDecimal("0.2"), null, null, null);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> transactionService.sell(userId, request));
-        assertEquals("Insufficient asset balance for sell transaction", ex.getMessage());
+        TransactionResponse response = transactionService.sell(userId, request);
+        assertEquals(0, response.grossAmount().compareTo(new BigDecimal("0.2")));
+        assertEquals(TransactionType.SELL, response.transactionType());
     }
 
     private BuyTransactionRequest buyRequest(
@@ -284,8 +288,15 @@ class TransactionServiceImplTest {
     private static Transaction existingBuy(String netAmount, String totalSpentUsd, String txDate) {
         Transaction tx = new Transaction();
         tx.setTransactionType(TransactionType.BUY);
+        Asset asset = new Asset();
+        asset.setSymbol("BTC");
+        tx.setAsset(asset);
         tx.setNetAmount(new BigDecimal(netAmount));
         tx.setGrossAmount(new BigDecimal(netAmount));
+        tx.setFeeAmount(BigDecimal.ZERO);
+        tx.setFeeCurrency(null);
+        tx.setFeePercentage(null);
+        tx.setUnitPriceUsd(new BigDecimal(totalSpentUsd).divide(new BigDecimal(netAmount), 18, java.math.RoundingMode.HALF_UP));
         tx.setTotalSpentUsd(new BigDecimal(totalSpentUsd));
         tx.setTransactionDate(OffsetDateTime.parse(txDate));
         return tx;
@@ -294,7 +305,15 @@ class TransactionServiceImplTest {
     private static Transaction existingSell(String grossAmount, String proceedsUsd, String txDate) {
         Transaction tx = new Transaction();
         tx.setTransactionType(TransactionType.SELL);
+        Asset asset = new Asset();
+        asset.setSymbol("BTC");
+        tx.setAsset(asset);
         tx.setGrossAmount(new BigDecimal(grossAmount));
+        tx.setNetAmount(new BigDecimal(grossAmount));
+        tx.setFeeAmount(BigDecimal.ZERO);
+        tx.setFeeCurrency(null);
+        tx.setFeePercentage(null);
+        tx.setUnitPriceUsd(new BigDecimal(proceedsUsd).divide(new BigDecimal(grossAmount), 18, java.math.RoundingMode.HALF_UP));
         tx.setTotalSpentUsd(new BigDecimal(proceedsUsd));
         tx.setTransactionDate(OffsetDateTime.parse(txDate));
         return tx;

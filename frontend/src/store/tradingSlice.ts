@@ -8,7 +8,8 @@ import type {
   PortfolioAssetPerformance,
   PortfolioSummary,
   TradeFormPayload,
-  TransactionItem
+  TransactionItem,
+  UpdateTransactionPayload
 } from '../types/trading';
 import type { UserPreferences } from '../types/userPreferences';
 
@@ -60,6 +61,22 @@ export const submitSellTrade = createAsyncThunk('trading/submitSell', async (pay
   await tradingApi.sell(payload);
   await dispatch(loadTradingBootstrap()).unwrap();
 });
+
+export const updateTransaction = createAsyncThunk(
+  'trading/updateTransaction',
+  async ({ id, payload }: { id: string; payload: UpdateTransactionPayload }, { dispatch }) => {
+    await tradingApi.updateTransaction(id, payload);
+    await dispatch(loadTradingBootstrap()).unwrap();
+  }
+);
+
+export const deleteTransaction = createAsyncThunk(
+  'trading/deleteTransaction',
+  async (id: string, { dispatch }) => {
+    await tradingApi.deleteTransaction(id);
+    await dispatch(loadTradingBootstrap()).unwrap();
+  }
+);
 
 export const updateDefaultBuyInputMode = createAsyncThunk(
   'trading/updateDefaultBuyInputMode',
@@ -117,6 +134,30 @@ const tradingSlice = createSlice({
     builder.addCase(submitSellTrade.rejected, (state, action) => {
       state.submitting = false;
       state.error = action.error.message ?? 'Sell order failed';
+    });
+
+    builder.addCase(updateTransaction.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(updateTransaction.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(updateTransaction.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Update transaction failed';
+    });
+
+    builder.addCase(deleteTransaction.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(deleteTransaction.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(deleteTransaction.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Delete transaction failed';
     });
 
     builder.addCase(updateDefaultBuyInputMode.fulfilled, (state, action) => {

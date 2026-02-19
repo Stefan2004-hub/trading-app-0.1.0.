@@ -5,7 +5,8 @@ import type {
   PortfolioAssetPerformance,
   PortfolioSummary,
   TradeFormPayload,
-  TransactionItem
+  TransactionItem,
+  UpdateTransactionPayload
 } from '../types/trading';
 
 function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
@@ -68,6 +69,30 @@ export const tradingApi = {
         ...base,
         grossAmount: payload.grossAmount
       }
+    });
+  },
+
+  updateTransaction(id: string, payload: UpdateTransactionPayload): Promise<TransactionItem> {
+    const feePercentage =
+      payload.feePercentage && Number.isFinite(Number(payload.feePercentage))
+        ? (Number(payload.feePercentage) / 100).toString()
+        : null;
+    const feeAmount = payload.feeAmount?.trim() ? payload.feeAmount.trim() : null;
+
+    return request<TransactionItem>(`/api/transactions/${id}`, {
+      method: 'PUT',
+      body: {
+        grossAmount: payload.grossAmount,
+        feeAmount,
+        feePercentage,
+        unitPriceUsd: payload.unitPriceUsd
+      }
+    });
+  },
+
+  deleteTransaction(id: string): Promise<void> {
+    return request<void>(`/api/transactions/${id}`, {
+      method: 'DELETE'
     });
   }
 };
