@@ -18,6 +18,12 @@ export function AppHeader(): JSX.Element {
         <Link className={location.pathname === '/transactions' ? 'active' : ''} to="/transactions">
           Transactions
         </Link>
+        <Link className={location.pathname === '/assets' ? 'active' : ''} to="/assets">
+          Assets
+        </Link>
+        <Link className={location.pathname === '/exchanges' ? 'active' : ''} to="/exchanges">
+          Exchanges
+        </Link>
         <Link className={location.pathname === '/strategies' ? 'active' : ''} to="/strategies">
           Strategies
         </Link>

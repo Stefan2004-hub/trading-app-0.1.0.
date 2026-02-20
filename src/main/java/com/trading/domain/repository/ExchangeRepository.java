@@ -11,5 +11,9 @@ public interface ExchangeRepository extends JpaRepository<Exchange, UUID> {
 
     Optional<Exchange> findByNameIgnoreCase(String name);
 
+    Optional<Exchange> findBySymbolIgnoreCase(String symbol);
+
     List<Exchange> findAllByOrderByNameAsc();
+
+    List<Exchange> findBySymbolContainingIgnoreCaseOrNameContainingIgnoreCaseOrderByNameAsc(String symbol, String name);
 }

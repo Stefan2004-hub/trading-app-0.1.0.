@@ -6,6 +6,8 @@ import com.trading.dto.strategy.BuyStrategyResponse;
 import com.trading.dto.strategy.SellStrategyResponse;
 import com.trading.dto.strategy.StrategyAlertResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.AssetService;
+import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
@@ -61,6 +63,12 @@ class StrategyControllerIntegrationTest {
     private TransactionService transactionService;
     @MockBean
     private PortfolioService portfolioService;
+    @MockBean
+    private AssetService assetService;
+
+    @MockBean
+    private ExchangeService exchangeService;
+
     @MockBean
     private LookupService lookupService;
     @MockBean

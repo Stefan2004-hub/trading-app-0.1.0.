@@ -6,6 +6,7 @@ export interface AssetOption {
 
 export interface ExchangeOption {
   id: string;
+  symbol: string;
   name: string;
 }
 
