@@ -18,6 +18,10 @@ interface TradingState {
   assets: AssetOption[];
   exchanges: ExchangeOption[];
   transactions: TransactionItem[];
+  transactionPage: number;
+  transactionPageSize: number;
+  transactionTotalPages: number;
+  transactionTotalElements: number;
   summary: PortfolioSummary | null;
   performance: PortfolioAssetPerformance[];
   userPreferences: UserPreferences | null;
@@ -31,6 +35,10 @@ const initialState: TradingState = {
   assets: [],
   exchanges: [],
   transactions: [],
+  transactionPage: 0,
+  transactionPageSize: 20,
+  transactionTotalPages: 0,
+  transactionTotalElements: 0,
   summary: null,
   performance: [],
   userPreferences: null,
@@ -41,21 +49,23 @@ const initialState: TradingState = {
 };
 
 export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', async () => {
-  const [assets, exchanges, transactions, summary, performance, userPreferences] = await Promise.all([
+  const [assets, exchanges, transactionsPage, summary, performance, userPreferences] = await Promise.all([
     tradingApi.listAssets(),
     tradingApi.listExchanges(),
-    tradingApi.listTransactions(),
+    tradingApi.listTransactions({ page: 0, size: 20 }),
     tradingApi.getPortfolioSummary(),
     tradingApi.getPortfolioPerformance(),
     userApi.getPreferences()
   ]);
 
-  return { assets, exchanges, transactions, summary, performance, userPreferences };
+  return { assets, exchanges, transactionsPage, summary, performance, userPreferences };
 });
 
-export const loadTransactions = createAsyncThunk('trading/loadTransactions', async (search: string | undefined) => {
-  return tradingApi.listTransactions(search);
-});
+export const loadTransactions = createAsyncThunk(
+  'trading/loadTransactions',
+  async ({ page, size, search }: { page: number; size: number; search?: string }) =>
+    tradingApi.listTransactions({ page, size, search })
+);
 
 export const submitBuyTrade = createAsyncThunk('trading/submitBuy', async (payload: TradeFormPayload, { dispatch }) => {
   await tradingApi.buy(payload);
@@ -114,7 +124,11 @@ const tradingSlice = createSlice({
       state.bootstrapAttempted = true;
       state.assets = action.payload.assets;
       state.exchanges = action.payload.exchanges;
-      state.transactions = action.payload.transactions;
+      state.transactions = action.payload.transactionsPage.content;
+      state.transactionPage = action.payload.transactionsPage.number;
+      state.transactionPageSize = action.payload.transactionsPage.size;
+      state.transactionTotalPages = action.payload.transactionsPage.totalPages;
+      state.transactionTotalElements = action.payload.transactionsPage.totalElements;
       state.summary = action.payload.summary;
       state.performance = action.payload.performance;
       state.userPreferences = action.payload.userPreferences;
@@ -131,7 +145,11 @@ const tradingSlice = createSlice({
     });
     builder.addCase(loadTransactions.fulfilled, (state, action) => {
       state.loading = false;
-      state.transactions = action.payload;
+      state.transactions = action.payload.content;
+      state.transactionPage = action.payload.number;
+      state.transactionPageSize = action.payload.size;
+      state.transactionTotalPages = action.payload.totalPages;
+      state.transactionTotalElements = action.payload.totalElements;
     });
     builder.addCase(loadTransactions.rejected, (state, action) => {
       state.loading = false;

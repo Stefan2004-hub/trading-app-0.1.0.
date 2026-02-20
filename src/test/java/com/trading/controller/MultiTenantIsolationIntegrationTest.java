@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -85,19 +87,19 @@ class MultiTenantIsolationIntegrationTest {
         Authentication authA = authenticationFor(userA);
         Authentication authB = authenticationFor(userB);
 
-        when(transactionService.list(userA, null)).thenReturn(List.of(txFor(userA)));
-        when(transactionService.list(userB, null)).thenReturn(List.of(txFor(userB)));
+        when(transactionService.list(userA, 0, 20, null)).thenReturn(pageOf(List.of(txFor(userA))));
+        when(transactionService.list(userB, 0, 20, null)).thenReturn(pageOf(List.of(txFor(userB))));
 
         mockMvc.perform(get("/api/transactions").with(authentication(authA)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].userId").value(userA.toString()));
+            .andExpect(jsonPath("$.content[0].userId").value(userA.toString()));
 
         mockMvc.perform(get("/api/transactions").with(authentication(authB)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].userId").value(userB.toString()));
+            .andExpect(jsonPath("$.content[0].userId").value(userB.toString()));
 
-        verify(transactionService).list(eq(userA), eq(null));
-        verify(transactionService).list(eq(userB), eq(null));
+        verify(transactionService).list(eq(userA), eq(0), eq(20), eq(null));
+        verify(transactionService).list(eq(userB), eq(0), eq(20), eq(null));
     }
 
     @Test
@@ -171,5 +173,9 @@ class MultiTenantIsolationIntegrationTest {
             OffsetDateTime.parse("2026-02-13T09:05:00Z"),
             null
         );
+    }
+
+    private static Page<TransactionResponse> pageOf(List<TransactionResponse> content) {
+        return new PageImpl<>(content, org.springframework.data.domain.PageRequest.of(0, 20), content.size());
     }
 }

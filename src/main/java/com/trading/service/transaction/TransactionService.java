@@ -5,13 +5,13 @@ import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionRequest;
+import org.springframework.data.domain.Page;
 
-import java.util.List;
 import java.util.UUID;
 
 public interface TransactionService {
 
-    List<TransactionResponse> list(UUID userId, String search);
+    Page<TransactionResponse> list(UUID userId, int page, int size, String search);
 
     TransactionResponse buy(UUID userId, BuyTransactionRequest request);
 
