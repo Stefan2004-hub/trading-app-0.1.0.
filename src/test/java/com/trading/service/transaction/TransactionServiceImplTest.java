@@ -2,12 +2,14 @@ package com.trading.service.transaction;
 
 import com.trading.domain.entity.Asset;
 import com.trading.domain.entity.Exchange;
+import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.ExchangeRepository;
+import com.trading.domain.repository.PricePeakRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
@@ -33,6 +35,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +50,8 @@ class TransactionServiceImplTest {
     private AssetRepository assetRepository;
     @Mock
     private ExchangeRepository exchangeRepository;
+    @Mock
+    private PricePeakRepository pricePeakRepository;
 
     @InjectMocks
     private TransactionServiceImpl transactionService;
@@ -70,9 +76,9 @@ class TransactionServiceImplTest {
         Exchange exchange = new Exchange();
         exchange.setId(exchangeId);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
-        when(exchangeRepository.findById(exchangeId)).thenReturn(Optional.of(exchange));
+        lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        lenient().when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
+        lenient().when(exchangeRepository.findById(exchangeId)).thenReturn(Optional.of(exchange));
         lenient().when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction tx = invocation.getArgument(0, Transaction.class);
             tx.setId(UUID.randomUUID());
@@ -300,6 +306,53 @@ class TransactionServiceImplTest {
         assertEquals(0, finalSell.realizedPnl().compareTo(new BigDecimal("119999.333333333333333333")));
         assertEquals(0, calculateRemainingInvestedUsd(history).compareTo(BigDecimal.ZERO));
         assertEquals(0, calculateCurrentBalance(history).compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void deleteBuyTransactionClearsReferencedPricePeakWhenNoReplacementBuyExists() {
+        Transaction buyTx = new Transaction();
+        buyTx.setId(UUID.randomUUID());
+        buyTx.setTransactionType(TransactionType.BUY);
+        Asset asset = new Asset();
+        asset.setId(assetId);
+        buyTx.setAsset(asset);
+
+        PricePeak pricePeak = new PricePeak();
+        pricePeak.setAsset(asset);
+        pricePeak.setLastBuyTransaction(buyTx);
+        pricePeak.setActive(true);
+
+        when(transactionRepository.findByIdAndUser_Id(buyTx.getId(), userId)).thenReturn(Optional.of(buyTx));
+        when(pricePeakRepository.findByUser_IdAndAsset_Id(userId, assetId)).thenReturn(Optional.of(pricePeak));
+        when(transactionRepository.findAllByUser_IdAndAsset_IdAndTransactionTypeOrderByTransactionDateDesc(
+            userId, assetId, TransactionType.BUY
+        )).thenReturn(List.of(buyTx));
+        when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
+            .thenReturn(List.of());
+
+        transactionService.deleteTransaction(userId, buyTx.getId());
+
+        assertEquals(null, pricePeak.getLastBuyTransaction());
+        assertEquals(false, pricePeak.getActive());
+        verify(pricePeakRepository).save(pricePeak);
+    }
+
+    @Test
+    void deleteSellTransactionDoesNotTouchPricePeak() {
+        Transaction sellTx = new Transaction();
+        sellTx.setId(UUID.randomUUID());
+        sellTx.setTransactionType(TransactionType.SELL);
+        Asset asset = new Asset();
+        asset.setId(assetId);
+        sellTx.setAsset(asset);
+
+        when(transactionRepository.findByIdAndUser_Id(sellTx.getId(), userId)).thenReturn(Optional.of(sellTx));
+        when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
+            .thenReturn(List.of());
+
+        transactionService.deleteTransaction(userId, sellTx.getId());
+
+        verify(pricePeakRepository, never()).save(any(PricePeak.class));
     }
 
     private BuyTransactionRequest buyRequest(
