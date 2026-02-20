@@ -233,7 +233,9 @@ class TransactionControllerIntegrationTest {
             new BigDecimal("100000"),
             new BigDecimal("50010"),
             transactionType == TransactionType.SELL ? new BigDecimal("500") : null,
-            OffsetDateTime.parse("2026-02-13T10:00:00Z")
+            OffsetDateTime.parse("2026-02-13T10:00:00Z"),
+            false,
+            null
         );
     }
 }

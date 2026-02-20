@@ -27,6 +27,8 @@ export interface TransactionItem {
   totalSpentUsd: string;
   realizedPnl: string | null;
   transactionDate: string;
+  matched: boolean;
+  matchedTransactionId: string | null;
 }
 
 export interface PortfolioAssetPerformance {

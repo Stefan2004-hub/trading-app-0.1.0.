@@ -23,8 +23,12 @@ import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,8 +66,12 @@ public class TransactionServiceImpl implements TransactionService {
     public List<TransactionResponse> list(UUID userId, String search) {
         Objects.requireNonNull(userId, "userId is required");
         String normalizedSearch = normalizeSearch(search);
-        return transactionRepository.findAllByUser_IdAndSearchOrderByTransactionDateDesc(userId, normalizedSearch).stream()
-            .map(TransactionServiceImpl::toResponse)
+        List<Transaction> transactions =
+            transactionRepository.findAllByUser_IdAndSearchOrderByTransactionDateDesc(userId, normalizedSearch);
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactions);
+
+        return transactions.stream()
+            .map((transaction) -> toResponse(transaction, matchedPairs.get(transaction.getId())))
             .toList();
     }
 
@@ -112,7 +120,8 @@ public class TransactionServiceImpl implements TransactionService {
         recalculateAssetTransactions(userId, asset.getId());
         return toResponse(
             transactionRepository.findByIdAndUser_Id(saved.getId(), userId)
-                .orElse(saved)
+                .orElse(saved),
+            null
         );
     }
 
@@ -160,7 +169,8 @@ public class TransactionServiceImpl implements TransactionService {
         recalculateAssetTransactions(userId, asset.getId());
         return toResponse(
             transactionRepository.findByIdAndUser_Id(saved.getId(), userId)
-                .orElse(saved)
+                .orElse(saved),
+            null
         );
     }
 
@@ -185,7 +195,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction refreshed = transactionRepository.findByIdAndUser_Id(transactionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
-        return toResponse(refreshed);
+        return toResponse(refreshed, null);
     }
 
     @Override
@@ -474,7 +484,53 @@ public class TransactionServiceImpl implements TransactionService {
         return new AmountState(netAmount, proceedsUsd);
     }
 
-    private static TransactionResponse toResponse(Transaction transaction) {
+    private static Map<UUID, UUID> buildMatchedPairsByTransactionId(List<Transaction> transactions) {
+        List<Transaction> ordered = new ArrayList<>(transactions);
+        ordered.sort(
+            Comparator.comparing(
+                Transaction::getTransactionDate,
+                Comparator.nullsFirst(Comparator.naturalOrder())
+            ).thenComparing(Transaction::getId, Comparator.nullsFirst(Comparator.naturalOrder()))
+        );
+
+        Map<AssetAmountKey, Deque<Transaction>> unmatchedBuysByAssetAmount = new HashMap<>();
+        Map<UUID, UUID> matchedPairsByTransactionId = new HashMap<>();
+
+        for (Transaction tx : ordered) {
+            if (tx.getTransactionType() == TransactionType.BUY) {
+                AssetAmountKey key = new AssetAmountKey(tx.getAsset().getId(), normalizeAmountKey(tx.getNetAmount()));
+                unmatchedBuysByAssetAmount.computeIfAbsent(key, ignored -> new LinkedList<>()).addLast(tx);
+                continue;
+            }
+
+            if (tx.getTransactionType() == TransactionType.SELL) {
+                AssetAmountKey key = new AssetAmountKey(tx.getAsset().getId(), normalizeAmountKey(tx.getGrossAmount()));
+                Deque<Transaction> candidates = unmatchedBuysByAssetAmount.get(key);
+                if (candidates == null || candidates.isEmpty()) {
+                    continue;
+                }
+
+                Transaction matchedBuy = candidates.pollFirst();
+                if (matchedBuy == null) {
+                    continue;
+                }
+
+                matchedPairsByTransactionId.put(matchedBuy.getId(), tx.getId());
+                matchedPairsByTransactionId.put(tx.getId(), matchedBuy.getId());
+            }
+        }
+
+        return matchedPairsByTransactionId;
+    }
+
+    private static String normalizeAmountKey(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+        return value.stripTrailingZeros().toPlainString();
+    }
+
+    private static TransactionResponse toResponse(Transaction transaction, UUID matchedTransactionId) {
         return new TransactionResponse(
             transaction.getId(),
             transaction.getUser().getId(),
@@ -489,8 +545,13 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.getUnitPriceUsd(),
             transaction.getTotalSpentUsd(),
             transaction.getRealizedPnl(),
-            transaction.getTransactionDate()
+            transaction.getTransactionDate(),
+            matchedTransactionId != null,
+            matchedTransactionId
         );
+    }
+
+    private record AssetAmountKey(UUID assetId, String amount) {
     }
 
     private record FeeState(BigDecimal feeAmount, BigDecimal feePercentage, String feeCurrency) {

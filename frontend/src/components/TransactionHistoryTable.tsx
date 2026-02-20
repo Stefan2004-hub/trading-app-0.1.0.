@@ -32,6 +32,7 @@ export function TransactionHistoryTable({
   onDeleteTransaction,
   onSellFromTransaction
 }: TransactionHistoryTableProps): JSX.Element {
+  const [showHistory, setShowHistory] = useState(false);
   const [editTargetId, setEditTargetId] = useState<string | null>(null);
   const [sellTargetId, setSellTargetId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -68,6 +69,48 @@ export function TransactionHistoryTable({
     [assetSymbolById, transactions]
   );
   const pricesBySymbol = useAssetSpotPrices(symbolsToPrice);
+  const transactionsById = useMemo(() => {
+    const map = new Map<string, TransactionItem>();
+    for (const tx of transactions) {
+      map.set(tx.id, tx);
+    }
+    return map;
+  }, [transactions]);
+  const openBuyTransactions = useMemo(
+    () => transactions.filter((tx) => tx.transactionType === 'BUY' && !tx.matched),
+    [transactions]
+  );
+  const rowsToRender = useMemo(() => {
+    if (!showHistory) {
+      return openBuyTransactions.map((tx) => ({ tx, groupClassName: '' }));
+    }
+
+    const visited = new Set<string>();
+    const groupedRows: Array<{ tx: TransactionItem; groupClassName: string }> = [];
+
+    for (const tx of transactions) {
+      if (visited.has(tx.id)) {
+        continue;
+      }
+
+      const matchId = tx.matchedTransactionId;
+      const matchTx = matchId ? transactionsById.get(matchId) : null;
+      if (tx.matched && matchTx) {
+        const buyTx = tx.transactionType === 'BUY' ? tx : matchTx;
+        const sellTx = tx.transactionType === 'SELL' ? tx : matchTx;
+        groupedRows.push({ tx: buyTx, groupClassName: 'matched-group-start' });
+        groupedRows.push({ tx: sellTx, groupClassName: 'matched-group-end' });
+        visited.add(buyTx.id);
+        visited.add(sellTx.id);
+        continue;
+      }
+
+      groupedRows.push({ tx, groupClassName: '' });
+      visited.add(tx.id);
+    }
+
+    return groupedRows;
+  }, [openBuyTransactions, showHistory, transactions, transactionsById]);
 
   async function confirmDelete(): Promise<void> {
     if (!deleteTargetId) {
@@ -84,9 +127,20 @@ export function TransactionHistoryTable({
   return (
     <>
       <section className="history-panel history-panel-prominent">
-        <h3>Transactions</h3>
-        {transactions.length === 0 ? (
-          <p>No transactions yet.</p>
+        <div className="transaction-table-header">
+          <h3>Transactions</h3>
+          <label className="checkbox-row transaction-history-toggle" htmlFor="show-transaction-history">
+            <input
+              id="show-transaction-history"
+              type="checkbox"
+              checked={showHistory}
+              onChange={(event) => setShowHistory(event.target.checked)}
+            />
+            Show History
+          </label>
+        </div>
+        {rowsToRender.length === 0 ? (
+          <p>{showHistory ? 'No transactions yet.' : 'No open buy transactions.'}</p>
         ) : (
           <div className="table-wrap">
             <table>
@@ -100,6 +154,7 @@ export function TransactionHistoryTable({
                   <th>Fee %</th>
                   <th>Price</th>
                   <th>Current Price</th>
+                  <th>Unrealized P&L</th>
                   <th>Total</th>
                   <th>Realized PnL</th>
                   <th>Date</th>
@@ -107,8 +162,27 @@ export function TransactionHistoryTable({
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((tx) => (
-                  <tr key={tx.id}>
+                {rowsToRender.map(({ tx, groupClassName }) => {
+                  const symbol = assetSymbolById.get(tx.assetId);
+                  const priceState = symbol ? pricesBySymbol[symbol.toUpperCase()] : undefined;
+                  const currentPriceValue =
+                    priceState && priceState.status === 'success' && priceState.priceUsd
+                      ? Number(priceState.priceUsd)
+                      : null;
+                  const purchasePriceValue = Number(tx.unitPriceUsd);
+                  const quantityValue = Number(tx.netAmount);
+                  const isOpenBuy = tx.transactionType === 'BUY' && !tx.matched;
+                  const unrealizedPnlValue =
+                    isOpenBuy &&
+                    currentPriceValue !== null &&
+                    Number.isFinite(currentPriceValue) &&
+                    Number.isFinite(purchasePriceValue) &&
+                    Number.isFinite(quantityValue)
+                      ? (currentPriceValue - purchasePriceValue) * quantityValue
+                      : null;
+
+                  return (
+                  <tr key={tx.id} className={groupClassName}>
                     <td>{tx.transactionType}</td>
                     <td>{labelAsset(tx.assetId, assets)}</td>
                     <td>{labelExchange(tx.exchangeId, exchanges)}</td>
@@ -120,20 +194,20 @@ export function TransactionHistoryTable({
                     <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
                     <td>{formatUsd(tx.unitPriceUsd)}</td>
                     <td>
-                      {(() => {
-                        const symbol = assetSymbolById.get(tx.assetId);
-                        if (!symbol) {
-                          return '---';
-                        }
-                        const priceState = pricesBySymbol[symbol.toUpperCase()];
-                        if (!priceState || priceState.status === 'loading') {
-                          return <span className="table-price-loading" aria-label="Loading current price" />;
-                        }
-                        if (priceState.status === 'error' || !priceState.priceUsd) {
-                          return '---';
-                        }
-                        return formatUsd(priceState.priceUsd);
-                      })()}
+                      {!symbol || !priceState || priceState.status === 'error'
+                        ? '---'
+                        : priceState.status === 'loading'
+                          ? <span className="table-price-loading" aria-label="Loading current price" />
+                          : formatUsd(priceState.priceUsd)}
+                    </td>
+                    <td>
+                      {unrealizedPnlValue === null ? (
+                        '---'
+                      ) : (
+                        <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                          {formatUsd(String(unrealizedPnlValue))}
+                        </span>
+                      )}
                     </td>
                     <td>{formatUsd(tx.totalSpentUsd)}</td>
                     <td>{formatUsd(tx.realizedPnl)}</td>
@@ -154,7 +228,7 @@ export function TransactionHistoryTable({
                         >
                           Delete
                         </button>
-                        {tx.transactionType === 'BUY' ? (
+                        {tx.transactionType === 'BUY' && !tx.matched ? (
                           <button
                             type="button"
                             className="row-action-button row-action-sell"
@@ -166,7 +240,7 @@ export function TransactionHistoryTable({
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
