@@ -2,6 +2,8 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { decimalToDisplay, divideDecimal, isPositiveDecimal, multiplyDecimal } from '../utils/decimal';
 import type { BuyInputMode, TradeFormPayload, TransactionType } from '../types/trading';
 import type { AssetOption, ExchangeOption } from '../types/trading';
+import { tradingApi } from '../api/tradingApi';
+import { SearchableLookupField } from './SearchableLookupField';
 
 type FeeInputMode = 'PERCENTAGE' | 'AMOUNT' | null;
 
@@ -60,6 +62,8 @@ export function TradeForm({
 }: TradeFormProps): JSX.Element {
   const [form, setForm] = useState<LocalTradeFormState>(INITIAL_FORM);
   const [feeInputMode, setFeeInputMode] = useState<FeeInputMode>(null);
+  const [selectedAsset, setSelectedAsset] = useState<AssetOption | null>(null);
+  const [selectedExchange, setSelectedExchange] = useState<ExchangeOption | null>(null);
 
   useEffect(() => {
     if (tradeType === 'BUY' && defaultBuyInputMode && defaultBuyInputMode !== form.inputMode) {
@@ -67,9 +71,27 @@ export function TradeForm({
     }
   }, [defaultBuyInputMode, form.inputMode, tradeType]);
 
+  useEffect(() => {
+    if (form.assetId && (!selectedAsset || selectedAsset.id !== form.assetId)) {
+      const asset = assets.find((row) => row.id === form.assetId) ?? null;
+      if (asset) {
+        setSelectedAsset(asset);
+      }
+    }
+  }, [assets, form.assetId, selectedAsset]);
+
+  useEffect(() => {
+    if (form.exchangeId && (!selectedExchange || selectedExchange.id !== form.exchangeId)) {
+      const exchange = exchanges.find((row) => row.id === form.exchangeId) ?? null;
+      if (exchange) {
+        setSelectedExchange(exchange);
+      }
+    }
+  }, [exchanges, form.exchangeId, selectedExchange]);
+
   const selectedAssetSymbol = useMemo(
-    () => assets.find((asset) => asset.id === form.assetId)?.symbol ?? '',
-    [assets, form.assetId]
+    () => selectedAsset?.symbol ?? assets.find((asset) => asset.id === form.assetId)?.symbol ?? '',
+    [assets, form.assetId, selectedAsset]
   );
 
   const effectiveGrossAmount = useMemo(() => {
@@ -169,40 +191,54 @@ export function TradeForm({
     <form id={formId} className={`trade-form${className ? ` ${className}` : ''}`} onSubmit={handleSubmit}>
       <h3>{title}</h3>
 
-      <label htmlFor={`${title}-asset`}>Asset</label>
-      <select
+      <SearchableLookupField
         id={`${title}-asset`}
-        value={form.assetId}
-        onChange={(event) =>
+        label="Asset"
+        placeholder="Search assets by symbol or name"
+        required
+        value={selectedAsset}
+        onSelect={(option) => {
+          const asset = option as AssetOption | null;
+          setSelectedAsset(asset);
           setForm((current) => {
-            const next = { ...current, assetId: event.target.value };
+            const next = { ...current, assetId: asset?.id ?? '' };
             return syncFeeByMode(next, feeInputMode);
-          })
-        }
-        required
-      >
-        <option value="">Select asset</option>
-        {assets.map((asset) => (
-          <option key={asset.id} value={asset.id}>
-            {asset.symbol} - {asset.name}
-          </option>
-        ))}
-      </select>
+          });
+        }}
+        onSearch={(search) => tradingApi.listAssets(search)}
+        quickAddLabel="Add New Asset"
+        onQuickAdd={async (search) => {
+          const normalized = search.trim();
+          const symbol = normalized.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+          return tradingApi.createAsset({
+            symbol: symbol || normalized.toUpperCase().slice(0, 10),
+            name: normalized
+          });
+        }}
+      />
 
-      <label htmlFor={`${title}-exchange`}>Exchange</label>
-      <select
+      <SearchableLookupField
         id={`${title}-exchange`}
-        value={form.exchangeId}
-        onChange={(event) => setForm((current) => ({ ...current, exchangeId: event.target.value }))}
+        label="Exchange"
+        placeholder="Search exchanges by symbol or name"
         required
-      >
-        <option value="">Select exchange</option>
-        {exchanges.map((exchange) => (
-          <option key={exchange.id} value={exchange.id}>
-            {exchange.name}
-          </option>
-        ))}
-      </select>
+        value={selectedExchange}
+        onSelect={(option) => {
+          const exchange = option as ExchangeOption | null;
+          setSelectedExchange(exchange);
+          setForm((current) => ({ ...current, exchangeId: exchange?.id ?? '' }));
+        }}
+        onSearch={(search) => tradingApi.listExchanges(search)}
+        quickAddLabel="Add New Exchange"
+        onQuickAdd={async (search) => {
+          const normalized = search.trim();
+          const symbol = normalized.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 10);
+          return tradingApi.createExchange({
+            symbol: symbol || normalized.toUpperCase().slice(0, 10),
+            name: normalized
+          });
+        }}
+      />
 
       {tradeType === 'BUY' ? (
         <>

@@ -3,6 +3,8 @@ package com.trading.controller;
 import com.trading.domain.enums.TransactionType;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.AssetService;
+import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
@@ -62,6 +64,12 @@ class TransactionControllerIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+
+    @MockBean
+    private AssetService assetService;
+
+    @MockBean
+    private ExchangeService exchangeService;
 
     @MockBean
     private LookupService lookupService;

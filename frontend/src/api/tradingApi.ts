@@ -26,12 +26,56 @@ function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> 
 }
 
 export const tradingApi = {
-  listAssets(): Promise<AssetOption[]> {
-    return request<AssetOption[]>('/api/assets');
+  listAssets(search?: string): Promise<AssetOption[]> {
+    const trimmedSearch = search?.trim();
+    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
+    return request<AssetOption[]>(`/api/assets${query}`);
   },
 
-  listExchanges(): Promise<ExchangeOption[]> {
-    return request<ExchangeOption[]>('/api/exchanges');
+  createAsset(payload: { symbol: string; name: string }): Promise<AssetOption> {
+    return request<AssetOption>('/api/assets', {
+      method: 'POST',
+      body: payload
+    });
+  },
+
+  updateAsset(id: string, payload: { symbol: string; name: string }): Promise<AssetOption> {
+    return request<AssetOption>(`/api/assets/${id}`, {
+      method: 'PUT',
+      body: payload
+    });
+  },
+
+  deleteAsset(id: string): Promise<void> {
+    return request<void>(`/api/assets/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  listExchanges(search?: string): Promise<ExchangeOption[]> {
+    const trimmedSearch = search?.trim();
+    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
+    return request<ExchangeOption[]>(`/api/exchanges${query}`);
+  },
+
+  createExchange(payload: { symbol: string; name: string }): Promise<ExchangeOption> {
+    return request<ExchangeOption>('/api/exchanges', {
+      method: 'POST',
+      body: payload
+    });
+  },
+
+  updateExchange(id: string, payload: { symbol: string; name: string }): Promise<ExchangeOption> {
+    return request<ExchangeOption>(`/api/exchanges/${id}`, {
+      method: 'PUT',
+      body: payload
+    });
+  },
+
+  deleteExchange(id: string): Promise<void> {
+    return request<void>(`/api/exchanges/${id}`, {
+      method: 'DELETE'
+    });
   },
 
   listTransactions(search?: string): Promise<TransactionItem[]> {

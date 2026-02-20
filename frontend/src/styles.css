@@ -219,6 +219,54 @@ p {
   max-width: 500px;
 }
 
+.autocomplete-field {
+  position: relative;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  max-height: 240px;
+  overflow-y: auto;
+  display: grid;
+}
+
+.autocomplete-option,
+.autocomplete-quick-add {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+  font-weight: 500;
+  padding: 0.6rem 0.75rem;
+}
+
+.autocomplete-option:hover,
+.autocomplete-quick-add:hover {
+  background: #f1f5f9;
+}
+
+.autocomplete-quick-add {
+  color: #0369a1;
+  border-top: 1px solid #e2e8f0;
+}
+
+.autocomplete-empty {
+  padding: 0.65rem 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
 .portfolio-summary-inline {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
