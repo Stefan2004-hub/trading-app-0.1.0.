@@ -21,40 +21,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findAllByUser_IdOrderByTransactionDateDesc(UUID userId);
 
     @Query(
-        value = """
-            SELECT t.*
-            FROM transactions t
-            JOIN assets a ON a.id = t.asset_id
-            JOIN exchanges e ON e.id = t.exchange_id
-            WHERE t.user_id = :userId
+        """
+            SELECT t
+            FROM Transaction t
+            JOIN t.asset a
+            JOIN t.exchange e
+            WHERE t.user.id = :userId
               AND (
-                :search IS NULL
-                OR CAST(a.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(a.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(e.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(e.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                :searchPattern IS NULL
+                OR a.symbol LIKE :searchPattern
+                OR a.name LIKE :searchPattern
+                OR e.symbol LIKE :searchPattern
+                OR e.name LIKE :searchPattern
               )
-            ORDER BY t.transaction_date DESC, t.id DESC
-            """,
-        countQuery = """
-            SELECT COUNT(*)
-            FROM transactions t
-            JOIN assets a ON a.id = t.asset_id
-            JOIN exchanges e ON e.id = t.exchange_id
-            WHERE t.user_id = :userId
-              AND (
-                :search IS NULL
-                OR CAST(a.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(a.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(e.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-                OR CAST(e.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
-              )
-            """,
-        nativeQuery = true
+            """
     )
     Page<Transaction> findByUser_IdAndSearch(
         @Param("userId") UUID userId,
-        @Param("search") String search,
+        @Param("searchPattern") String searchPattern,
         Pageable pageable
     );
 

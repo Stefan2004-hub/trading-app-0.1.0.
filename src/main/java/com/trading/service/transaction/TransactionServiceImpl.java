@@ -20,6 +20,7 @@ import com.trading.dto.transaction.UpdateTransactionRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -69,9 +70,14 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public Page<TransactionResponse> list(UUID userId, int page, int size, String search) {
         Objects.requireNonNull(userId, "userId is required");
-        String normalizedSearch = normalizeSearch(search);
-        PageRequest pageRequest = PageRequest.of(page, size);
-        Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, normalizedSearch, pageRequest);
+        String searchPattern = toSearchPattern(search);
+        Sort sort = Sort.by(
+            Sort.Order.asc("exchange.name"),
+            Sort.Order.asc("asset.symbol"),
+            Sort.Order.desc("transactionDate")
+        );
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, searchPattern, pageRequest);
         Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactionPage.getContent());
         List<TransactionResponse> content = transactionPage.getContent().stream()
             .map((transaction) -> toResponse(transaction, matchedPairs.get(transaction.getId())))
@@ -344,6 +350,14 @@ public class TransactionServiceImpl implements TransactionService {
             return null;
         }
         return search.trim();
+    }
+
+    private static String toSearchPattern(String search) {
+        String normalizedSearch = normalizeSearch(search);
+        if (normalizedSearch == null) {
+            return null;
+        }
+        return "%" + normalizedSearch + "%";
     }
 
     private static FeeState resolveFeeState(
