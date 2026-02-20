@@ -4,9 +4,10 @@ interface DialogProps {
   open: boolean;
   title: string;
   onClose: () => void;
+  panelClassName?: string;
 }
 
-export function Dialog({ open, title, onClose, children }: PropsWithChildren<DialogProps>): JSX.Element | null {
+export function Dialog({ open, title, onClose, panelClassName, children }: PropsWithChildren<DialogProps>): JSX.Element | null {
   if (!open) {
     return null;
   }
@@ -14,7 +15,7 @@ export function Dialog({ open, title, onClose, children }: PropsWithChildren<Dia
   return (
     <div className="dialog-backdrop" role="presentation" onClick={onClose}>
       <div
-        className="dialog-panel"
+        className={`dialog-panel${panelClassName ? ` ${panelClassName}` : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
