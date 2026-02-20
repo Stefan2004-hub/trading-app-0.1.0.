@@ -128,7 +128,7 @@ export function TransactionsPage(): JSX.Element {
   return (
     <main className="workspace-shell">
       <AppHeader />
-      <section className="workspace-panel">
+      <section className="workspace-panel transactions-workspace-panel">
         <h1>Trading</h1>
         {error ? <p className="auth-error">{error}</p> : null}
 

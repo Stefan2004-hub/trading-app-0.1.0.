@@ -40,6 +40,11 @@ body {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
 }
 
+.transactions-workspace-panel {
+  width: 100%;
+  max-width: none;
+}
+
 .app-header {
   position: relative;
   width: min(100%, 1080px);
@@ -319,6 +324,29 @@ p {
 .table-wrap {
   overflow-x: auto;
   overflow-y: visible;
+}
+
+.transaction-table-wrap {
+  overflow-x: visible;
+}
+
+.transaction-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.transaction-table th,
+.transaction-table td {
+  padding: 0.4rem 0.3rem;
+  font-size: 0.78rem;
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.transaction-table th:last-child,
+.transaction-table td:last-child {
+  width: 4rem;
 }
 
 table {
@@ -620,6 +648,52 @@ button:disabled {
   border-bottom-color: #dbe5f0;
 }
 
+.transaction-mobile-list {
+  display: none;
+}
+
+.transaction-mobile-card {
+  border: 1px solid #dbe5f0;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 0.75rem;
+}
+
+.transaction-mobile-card + .transaction-mobile-card {
+  margin-top: 0.7rem;
+}
+
+.transaction-mobile-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  align-items: flex-start;
+  margin-bottom: 0.6rem;
+}
+
+.transaction-mobile-asset {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.transaction-mobile-price {
+  margin: 0.15rem 0 0;
+  color: #334155;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.transaction-mobile-details {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.transaction-mobile-details p {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
 .toast-container {
   position: fixed;
   top: 1rem;
@@ -698,6 +772,15 @@ a {
 }
 
 @media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .workspace-shell,
+  .transactions-workspace-panel {
+    overflow-x: hidden;
+  }
+
   .app-header {
     align-items: flex-start;
   }
@@ -750,6 +833,31 @@ a {
 
   .header-right {
     margin-left: auto;
+  }
+
+  .transaction-table-wrap {
+    display: none;
+  }
+
+  .transaction-mobile-list {
+    display: block;
+  }
+
+  .transaction-mobile-card .transaction-actions {
+    position: relative;
+    margin-left: auto;
+  }
+
+  .transaction-mobile-card .row-action-menu-trigger {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 1px;
+  }
+
+  .transaction-mobile-card .transaction-actions-menu {
+    right: 0;
+    left: auto;
+    min-width: 10.5rem;
   }
 }
 
