@@ -9,6 +9,7 @@ import type {
   PortfolioSummary,
   TradeFormPayload,
   TransactionItem,
+  UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
 import type { UserPreferences } from '../types/userPreferences';
@@ -70,6 +71,14 @@ export const updateTransaction = createAsyncThunk(
   'trading/updateTransaction',
   async ({ id, payload }: { id: string; payload: UpdateTransactionPayload }, { dispatch }) => {
     await tradingApi.updateTransaction(id, payload);
+    await dispatch(loadTradingBootstrap()).unwrap();
+  }
+);
+
+export const updateTransactionNetAmount = createAsyncThunk(
+  'trading/updateTransactionNetAmount',
+  async ({ id, payload }: { id: string; payload: UpdateTransactionNetAmountPayload }, { dispatch }) => {
+    await tradingApi.updateTransactionNetAmount(id, payload);
     await dispatch(loadTradingBootstrap()).unwrap();
   }
 );
@@ -163,6 +172,18 @@ const tradingSlice = createSlice({
     builder.addCase(updateTransaction.rejected, (state, action) => {
       state.submitting = false;
       state.error = action.error.message ?? 'Update transaction failed';
+    });
+
+    builder.addCase(updateTransactionNetAmount.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(updateTransactionNetAmount.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(updateTransactionNetAmount.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Update transaction quantity failed';
     });
 
     builder.addCase(deleteTransaction.pending, (state) => {

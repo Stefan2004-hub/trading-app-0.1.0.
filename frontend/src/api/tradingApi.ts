@@ -7,6 +7,7 @@ import type {
   PortfolioSummary,
   TradeFormPayload,
   TransactionItem,
+  UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
 
@@ -127,6 +128,15 @@ export const tradingApi = {
         feeAmount,
         feePercentage,
         unitPriceUsd: payload.unitPriceUsd
+      }
+    });
+  },
+
+  updateTransactionNetAmount(id: string, payload: UpdateTransactionNetAmountPayload): Promise<TransactionItem> {
+    return request<TransactionItem>(`/api/transactions/${id}/net-amount`, {
+      method: 'PATCH',
+      body: {
+        netAmount: payload.netAmount
       }
     });
   },

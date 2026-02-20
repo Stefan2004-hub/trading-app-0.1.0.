@@ -12,10 +12,15 @@ import {
   submitBuyTrade,
   submitSellTrade,
   updateTransaction,
+  updateTransactionNetAmount,
   updateDefaultBuyInputMode
 } from '../store/tradingSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import type { TradeFormPayload, UpdateTransactionPayload } from '../types/trading';
+import type {
+  TradeFormPayload,
+  UpdateTransactionNetAmountPayload,
+  UpdateTransactionPayload
+} from '../types/trading';
 
 export function TransactionsPage(): JSX.Element {
   const dispatch = useAppDispatch();
@@ -66,6 +71,22 @@ export function TransactionsPage(): JSX.Element {
         await refreshTransactionsForSearch();
       } else {
         showToast('Failed to update transaction. Please try again.', 'error');
+      }
+      return ok;
+    },
+    [dispatch, refreshTransactionsForSearch, showToast]
+  );
+
+  const submitEditTransactionQuantity = useCallback(
+    async (transactionId: string, payload: UpdateTransactionNetAmountPayload): Promise<boolean> => {
+      dispatch(clearTradingError());
+      const action = await dispatch(updateTransactionNetAmount({ id: transactionId, payload }));
+      const ok = updateTransactionNetAmount.fulfilled.match(action);
+      if (ok) {
+        showToast('Transaction quantity updated successfully.', 'success');
+        await refreshTransactionsForSearch();
+      } else {
+        showToast('Failed to update transaction quantity. Please try again.', 'error');
       }
       return ok;
     },
@@ -136,6 +157,7 @@ export function TransactionsPage(): JSX.Element {
           transactions={transactions}
           assets={assets}
           exchanges={exchanges}
+          onEditTransactionQuantity={submitEditTransactionQuantity}
           onEditTransaction={submitEditTransaction}
           onDeleteTransaction={submitDeleteTransaction}
           onSellFromTransaction={submitSellFromTransaction}
