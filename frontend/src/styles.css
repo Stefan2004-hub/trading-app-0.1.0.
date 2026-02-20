@@ -338,6 +338,27 @@ button:disabled {
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
 }
 
+.buy-transaction-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.buy-modal-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 2rem;
+}
+
+.buy-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+
 .dialog-header {
   display: flex;
   align-items: center;
@@ -507,6 +528,14 @@ a {
   }
 
   .dialog-actions .ui-button {
+    width: 100%;
+  }
+
+  .buy-transaction-modal {
+    max-height: 90vh;
+  }
+
+  .buy-modal-footer .ui-button {
     width: 100%;
   }
 }

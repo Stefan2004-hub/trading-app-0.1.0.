@@ -11,6 +11,10 @@ interface TradeFormProps {
   assets: AssetOption[];
   exchanges: ExchangeOption[];
   submitting: boolean;
+  formId?: string;
+  className?: string;
+  hideSubmitButton?: boolean;
+  submitLabel?: string;
   defaultBuyInputMode?: BuyInputMode;
   onBuyInputModeChange?: (mode: BuyInputMode) => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
@@ -46,6 +50,10 @@ export function TradeForm({
   assets,
   exchanges,
   submitting,
+  formId,
+  className,
+  hideSubmitButton = false,
+  submitLabel,
   defaultBuyInputMode,
   onBuyInputModeChange,
   onSubmit
@@ -158,7 +166,7 @@ export function TradeForm({
   }
 
   return (
-    <form className="trade-form" onSubmit={handleSubmit}>
+    <form id={formId} className={`trade-form${className ? ` ${className}` : ''}`} onSubmit={handleSubmit}>
       <h3>{title}</h3>
 
       <label htmlFor={`${title}-asset`}>Asset</label>
@@ -305,9 +313,11 @@ export function TradeForm({
         placeholder={selectedAssetSymbol || 'BTC'}
       />
 
-      <button type="submit" disabled={submitting}>
-        {submitting ? 'Submitting...' : `Submit ${title}`}
-      </button>
+      {!hideSubmitButton ? (
+        <button type="submit" disabled={submitting}>
+          {submitting ? 'Submitting...' : submitLabel ?? `Submit ${title}`}
+        </button>
+      ) : null}
     </form>
   );
 }
