@@ -20,6 +20,8 @@ public record TransactionResponse(
     BigDecimal unitPriceUsd,
     BigDecimal totalSpentUsd,
     BigDecimal realizedPnl,
-    OffsetDateTime transactionDate
+    OffsetDateTime transactionDate,
+    boolean matched,
+    UUID matchedTransactionId
 ) {
 }

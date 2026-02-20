@@ -59,6 +59,8 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/auth/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/lookup/AssetLookupResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/lookup/ExchangeLookupResponse.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/lookup/UpsertAssetRequest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/lookup/UpsertExchangeRequest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/lookup/package-info.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/portfolio/PortfolioAssetPerformanceResponse.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/dto/portfolio/PortfolioSummaryResponse.java
@@ -107,6 +109,10 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/auth/InMemoryAuthLogoutService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/auth/InMemoryAuthOAuthService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/auth/InMemoryAuthRegistrationService.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/AssetService.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/AssetServiceImpl.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/ExchangeService.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/ExchangeServiceImpl.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/LookupSeedInitializer.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/LookupService.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/main/java/com/trading/service/lookup/LookupServiceImpl.java

@@ -29,6 +29,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                 :search IS NULL
                 OR CAST(a.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
                 OR CAST(a.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(e.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
                 OR CAST(e.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
               )
             ORDER BY t.transaction_date DESC, t.id DESC

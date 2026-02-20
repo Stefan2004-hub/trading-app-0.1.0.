@@ -6,6 +6,8 @@ import com.trading.domain.enums.TransactionType;
 import com.trading.dto.strategy.StrategyAlertResponse;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.AssetService;
+import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
@@ -63,6 +65,12 @@ class MultiTenantIsolationIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+
+    @MockBean
+    private AssetService assetService;
+
+    @MockBean
+    private ExchangeService exchangeService;
 
     @MockBean
     private LookupService lookupService;
@@ -142,7 +150,9 @@ class MultiTenantIsolationIntegrationTest {
             new BigDecimal("60000"),
             new BigDecimal("18000"),
             null,
-            OffsetDateTime.parse("2026-02-13T10:00:00Z")
+            OffsetDateTime.parse("2026-02-13T10:00:00Z"),
+            false,
+            null
         );
     }
 

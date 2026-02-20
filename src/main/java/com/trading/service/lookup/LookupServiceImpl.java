@@ -39,6 +39,6 @@ public class LookupServiceImpl implements LookupService {
     }
 
     private static ExchangeLookupResponse toExchangeResponse(Exchange exchange) {
-        return new ExchangeLookupResponse(exchange.getId(), exchange.getName());
+        return new ExchangeLookupResponse(exchange.getId(), exchange.getSymbol(), exchange.getName());
     }
 }

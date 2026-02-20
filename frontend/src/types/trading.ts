@@ -6,6 +6,7 @@ export interface AssetOption {
 
 export interface ExchangeOption {
   id: string;
+  symbol: string;
   name: string;
 }
 
@@ -27,6 +28,8 @@ export interface TransactionItem {
   totalSpentUsd: string;
   realizedPnl: string | null;
   transactionDate: string;
+  matched: boolean;
+  matchedTransactionId: string | null;
 }
 
 export interface PortfolioAssetPerformance {

@@ -12,4 +12,6 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
     Optional<Asset> findBySymbolIgnoreCase(String symbol);
 
     List<Asset> findAllByOrderBySymbolAsc();
+
+    List<Asset> findBySymbolContainingIgnoreCaseOrNameContainingIgnoreCaseOrderBySymbolAsc(String symbol, String name);
 }

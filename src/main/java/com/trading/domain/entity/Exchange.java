@@ -20,6 +20,9 @@ public class Exchange {
     @Column(name = "name", nullable = false, length = 50, unique = true)
     private String name;
 
+    @Column(name = "symbol", nullable = false, length = 10, unique = true)
+    private String symbol;
+
     public UUID getId() {
         return id;
     }
@@ -34,5 +37,13 @@ public class Exchange {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public void setSymbol(String symbol) {
+        this.symbol = symbol;
     }
 }

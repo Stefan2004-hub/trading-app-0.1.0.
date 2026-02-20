@@ -1,0 +1,155 @@
+import { useMemo } from 'react';
+import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
+import type { AssetOption, TransactionItem } from '../types/trading';
+import { formatNumber, formatUsd } from '../utils/format';
+
+interface OpenPortfolioSectionProps {
+  transactions: TransactionItem[];
+  assets: AssetOption[];
+}
+
+interface OpenPositionRow {
+  symbol: string;
+  netAmount: number;
+  usdInvested: number;
+}
+
+export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSectionProps): JSX.Element {
+  const assetSymbolById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const asset of assets) {
+      map.set(asset.id, asset.symbol.toUpperCase());
+    }
+    return map;
+  }, [assets]);
+
+  const openRows = useMemo(() => {
+    const aggregate = new Map<string, OpenPositionRow>();
+    for (const tx of transactions) {
+      if (tx.transactionType !== 'BUY' || tx.matched) {
+        continue;
+      }
+      const symbol = assetSymbolById.get(tx.assetId);
+      if (!symbol) {
+        continue;
+      }
+      const amount = Number(tx.netAmount);
+      const invested = Number(tx.totalSpentUsd);
+      const current = aggregate.get(symbol);
+      if (current) {
+        current.netAmount += Number.isFinite(amount) ? amount : 0;
+        current.usdInvested += Number.isFinite(invested) ? invested : 0;
+      } else {
+        aggregate.set(symbol, {
+          symbol,
+          netAmount: Number.isFinite(amount) ? amount : 0,
+          usdInvested: Number.isFinite(invested) ? invested : 0
+        });
+      }
+    }
+
+    return Array.from(aggregate.values()).sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [assetSymbolById, transactions]);
+
+  const symbols = useMemo(() => openRows.map((row) => row.symbol), [openRows]);
+  const pricesBySymbol = useAssetSpotPrices(symbols);
+
+  const valuationRows = useMemo(
+    () =>
+      openRows.map((row) => {
+        const priceState = pricesBySymbol[row.symbol];
+        const currentPrice =
+          priceState?.status === 'success' && priceState.priceUsd && Number.isFinite(Number(priceState.priceUsd))
+            ? Number(priceState.priceUsd)
+            : null;
+        const currentValue = currentPrice === null ? null : row.netAmount * currentPrice;
+        return {
+          ...row,
+          priceState,
+          currentPrice,
+          currentValue
+        };
+      }),
+    [openRows, pricesBySymbol]
+  );
+
+  const summary = useMemo(() => {
+    const totalInvested = valuationRows.reduce((sum, row) => sum + row.usdInvested, 0);
+    const allValuesKnown = valuationRows.every((row) => row.currentValue !== null);
+    const totalMarketValue = allValuesKnown
+      ? valuationRows.reduce((sum, row) => sum + (row.currentValue ?? 0), 0)
+      : null;
+
+    return { totalInvested, totalMarketValue };
+  }, [valuationRows]);
+
+  const summaryClassName =
+    summary.totalMarketValue === null
+      ? ''
+      : summary.totalMarketValue >= summary.totalInvested
+        ? 'pnl-positive'
+        : 'pnl-negative';
+
+  return (
+    <section className="history-panel history-panel-prominent">
+      <h3>Portfolio Summary</h3>
+      <div className="portfolio-summary-inline">
+        <div className="metric-card">
+          <h3>Total Invested</h3>
+          <p>{formatUsd(String(summary.totalInvested))}</p>
+        </div>
+        <div className="metric-card">
+          <h3>Current Market Value</h3>
+          <p className={summaryClassName}>
+            {summary.totalMarketValue === null ? '---' : formatUsd(String(summary.totalMarketValue))}
+          </p>
+        </div>
+      </div>
+
+      {valuationRows.length === 0 ? (
+        <p>No open positions yet.</p>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Net Amount</th>
+                <th>USD Invested</th>
+                <th>Current Price</th>
+                <th>Current Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {valuationRows.map((row) => {
+                const diff =
+                  row.currentValue === null || !Number.isFinite(row.currentValue)
+                    ? null
+                    : row.currentValue - row.usdInvested;
+                const valueClassName = diff === null ? '' : diff >= 0 ? 'pnl-positive' : 'pnl-negative';
+
+                return (
+                  <tr key={row.symbol}>
+                    <td>{row.symbol}</td>
+                    <td>{formatNumber(String(row.netAmount))}</td>
+                    <td>{formatUsd(String(row.usdInvested))}</td>
+                    <td>
+                      {!row.priceState || row.priceState.status === 'loading'
+                        ? <span className="table-price-loading" aria-label="Loading current price" />
+                        : row.priceState.status === 'error' || row.currentPrice === null
+                          ? '---'
+                          : formatUsd(String(row.currentPrice))}
+                    </td>
+                    <td className={valueClassName}>
+                      {row.currentValue === null ? '---' : formatUsd(String(row.currentValue))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}

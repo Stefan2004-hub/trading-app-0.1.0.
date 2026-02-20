@@ -3,6 +3,8 @@ package com.trading.controller;
 import com.trading.dto.lookup.AssetLookupResponse;
 import com.trading.dto.lookup.ExchangeLookupResponse;
 import com.trading.security.UserPrincipal;
+import com.trading.service.lookup.AssetService;
+import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
@@ -43,6 +45,12 @@ class LookupControllerIntegrationTest {
     private MockMvc mockMvc;
 
     @MockBean
+    private AssetService assetService;
+
+    @MockBean
+    private ExchangeService exchangeService;
+
+    @MockBean
     private LookupService lookupService;
 
     @MockBean
@@ -70,7 +78,7 @@ class LookupControllerIntegrationTest {
             "BTC",
             "Bitcoin"
         );
-        when(lookupService.listAssets()).thenReturn(List.of(row));
+        when(assetService.list(null)).thenReturn(List.of(row));
 
         mockMvc.perform(get("/api/assets").with(authentication(authenticationFor())))
             .andExpect(status().isOk())
@@ -78,23 +86,25 @@ class LookupControllerIntegrationTest {
             .andExpect(jsonPath("$[0].symbol").value("BTC"))
             .andExpect(jsonPath("$[0].name").value("Bitcoin"));
 
-        verify(lookupService).listAssets();
+        verify(assetService).list(null);
     }
 
     @Test
     void exchangesEndpointReturnsSeededStyleList() throws Exception {
         ExchangeLookupResponse row = new ExchangeLookupResponse(
             UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "BINANCE",
             "Binance"
         );
-        when(lookupService.listExchanges()).thenReturn(List.of(row));
+        when(exchangeService.list(null)).thenReturn(List.of(row));
 
         mockMvc.perform(get("/api/exchanges").with(authentication(authenticationFor())))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"))
+            .andExpect(jsonPath("$[0].symbol").value("BINANCE"))
             .andExpect(jsonPath("$[0].name").value("Binance"));
 
-        verify(lookupService).listExchanges();
+        verify(exchangeService).list(null);
     }
 
     @Test

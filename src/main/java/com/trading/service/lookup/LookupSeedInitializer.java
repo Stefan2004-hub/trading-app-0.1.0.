@@ -55,19 +55,21 @@ public class LookupSeedInitializer implements ApplicationRunner {
 
     private void ensureExchanges() {
         List<SeedExchange> defaults = List.of(
-            new SeedExchange("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "Binance"),
-            new SeedExchange("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "Coinbase"),
-            new SeedExchange("cccccccc-cccc-cccc-cccc-cccccccccccc", "Kraken"),
-            new SeedExchange("dddddddd-dddd-dddd-dddd-dddddddddddd", "Bybit"),
-            new SeedExchange("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", "OKX")
+            new SeedExchange("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "BINANCE", "Binance"),
+            new SeedExchange("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "COINBASE", "Coinbase"),
+            new SeedExchange("cccccccc-cccc-cccc-cccc-cccccccccccc", "KRAKEN", "Kraken"),
+            new SeedExchange("dddddddd-dddd-dddd-dddd-dddddddddddd", "BYBIT", "Bybit"),
+            new SeedExchange("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", "OKX", "OKX")
         );
 
         for (SeedExchange defaultExchange : defaults) {
-            if (exchangeRepository.findByNameIgnoreCase(defaultExchange.name()).isPresent()) {
+            if (exchangeRepository.findByNameIgnoreCase(defaultExchange.name()).isPresent()
+                || exchangeRepository.findBySymbolIgnoreCase(defaultExchange.symbol()).isPresent()) {
                 continue;
             }
             Exchange exchange = new Exchange();
             exchange.setId(UUID.fromString(defaultExchange.id()));
+            exchange.setSymbol(defaultExchange.symbol());
             exchange.setName(defaultExchange.name());
             exchangeRepository.save(exchange);
         }
@@ -76,6 +78,6 @@ public class LookupSeedInitializer implements ApplicationRunner {
     private record SeedAsset(String id, String symbol, String name) {
     }
 
-    private record SeedExchange(String id, String name) {
+    private record SeedExchange(String id, String symbol, String name) {
     }
 }
