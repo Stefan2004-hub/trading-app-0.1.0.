@@ -251,6 +251,40 @@ p {
   max-width: 500px;
 }
 
+.transactions-pagination-footer {
+  margin-top: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.transactions-pagination-footer label {
+  font-weight: 500;
+}
+
+.transactions-page-size-select {
+  width: auto;
+  min-width: 4.8rem;
+}
+
+.transactions-pagination-label {
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.transactions-pagination-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.transactions-page-button {
+  width: auto;
+  margin-top: 0;
+  min-width: 5.8rem;
+}
+
 .autocomplete-field {
   position: relative;
 }
@@ -858,6 +892,11 @@ a {
     right: 0;
     left: auto;
     min-width: 10.5rem;
+  }
+
+  .transactions-pagination-footer {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 }
 

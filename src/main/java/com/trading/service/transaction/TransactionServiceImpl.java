@@ -17,6 +17,9 @@ import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -64,16 +67,16 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<TransactionResponse> list(UUID userId, String search) {
+    public Page<TransactionResponse> list(UUID userId, int page, int size, String search) {
         Objects.requireNonNull(userId, "userId is required");
         String normalizedSearch = normalizeSearch(search);
-        List<Transaction> transactions =
-            transactionRepository.findAllByUser_IdAndSearchOrderByTransactionDateDesc(userId, normalizedSearch);
-        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactions);
-
-        return transactions.stream()
+        PageRequest pageRequest = PageRequest.of(page, size);
+        Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, normalizedSearch, pageRequest);
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactionPage.getContent());
+        List<TransactionResponse> content = transactionPage.getContent().stream()
             .map((transaction) -> toResponse(transaction, matchedPairs.get(transaction.getId())))
             .toList();
+        return new PageImpl<>(content, pageRequest, transactionPage.getTotalElements());
     }
 
     @Override

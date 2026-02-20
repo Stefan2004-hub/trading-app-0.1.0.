@@ -3,6 +3,7 @@ import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AssetOption,
   ExchangeOption,
+  PaginatedResponse,
   PortfolioAssetPerformance,
   PortfolioSummary,
   TradeFormPayload,
@@ -79,10 +80,17 @@ export const tradingApi = {
     });
   },
 
-  listTransactions(search?: string): Promise<TransactionItem[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<TransactionItem[]>(`/api/transactions${query}`);
+  listTransactions(params?: { page?: number; size?: number; search?: string }): Promise<PaginatedResponse<TransactionItem>> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('page', String(params?.page ?? 0));
+    queryParams.set('size', String(params?.size ?? 20));
+
+    const trimmedSearch = params?.search?.trim();
+    if (trimmedSearch) {
+      queryParams.set('search', trimmedSearch);
+    }
+
+    return request<PaginatedResponse<TransactionItem>>(`/api/transactions?${queryParams.toString()}`);
   },
 
   getPortfolioSummary(): Promise<PortfolioSummary> {

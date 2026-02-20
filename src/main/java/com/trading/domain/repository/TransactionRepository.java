@@ -6,6 +6,8 @@ import com.trading.domain.projection.UserAssetRealizedPnlProjection;
 import com.trading.domain.projection.SellOpportunityProjection;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
 import com.trading.domain.enums.TransactionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,11 +36,26 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
               )
             ORDER BY t.transaction_date DESC, t.id DESC
             """,
+        countQuery = """
+            SELECT COUNT(*)
+            FROM transactions t
+            JOIN assets a ON a.id = t.asset_id
+            JOIN exchanges e ON e.id = t.exchange_id
+            WHERE t.user_id = :userId
+              AND (
+                :search IS NULL
+                OR CAST(a.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(a.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(e.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(e.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+              )
+            """,
         nativeQuery = true
     )
-    List<Transaction> findAllByUser_IdAndSearchOrderByTransactionDateDesc(
+    Page<Transaction> findByUser_IdAndSearch(
         @Param("userId") UUID userId,
-        @Param("search") String search
+        @Param("search") String search,
+        Pageable pageable
     );
 
     List<Transaction> findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(UUID userId, UUID assetId);
