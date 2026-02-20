@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppHeader } from '../components/AppHeader';
 import { BuyTransactionModal } from '../components/BuyTransactionModal';
-import { PortfolioSummaryCards } from '../components/PortfolioSummaryCards';
+import { OpenTransactionSummaryCards } from '../components/OpenTransactionSummaryCards';
 import { TransactionHistoryTable } from '../components/TransactionHistoryTable';
 import { ToastContainer, type ToastItem, type ToastVariant } from '../components/ui/toast';
 import {
@@ -22,7 +22,7 @@ export function TransactionsPage(): JSX.Element {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { assets, exchanges, transactions, summary, loading, bootstrapAttempted, submitting, error, userPreferences } =
+  const { assets, exchanges, transactions, loading, bootstrapAttempted, submitting, error, userPreferences } =
     useAppSelector((state) => state.trading);
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export function TransactionsPage(): JSX.Element {
         <h1>Trading</h1>
         {error ? <p className="auth-error">{error}</p> : null}
 
-        <PortfolioSummaryCards summary={summary} />
+        <OpenTransactionSummaryCards transactions={transactions} assets={assets} />
 
         <section className="transactions-title-row">
           <h2>Transaction List</h2>
