@@ -18,6 +18,28 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     List<Transaction> findAllByUser_IdOrderByTransactionDateDesc(UUID userId);
 
+    @Query(
+        value = """
+            SELECT t.*
+            FROM transactions t
+            JOIN assets a ON a.id = t.asset_id
+            JOIN exchanges e ON e.id = t.exchange_id
+            WHERE t.user_id = :userId
+              AND (
+                :search IS NULL
+                OR CAST(a.symbol AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(a.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+                OR CAST(e.name AS TEXT) ILIKE CONCAT('%', CAST(:search AS TEXT), '%')
+              )
+            ORDER BY t.transaction_date DESC, t.id DESC
+            """,
+        nativeQuery = true
+    )
+    List<Transaction> findAllByUser_IdAndSearchOrderByTransactionDateDesc(
+        @Param("userId") UUID userId,
+        @Param("search") String search
+    );
+
     List<Transaction> findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(UUID userId, UUID assetId);
 
     List<Transaction> findAllByUser_IdAndAsset_IdAndTransactionTypeOrderByTransactionDateDesc(

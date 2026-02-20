@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -37,9 +38,11 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionResponse>> list() {
+    public ResponseEntity<List<TransactionResponse>> list(
+        @RequestParam(name = "search", required = false) String search
+    ) {
         UUID userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.list(userId));
+        return ResponseEntity.ok(transactionService.list(userId, search));
     }
 
     @PostMapping("/buy")

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AppHeader } from '../components/AppHeader';
+import { BuyTransactionModal } from '../components/BuyTransactionModal';
 import { PortfolioSummaryCards } from '../components/PortfolioSummaryCards';
-import { TradeForm } from '../components/TradeForm';
 import { TransactionHistoryTable } from '../components/TransactionHistoryTable';
 import { ToastContainer, type ToastItem, type ToastVariant } from '../components/ui/toast';
 import {
   clearTradingError,
   deleteTransaction,
+  loadTransactions,
   loadTradingBootstrap,
   submitBuyTrade,
   submitSellTrade,
@@ -19,6 +20,8 @@ import type { TradeFormPayload, UpdateTransactionPayload } from '../types/tradin
 export function TransactionsPage(): JSX.Element {
   const dispatch = useAppDispatch();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { assets, exchanges, transactions, summary, loading, bootstrapAttempted, submitting, error, userPreferences } =
     useAppSelector((state) => state.trading);
 
@@ -28,6 +31,22 @@ export function TransactionsPage(): JSX.Element {
     }
     void dispatch(loadTradingBootstrap());
   }, [bootstrapAttempted, dispatch, loading]);
+
+  useEffect(() => {
+    if (!bootstrapAttempted) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      void dispatch(loadTransactions(searchTerm.trim() ? searchTerm : undefined));
+    }, 250);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [bootstrapAttempted, dispatch, searchTerm]);
+
+  const refreshTransactionsForSearch = useCallback(async (): Promise<void> => {
+    await dispatch(loadTransactions(searchTerm.trim() ? searchTerm : undefined)).unwrap();
+  }, [dispatch, searchTerm]);
 
   const showToast = useCallback((message: string, variant: ToastVariant): void => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -44,12 +63,13 @@ export function TransactionsPage(): JSX.Element {
       const ok = updateTransaction.fulfilled.match(action);
       if (ok) {
         showToast('Transaction updated successfully.', 'success');
+        await refreshTransactionsForSearch();
       } else {
         showToast('Failed to update transaction. Please try again.', 'error');
       }
       return ok;
     },
-    [dispatch, showToast]
+    [dispatch, refreshTransactionsForSearch, showToast]
   );
 
   const submitDeleteTransaction = useCallback(
@@ -59,12 +79,13 @@ export function TransactionsPage(): JSX.Element {
       const ok = deleteTransaction.fulfilled.match(action);
       if (ok) {
         showToast('Transaction deleted successfully.', 'success');
+        await refreshTransactionsForSearch();
       } else {
         showToast('Failed to delete transaction. Please try again.', 'error');
       }
       return ok;
     },
-    [dispatch, showToast]
+    [dispatch, refreshTransactionsForSearch, showToast]
   );
 
   const submitSellFromTransaction = useCallback(
@@ -74,12 +95,13 @@ export function TransactionsPage(): JSX.Element {
       const ok = submitSellTrade.fulfilled.match(action);
       if (ok) {
         showToast('Sell transaction created successfully.', 'success');
+        await refreshTransactionsForSearch();
       } else {
         showToast('Failed to create sell transaction. Please try again.', 'error');
       }
       return ok;
     },
-    [dispatch, showToast]
+    [dispatch, refreshTransactionsForSearch, showToast]
   );
 
   return (
@@ -91,37 +113,24 @@ export function TransactionsPage(): JSX.Element {
 
         <PortfolioSummaryCards summary={summary} />
 
-        <section className="forms-grid">
-          <TradeForm
-            title="Buy"
-            tradeType="BUY"
-            assets={assets}
-            exchanges={exchanges}
-            submitting={submitting}
-            defaultBuyInputMode={userPreferences?.defaultBuyInputMode}
-            onBuyInputModeChange={(mode) => {
-              void dispatch(updateDefaultBuyInputMode(mode));
-            }}
-            onSubmit={async (payload) => {
-              dispatch(clearTradingError());
-              const action = await dispatch(submitBuyTrade(payload));
-              return submitBuyTrade.fulfilled.match(action);
-            }}
-          />
-
-          <TradeForm
-            title="Sell"
-            tradeType="SELL"
-            assets={assets}
-            exchanges={exchanges}
-            submitting={submitting}
-            onSubmit={async (payload) => {
-              dispatch(clearTradingError());
-              const action = await dispatch(submitSellTrade(payload));
-              return submitSellTrade.fulfilled.match(action);
-            }}
-          />
+        <section className="transactions-title-row">
+          <h2>Transaction List</h2>
+          <button type="button" className="open-buy-modal-button" onClick={() => setIsBuyModalOpen(true)}>
+            Buy
+          </button>
         </section>
+
+        <div className="search-controls">
+          <label htmlFor="transaction-search">Search by Asset or Exchange</label>
+          <input
+            id="transaction-search"
+            className="search-input"
+            type="search"
+            placeholder="e.g. BTC, AAPL, Binance, Nasdaq"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+        </div>
 
         <TransactionHistoryTable
           transactions={transactions}
@@ -130,6 +139,30 @@ export function TransactionsPage(): JSX.Element {
           onEditTransaction={submitEditTransaction}
           onDeleteTransaction={submitDeleteTransaction}
           onSellFromTransaction={submitSellFromTransaction}
+        />
+
+        <BuyTransactionModal
+          open={isBuyModalOpen}
+          assets={assets}
+          exchanges={exchanges}
+          submitting={submitting}
+          defaultBuyInputMode={userPreferences?.defaultBuyInputMode}
+          onClose={() => setIsBuyModalOpen(false)}
+          onBuyInputModeChange={(mode) => {
+            void dispatch(updateDefaultBuyInputMode(mode));
+          }}
+          onSubmit={async (payload) => {
+            dispatch(clearTradingError());
+            const action = await dispatch(submitBuyTrade(payload));
+            const ok = submitBuyTrade.fulfilled.match(action);
+            if (ok) {
+              showToast('Buy transaction created successfully.', 'success');
+              await refreshTransactionsForSearch();
+            } else {
+              showToast('Failed to create buy transaction. Please try again.', 'error');
+            }
+            return ok;
+          }}
         />
       </section>
       <ToastContainer items={toasts} />

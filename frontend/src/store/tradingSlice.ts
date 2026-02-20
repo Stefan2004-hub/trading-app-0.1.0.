@@ -52,6 +52,10 @@ export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', as
   return { assets, exchanges, transactions, summary, performance, userPreferences };
 });
 
+export const loadTransactions = createAsyncThunk('trading/loadTransactions', async (search: string | undefined) => {
+  return tradingApi.listTransactions(search);
+});
+
 export const submitBuyTrade = createAsyncThunk('trading/submitBuy', async (payload: TradeFormPayload, { dispatch }) => {
   await tradingApi.buy(payload);
   await dispatch(loadTradingBootstrap()).unwrap();
@@ -110,6 +114,19 @@ const tradingSlice = createSlice({
       state.loading = false;
       state.bootstrapAttempted = true;
       state.error = action.error.message ?? 'Failed to load trading data';
+    });
+
+    builder.addCase(loadTransactions.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    });
+    builder.addCase(loadTransactions.fulfilled, (state, action) => {
+      state.loading = false;
+      state.transactions = action.payload;
+    });
+    builder.addCase(loadTransactions.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.error.message ?? 'Failed to load transactions';
     });
 
     builder.addCase(submitBuyTrade.pending, (state) => {
