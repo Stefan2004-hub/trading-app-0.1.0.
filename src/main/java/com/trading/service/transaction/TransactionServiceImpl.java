@@ -2,12 +2,14 @@ package com.trading.service.transaction;
 
 import com.trading.domain.entity.Asset;
 import com.trading.domain.entity.Exchange;
+import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.ExchangeRepository;
+import com.trading.domain.repository.PricePeakRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
@@ -24,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -39,17 +42,20 @@ public class TransactionServiceImpl implements TransactionService {
     private final UserRepository userRepository;
     private final AssetRepository assetRepository;
     private final ExchangeRepository exchangeRepository;
+    private final PricePeakRepository pricePeakRepository;
 
     public TransactionServiceImpl(
         TransactionRepository transactionRepository,
         UserRepository userRepository,
         AssetRepository assetRepository,
-        ExchangeRepository exchangeRepository
+        ExchangeRepository exchangeRepository,
+        PricePeakRepository pricePeakRepository
     ) {
         this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
         this.assetRepository = assetRepository;
         this.exchangeRepository = exchangeRepository;
+        this.pricePeakRepository = pricePeakRepository;
     }
 
     @Override
@@ -190,8 +196,45 @@ public class TransactionServiceImpl implements TransactionService {
             .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
         UUID assetId = tx.getAsset().getId();
 
+        clearDeletedBuyReferenceFromPricePeak(userId, assetId, tx);
         transactionRepository.delete(tx);
         recalculateAssetTransactions(userId, assetId);
+    }
+
+    private void clearDeletedBuyReferenceFromPricePeak(UUID userId, UUID assetId, Transaction deletedTransaction) {
+        if (deletedTransaction.getTransactionType() != TransactionType.BUY) {
+            return;
+        }
+
+        Optional<PricePeak> pricePeakOptional = pricePeakRepository.findByUser_IdAndAsset_Id(userId, assetId);
+        if (pricePeakOptional.isEmpty()) {
+            return;
+        }
+
+        PricePeak pricePeak = pricePeakOptional.get();
+        Transaction lastBuyTransaction = pricePeak.getLastBuyTransaction();
+        if (lastBuyTransaction == null || !deletedTransaction.getId().equals(lastBuyTransaction.getId())) {
+            return;
+        }
+
+        Optional<Transaction> replacementBuy = transactionRepository
+            .findAllByUser_IdAndAsset_IdAndTransactionTypeOrderByTransactionDateDesc(userId, assetId, TransactionType.BUY)
+            .stream()
+            .filter(existingBuy -> !deletedTransaction.getId().equals(existingBuy.getId()))
+            .findFirst();
+
+        if (replacementBuy.isPresent()) {
+            Transaction replacement = replacementBuy.get();
+            pricePeak.setLastBuyTransaction(replacement);
+            pricePeak.setPeakPrice(replacement.getUnitPriceUsd());
+            pricePeak.setPeakTimestamp(replacement.getTransactionDate());
+            pricePeak.setActive(true);
+        } else {
+            pricePeak.setLastBuyTransaction(null);
+            pricePeak.setActive(false);
+        }
+
+        pricePeakRepository.save(pricePeak);
     }
 
     private static void validateRequest(BuyTransactionRequest request) {
