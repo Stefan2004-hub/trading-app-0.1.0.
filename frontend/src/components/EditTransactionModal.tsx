@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TransactionItem, UpdateTransactionPayload } from '../types/trading';
+import {
+  decimalToDisplay,
+  divideDecimal,
+  fractionalToPercent,
+  isPositiveDecimal,
+  multiplyDecimal
+} from '../utils/decimal';
 import { formatDateTime } from '../utils/format';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Button } from './ui/button';
@@ -32,53 +39,49 @@ const EMPTY_FORM: EditFormState = {
   unitPriceUsd: ''
 };
 
-function parsePositive(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const numeric = Number(trimmed);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-function formatCalculated(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(18).replace(/\.?0+$/, '') : '';
+function asText(value: unknown): string {
+  return value == null ? '' : String(value);
 }
 
 function toFormState(transaction: TransactionItem): EditFormState {
-  const gross = Number(transaction.grossAmount);
-  const feeAmountValue = transaction.feeAmount ? Number(transaction.feeAmount) : null;
-  const feePercentageValue = transaction.feePercentage ? Number(transaction.feePercentage) * 100 : null;
-
-  const computedPercent = feeAmountValue && gross > 0 ? (feeAmountValue / gross) * 100 : null;
+  const grossAmount = asText(transaction.grossAmount);
+  const feeAmount = asText(transaction.feeAmount);
+  const unitPriceUsd = asText(transaction.unitPriceUsd);
+  const feePercentage = transaction.feePercentage ? fractionalToPercent(transaction.feePercentage) : null;
+  const fallbackRatio =
+    feeAmount && grossAmount && isPositiveDecimal(grossAmount)
+      ? divideDecimal(feeAmount, grossAmount, 18)
+      : null;
+  const fallbackPercentage = fallbackRatio ? multiplyDecimal(fallbackRatio, '100') : null;
 
   return {
-    grossAmount: transaction.grossAmount,
-    feeAmount: transaction.feeAmount ?? '',
-    feePercentage: formatCalculated(feePercentageValue ?? computedPercent ?? 0),
-    unitPriceUsd: transaction.unitPriceUsd
+    grossAmount,
+    feeAmount,
+    feePercentage: decimalToDisplay(feePercentage ?? fallbackPercentage ?? '0', 18) ?? '',
+    unitPriceUsd
   };
 }
 
 function syncFee(form: EditFormState, mode: FeeMode): EditFormState {
-  const gross = parsePositive(form.grossAmount);
-  if (!mode || !gross) {
+  if (!mode || !isPositiveDecimal(form.grossAmount)) {
     return form;
   }
 
   if (mode === 'PERCENTAGE') {
-    const percentage = parsePositive(form.feePercentage);
-    if (!percentage) {
+    if (!isPositiveDecimal(form.feePercentage)) {
       return { ...form, feeAmount: '' };
     }
-    return { ...form, feeAmount: formatCalculated((gross * percentage) / 100) };
+    const feeProduct = multiplyDecimal(form.grossAmount, form.feePercentage);
+    const feeAmount = feeProduct ? divideDecimal(feeProduct, '100', 18) : null;
+    return { ...form, feeAmount: feeAmount ?? '' };
   }
 
-  const amount = parsePositive(form.feeAmount);
-  if (!amount) {
+  if (!isPositiveDecimal(form.feeAmount)) {
     return { ...form, feePercentage: '' };
   }
-  return { ...form, feePercentage: formatCalculated((amount / gross) * 100) };
+  const ratio = divideDecimal(form.feeAmount, form.grossAmount, 18);
+  const feePercentage = ratio ? multiplyDecimal(ratio, '100') : null;
+  return { ...form, feePercentage: feePercentage ?? '' };
 }
 
 export function EditTransactionModal({
@@ -115,11 +118,11 @@ export function EditTransactionModal({
     setSaving(true);
 
     const payload: UpdateTransactionPayload = {
-      grossAmount: form.grossAmount,
+      grossAmount: asText(form.grossAmount),
       feeAmount: form.feeAmount.trim() ? form.feeAmount.trim() : undefined,
       feePercentage:
         !isUsdFee && form.feePercentage.trim() ? form.feePercentage.trim() : undefined,
-      unitPriceUsd: form.unitPriceUsd
+      unitPriceUsd: asText(form.unitPriceUsd)
     };
 
     const ok = await onSubmit(activeTransaction.id, payload);
