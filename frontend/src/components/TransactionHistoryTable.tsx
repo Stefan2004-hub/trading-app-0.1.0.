@@ -102,11 +102,7 @@ export function TransactionHistoryTable({
         groupedRows.push({ tx: sellTx, groupClassName: 'matched-group-end' });
         visited.add(buyTx.id);
         visited.add(sellTx.id);
-        continue;
       }
-
-      groupedRows.push({ tx, groupClassName: '' });
-      visited.add(tx.id);
     }
 
     return groupedRows;
@@ -140,7 +136,7 @@ export function TransactionHistoryTable({
           </label>
         </div>
         {rowsToRender.length === 0 ? (
-          <p>{showHistory ? 'No transactions yet.' : 'No open buy transactions.'}</p>
+          <p>{showHistory ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
         ) : (
           <div className="table-wrap">
             <table>
