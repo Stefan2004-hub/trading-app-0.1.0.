@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { TradeFormPayload, UpdateTransactionPayload } from '../types/trading';
 import type { AssetOption, ExchangeOption, TransactionItem } from '../types/trading';
 import { formatDateTime, formatNumber, formatUsd } from '../utils/format';
+import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EditTransactionModal } from './EditTransactionModal';
 import { SellTransactionModal } from './SellTransactionModal';
@@ -48,6 +49,25 @@ export function TransactionHistoryTable({
     () => transactions.find((item) => item.id === deleteTargetId) ?? null,
     [deleteTargetId, transactions]
   );
+  const assetSymbolById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const asset of assets) {
+      map.set(asset.id, asset.symbol);
+    }
+    return map;
+  }, [assets]);
+  const symbolsToPrice = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          transactions
+            .map((tx) => assetSymbolById.get(tx.assetId))
+            .filter((symbol): symbol is string => Boolean(symbol))
+        )
+      ),
+    [assetSymbolById, transactions]
+  );
+  const pricesBySymbol = useAssetSpotPrices(symbolsToPrice);
 
   async function confirmDelete(): Promise<void> {
     if (!deleteTargetId) {
@@ -79,6 +99,7 @@ export function TransactionHistoryTable({
                   <th>Fee Amount</th>
                   <th>Fee %</th>
                   <th>Price</th>
+                  <th>Current Price</th>
                   <th>Total</th>
                   <th>Realized PnL</th>
                   <th>Date</th>
@@ -98,6 +119,22 @@ export function TransactionHistoryTable({
                     </td>
                     <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
                     <td>{formatUsd(tx.unitPriceUsd)}</td>
+                    <td>
+                      {(() => {
+                        const symbol = assetSymbolById.get(tx.assetId);
+                        if (!symbol) {
+                          return '---';
+                        }
+                        const priceState = pricesBySymbol[symbol.toUpperCase()];
+                        if (!priceState || priceState.status === 'loading') {
+                          return <span className="table-price-loading" aria-label="Loading current price" />;
+                        }
+                        if (priceState.status === 'error' || !priceState.priceUsd) {
+                          return '---';
+                        }
+                        return formatUsd(priceState.priceUsd);
+                      })()}
+                    </td>
                     <td>{formatUsd(tx.totalSpentUsd)}</td>
                     <td>{formatUsd(tx.realizedPnl)}</td>
                     <td>{formatDateTime(tx.transactionDate)}</td>
