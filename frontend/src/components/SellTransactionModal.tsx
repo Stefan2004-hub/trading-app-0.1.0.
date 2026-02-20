@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { TradeFormPayload, TransactionItem } from '../types/trading';
+import {
+  decimalToDisplay,
+  divideDecimal,
+  fractionalToPercent,
+  isPositiveDecimal,
+  multiplyDecimal
+} from '../utils/decimal';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
 import { Input } from './ui/input';
@@ -26,60 +33,51 @@ const EMPTY_FORM: SellFormState = {
   unitPriceUsd: ''
 };
 
-function parsePositive(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const numeric = Number(trimmed);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-function formatCalculated(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(18).replace(/\.?0+$/, '') : '';
-}
-
 function asText(value: unknown): string {
   return value == null ? '' : String(value);
 }
 
 function toInitialState(transaction: TransactionItem): SellFormState {
-  const sellQuantity = Number(transaction.netAmount);
-  const unitPrice = Number(transaction.unitPriceUsd ?? '0');
-  const feeAmount = transaction.feeAmount ? Number(transaction.feeAmount) : null;
-  const feePercentage = transaction.feePercentage ? Number(transaction.feePercentage) * 100 : null;
-  const notionalUsd = sellQuantity > 0 && unitPrice > 0 ? sellQuantity * unitPrice : 0;
-
-  const fallbackPercentage = feeAmount && notionalUsd > 0 ? (feeAmount / notionalUsd) * 100 : null;
+  const notionalUsd = multiplyDecimal(transaction.netAmount, transaction.unitPriceUsd);
+  const feePercentage = transaction.feePercentage ? fractionalToPercent(transaction.feePercentage) : null;
+  const fallbackRatio =
+    transaction.feeAmount && notionalUsd && isPositiveDecimal(notionalUsd)
+      ? divideDecimal(transaction.feeAmount, notionalUsd, 18)
+      : null;
+  const fallbackPercentage = fallbackRatio ? multiplyDecimal(fallbackRatio, '100') : null;
 
   return {
     feeAmountUsd: transaction.feeAmount ?? '',
-    feePercentage: formatCalculated(feePercentage ?? fallbackPercentage ?? 0),
+    feePercentage: decimalToDisplay(feePercentage ?? fallbackPercentage ?? '0', 18) ?? '',
     unitPriceUsd: asText(transaction.unitPriceUsd)
   };
 }
 
-function syncFee(form: SellFormState, grossAmount: number, mode: 'PERCENTAGE' | 'AMOUNT'): SellFormState {
-  const unitPriceUsd = parsePositive(form.unitPriceUsd);
-  const notionalUsd = unitPriceUsd ? grossAmount * unitPriceUsd : null;
+function syncFee(form: SellFormState, grossAmount: string, mode: 'PERCENTAGE' | 'AMOUNT'): SellFormState {
+  const notionalUsd =
+    isPositiveDecimal(grossAmount) && isPositiveDecimal(form.unitPriceUsd)
+      ? multiplyDecimal(grossAmount, form.unitPriceUsd)
+      : null;
 
-  if (!mode || !Number.isFinite(grossAmount) || grossAmount <= 0 || !notionalUsd || notionalUsd <= 0) {
+  if (!mode || !notionalUsd || !isPositiveDecimal(notionalUsd)) {
     return form;
   }
 
   if (mode === 'PERCENTAGE') {
-    const percentage = parsePositive(form.feePercentage);
-    if (!percentage) {
+    if (!isPositiveDecimal(form.feePercentage)) {
       return { ...form, feeAmountUsd: '' };
     }
-    return { ...form, feeAmountUsd: formatCalculated((notionalUsd * percentage) / 100) };
+    const feeProduct = multiplyDecimal(notionalUsd, form.feePercentage);
+    const feeAmount = feeProduct ? divideDecimal(feeProduct, '100', 18) : null;
+    return { ...form, feeAmountUsd: feeAmount ?? '' };
   }
 
-  const amount = parsePositive(form.feeAmountUsd);
-  if (!amount) {
+  if (!isPositiveDecimal(form.feeAmountUsd)) {
     return { ...form, feePercentage: '' };
   }
-  return { ...form, feePercentage: formatCalculated((amount / notionalUsd) * 100) };
+  const ratio = divideDecimal(form.feeAmountUsd, notionalUsd, 18);
+  const feePercentage = ratio ? multiplyDecimal(ratio, '100') : null;
+  return { ...form, feePercentage: feePercentage ?? '' };
 }
 
 export function SellTransactionModal({
@@ -101,7 +99,7 @@ export function SellTransactionModal({
     setForm(toInitialState(transaction));
   }, [open, transaction]);
 
-  const sellQuantity = useMemo(() => Number(transaction?.netAmount ?? '0'), [transaction]);
+  const sellQuantity = useMemo(() => asText(transaction?.netAmount ?? ''), [transaction]);
 
   if (!open || !transaction) {
     return null;
