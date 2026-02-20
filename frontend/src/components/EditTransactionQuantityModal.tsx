@@ -39,6 +39,7 @@ export function EditTransactionQuantityModal({
   if (!open || !transaction) {
     return null;
   }
+  const activeTransaction = transaction;
 
   async function handleSave(): Promise<void> {
     const trimmedNetAmount = asText(netAmount).trim();
@@ -47,7 +48,7 @@ export function EditTransactionQuantityModal({
     }
 
     setSaving(true);
-    const ok = await onSubmit(transaction.id, {
+    const ok = await onSubmit(activeTransaction.id, {
       netAmount: trimmedNetAmount
     });
     setSaving(false);
