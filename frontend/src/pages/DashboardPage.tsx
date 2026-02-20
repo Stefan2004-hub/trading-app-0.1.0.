@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { AppHeader } from '../components/AppHeader';
-import { PortfolioSummaryCards } from '../components/PortfolioSummaryCards';
+import { OpenPortfolioSection } from '../components/OpenPortfolioSection';
 import { loadTradingBootstrap } from '../store/tradingSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 
 export function DashboardPage(): JSX.Element {
   const dispatch = useAppDispatch();
-  const { loading, bootstrapAttempted, error, summary } = useAppSelector((state) => state.trading);
+  const { loading, bootstrapAttempted, error, transactions, assets } = useAppSelector((state) => state.trading);
 
   useEffect(() => {
     if (loading || bootstrapAttempted) {
@@ -21,7 +21,7 @@ export function DashboardPage(): JSX.Element {
       <section className="workspace-panel">
         <h1>Portfolio Overview</h1>
         {error ? <p className="auth-error">{error}</p> : null}
-        <PortfolioSummaryCards summary={summary} />
+        <OpenPortfolioSection transactions={transactions} assets={assets} />
       </section>
     </main>
   );

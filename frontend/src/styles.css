@@ -219,6 +219,13 @@ p {
   max-width: 500px;
 }
 
+.portfolio-summary-inline {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
 .alert-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -550,6 +557,10 @@ a {
   }
 
   .alert-list {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-summary-inline {
     grid-template-columns: 1fr;
   }
 }

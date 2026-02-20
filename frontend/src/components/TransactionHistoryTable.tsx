@@ -102,11 +102,7 @@ export function TransactionHistoryTable({
         groupedRows.push({ tx: sellTx, groupClassName: 'matched-group-end' });
         visited.add(buyTx.id);
         visited.add(sellTx.id);
-        continue;
       }
-
-      groupedRows.push({ tx, groupClassName: '' });
-      visited.add(tx.id);
     }
 
     return groupedRows;
@@ -140,7 +136,7 @@ export function TransactionHistoryTable({
           </label>
         </div>
         {rowsToRender.length === 0 ? (
-          <p>{showHistory ? 'No transactions yet.' : 'No open buy transactions.'}</p>
+          <p>{showHistory ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
         ) : (
           <div className="table-wrap">
             <table>
@@ -155,7 +151,8 @@ export function TransactionHistoryTable({
                   <th>Price</th>
                   <th>Current Price</th>
                   <th>Unrealized P&L</th>
-                  <th>Total</th>
+                  <th>USD Invested</th>
+                  <th>Remaining Dollars</th>
                   <th>Realized PnL</th>
                   <th>Date</th>
                   <th>Actions</th>
@@ -180,6 +177,20 @@ export function TransactionHistoryTable({
                     Number.isFinite(quantityValue)
                       ? (currentPriceValue - purchasePriceValue) * quantityValue
                       : null;
+                  const remainingDollarsValue =
+                    isOpenBuy &&
+                    currentPriceValue !== null &&
+                    Number.isFinite(currentPriceValue) &&
+                    Number.isFinite(quantityValue)
+                      ? currentPriceValue * quantityValue
+                      : null;
+                  const usdInvestedValue = Number(tx.totalSpentUsd);
+                  const remainingClassName =
+                    remainingDollarsValue === null || !Number.isFinite(usdInvestedValue)
+                      ? ''
+                      : remainingDollarsValue >= usdInvestedValue
+                        ? 'pnl-positive'
+                        : 'pnl-negative';
 
                   return (
                   <tr key={tx.id} className={groupClassName}>
@@ -210,6 +221,9 @@ export function TransactionHistoryTable({
                       )}
                     </td>
                     <td>{formatUsd(tx.totalSpentUsd)}</td>
+                    <td className={remainingClassName}>
+                      {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
+                    </td>
                     <td>{formatUsd(tx.realizedPnl)}</td>
                     <td>{formatDateTime(tx.transactionDate)}</td>
                     <td>
