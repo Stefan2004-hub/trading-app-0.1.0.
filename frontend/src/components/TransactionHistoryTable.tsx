@@ -160,6 +160,43 @@ export function TransactionHistoryTable({
     }
   }
 
+  function getRowComputedValues(tx: TransactionItem): {
+    symbol: string | undefined;
+    priceState: ReturnType<typeof useAssetSpotPrices>[string] | undefined;
+    unrealizedPnlValue: number | null;
+    remainingDollarsValue: number | null;
+    remainingClassName: string;
+  } {
+    const symbol = assetSymbolById.get(tx.assetId);
+    const priceState = symbol ? pricesBySymbol[symbol.toUpperCase()] : undefined;
+    const currentPriceValue =
+      priceState && priceState.status === 'success' && priceState.priceUsd ? Number(priceState.priceUsd) : null;
+    const purchasePriceValue = Number(tx.unitPriceUsd);
+    const quantityValue = Number(tx.netAmount);
+    const isOpenBuy = tx.transactionType === 'BUY' && !tx.matched;
+    const unrealizedPnlValue =
+      isOpenBuy &&
+      currentPriceValue !== null &&
+      Number.isFinite(currentPriceValue) &&
+      Number.isFinite(purchasePriceValue) &&
+      Number.isFinite(quantityValue)
+        ? (currentPriceValue - purchasePriceValue) * quantityValue
+        : null;
+    const remainingDollarsValue =
+      isOpenBuy && currentPriceValue !== null && Number.isFinite(currentPriceValue) && Number.isFinite(quantityValue)
+        ? currentPriceValue * quantityValue
+        : null;
+    const usdInvestedValue = Number(tx.totalSpentUsd);
+    const remainingClassName =
+      remainingDollarsValue === null || !Number.isFinite(usdInvestedValue)
+        ? ''
+        : remainingDollarsValue >= usdInvestedValue
+          ? 'pnl-positive'
+          : 'pnl-negative';
+
+    return { symbol, priceState, unrealizedPnlValue, remainingDollarsValue, remainingClassName };
+  }
+
   return (
     <>
       <section className="history-panel history-panel-prominent">
@@ -178,8 +215,9 @@ export function TransactionHistoryTable({
         {rowsToRender.length === 0 ? (
           <p>{showHistory ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
         ) : (
-          <div className="table-wrap">
-            <table>
+          <>
+            <div className="table-wrap transaction-table-wrap">
+              <table className="transaction-table">
               <thead>
                 <tr>
                   <th>Type</th>
@@ -200,37 +238,8 @@ export function TransactionHistoryTable({
               </thead>
               <tbody>
                 {rowsToRender.map(({ tx, groupClassName }) => {
-                  const symbol = assetSymbolById.get(tx.assetId);
-                  const priceState = symbol ? pricesBySymbol[symbol.toUpperCase()] : undefined;
-                  const currentPriceValue =
-                    priceState && priceState.status === 'success' && priceState.priceUsd
-                      ? Number(priceState.priceUsd)
-                      : null;
-                  const purchasePriceValue = Number(tx.unitPriceUsd);
-                  const quantityValue = Number(tx.netAmount);
-                  const isOpenBuy = tx.transactionType === 'BUY' && !tx.matched;
-                  const unrealizedPnlValue =
-                    isOpenBuy &&
-                    currentPriceValue !== null &&
-                    Number.isFinite(currentPriceValue) &&
-                    Number.isFinite(purchasePriceValue) &&
-                    Number.isFinite(quantityValue)
-                      ? (currentPriceValue - purchasePriceValue) * quantityValue
-                      : null;
-                  const remainingDollarsValue =
-                    isOpenBuy &&
-                    currentPriceValue !== null &&
-                    Number.isFinite(currentPriceValue) &&
-                    Number.isFinite(quantityValue)
-                      ? currentPriceValue * quantityValue
-                      : null;
-                  const usdInvestedValue = Number(tx.totalSpentUsd);
-                  const remainingClassName =
-                    remainingDollarsValue === null || !Number.isFinite(usdInvestedValue)
-                      ? ''
-                      : remainingDollarsValue >= usdInvestedValue
-                        ? 'pnl-positive'
-                        : 'pnl-negative';
+                  const { symbol, priceState, unrealizedPnlValue, remainingDollarsValue, remainingClassName } =
+                    getRowComputedValues(tx);
 
                   return (
                     <tr key={tx.id} className={groupClassName}>
@@ -340,8 +349,143 @@ export function TransactionHistoryTable({
                   );
                 })}
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
+            <div className="transaction-mobile-list">
+              {rowsToRender.map(({ tx, groupClassName }) => {
+                const { symbol, priceState, unrealizedPnlValue, remainingDollarsValue } = getRowComputedValues(tx);
+
+                return (
+                  <article key={tx.id} className={`transaction-mobile-card ${groupClassName}`.trim()}>
+                  <div className="transaction-mobile-card-top">
+                    <div>
+                      <p className="transaction-mobile-asset">{labelAsset(tx.assetId, assets)}</p>
+                      <p className="transaction-mobile-price">{formatUsd(tx.unitPriceUsd)}</p>
+                    </div>
+                    <div className="transaction-actions" data-actions-row-id={tx.id}>
+                      <button
+                        type="button"
+                        className="row-action-button row-action-menu-trigger"
+                        aria-haspopup="menu"
+                        aria-expanded={openMenuId === tx.id}
+                        aria-label="Open actions menu"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenuId((current) => (current === tx.id ? null : tx.id));
+                        }}
+                      >
+                        <svg viewBox="0 0 4 16" aria-hidden="true" focusable="false">
+                          <circle cx="2" cy="2" r="1.25" />
+                          <circle cx="2" cy="8" r="1.25" />
+                          <circle cx="2" cy="14" r="1.25" />
+                        </svg>
+                      </button>
+                      {openMenuId === tx.id ? (
+                        <div className="transaction-actions-menu" role="menu" aria-label="Transaction actions">
+                          <button
+                            type="button"
+                            className="transaction-actions-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                              setEditQuantityTargetId(tx.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Edit Quantity
+                          </button>
+                          <button
+                            type="button"
+                            className="transaction-actions-menu-item"
+                            role="menuitem"
+                            onClick={() => {
+                              setEditTargetId(tx.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Edit Full Transaction
+                          </button>
+                          <button
+                            type="button"
+                            className="transaction-actions-menu-item transaction-actions-menu-item-danger"
+                            role="menuitem"
+                            onClick={() => {
+                              setDeleteTargetId(tx.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Delete
+                          </button>
+                          <button
+                            type="button"
+                            className="transaction-actions-menu-item transaction-actions-menu-item-success"
+                            role="menuitem"
+                            disabled={!(tx.transactionType === 'BUY' && !tx.matched)}
+                            onClick={() => {
+                              setSellTargetId(tx.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            Sell
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="transaction-mobile-details">
+                    <p>
+                      <strong>Type:</strong> {tx.transactionType}
+                    </p>
+                    <p>
+                      <strong>Exchange:</strong> {labelExchange(tx.exchangeId, exchanges)}
+                    </p>
+                    <p>
+                      <strong>Net Amount:</strong> {formatNumber(tx.netAmount)}
+                    </p>
+                    <p>
+                      <strong>Fee Amount:</strong> {formatNumber(tx.feeAmount)}
+                      {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
+                    </p>
+                    <p>
+                      <strong>Fee %:</strong> {tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}
+                    </p>
+                    <p>
+                      <strong>Current Price:</strong>{' '}
+                      {!symbol || !priceState || priceState.status === 'error'
+                        ? '---'
+                        : priceState.status === 'loading'
+                          ? 'Loading...'
+                          : formatUsd(priceState.priceUsd)}
+                    </p>
+                    <p>
+                      <strong>Unrealized P&L:</strong>{' '}
+                      {unrealizedPnlValue === null ? (
+                        '---'
+                      ) : (
+                        <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                          {formatUsd(String(unrealizedPnlValue))}
+                        </span>
+                      )}
+                    </p>
+                    <p>
+                      <strong>USD Invested:</strong> {formatUsd(tx.totalSpentUsd)}
+                    </p>
+                    <p>
+                      <strong>Remaining Dollars:</strong>{' '}
+                      {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
+                    </p>
+                    <p>
+                      <strong>Realized PnL:</strong> {formatUsd(tx.realizedPnl)}
+                    </p>
+                    <p>
+                      <strong>Date:</strong> {formatDateTime(tx.transactionDate)}
+                    </p>
+                  </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
