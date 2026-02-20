@@ -2,6 +2,7 @@ package com.trading.service.transaction;
 
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
+import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionRequest;
 
@@ -17,6 +18,8 @@ public interface TransactionService {
     TransactionResponse sell(UUID userId, SellTransactionRequest request);
 
     TransactionResponse updateTransaction(UUID userId, UUID transactionId, UpdateTransactionRequest request);
+
+    TransactionResponse updateTransactionNetAmount(UUID userId, UUID transactionId, UpdateTransactionNetAmountRequest request);
 
     void deleteTransaction(UUID userId, UUID transactionId);
 }

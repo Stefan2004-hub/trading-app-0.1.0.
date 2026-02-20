@@ -15,6 +15,7 @@ import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
+import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
 import org.springframework.stereotype.Service;
 
@@ -196,6 +197,28 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction refreshed = transactionRepository.findByIdAndUser_Id(transactionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
         return toResponse(refreshed, null);
+    }
+
+    @Override
+    public TransactionResponse updateTransactionNetAmount(
+        UUID userId,
+        UUID transactionId,
+        UpdateTransactionNetAmountRequest request
+    ) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(transactionId, "transactionId is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(request.netAmount(), "netAmount is required");
+        if (request.netAmount().compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException("netAmount must be positive");
+        }
+
+        Transaction tx = transactionRepository.findByIdAndUser_Id(transactionId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+
+        tx.setNetAmount(request.netAmount());
+        Transaction saved = transactionRepository.save(tx);
+        return toResponse(saved, null);
     }
 
     @Override

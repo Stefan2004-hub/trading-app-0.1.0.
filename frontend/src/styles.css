@@ -318,6 +318,7 @@ p {
 
 .table-wrap {
   overflow-x: auto;
+  overflow-y: visible;
 }
 
 table {
@@ -506,9 +507,9 @@ button:disabled {
 }
 
 .transaction-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
 }
 
 .row-action-button {
@@ -531,6 +532,62 @@ button:disabled {
 .row-action-sell {
   background: #15803d;
   border-color: #15803d;
+}
+
+.row-action-menu-trigger {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.row-action-menu-trigger svg {
+  width: 0.5rem;
+  height: 1.1rem;
+  fill: currentColor;
+}
+
+.transaction-actions-menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  min-width: 11.5rem;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+  z-index: 50;
+}
+
+.transaction-actions-menu-item {
+  width: 100%;
+  margin-top: 0;
+  text-align: left;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.transaction-actions-menu-item:hover {
+  background: #f1f5f9;
+}
+
+.transaction-actions-menu-item-danger {
+  color: #b91c1c;
+}
+
+.transaction-actions-menu-item-success {
+  color: #15803d;
 }
 
 .table-price-loading {

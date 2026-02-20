@@ -34,6 +34,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -175,6 +176,33 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.transactionType").value("SELL"));
 
         verify(transactionService).sell(eq(userId), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void updateNetAmountEndpointReturnsUpdatedPayload() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        TransactionResponse response = txResponse(userId, TransactionType.BUY);
+        when(transactionService.updateTransactionNetAmount(eq(userId), eq(transactionId), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(response);
+
+        mockMvc.perform(
+                patch("/api/transactions/{transactionId}/net-amount", transactionId)
+                    .with(authentication(auth))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "netAmount": 0.42
+                        }
+                        """)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(response.id().toString()))
+            .andExpect(jsonPath("$.userId").value(userId.toString()));
+
+        verify(transactionService).updateTransactionNetAmount(eq(userId), eq(transactionId), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

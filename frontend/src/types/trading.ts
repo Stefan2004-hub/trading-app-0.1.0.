@@ -75,3 +75,7 @@ export interface UpdateTransactionPayload {
   feePercentage?: string;
   unitPriceUsd: string;
 }
+
+export interface UpdateTransactionNetAmountPayload {
+  netAmount: string;
+}

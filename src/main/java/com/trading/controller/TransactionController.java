@@ -3,6 +3,7 @@ package com.trading.controller;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
+import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.transaction.TransactionService;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,6 +66,15 @@ public class TransactionController {
     ) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(transactionService.updateTransaction(userId, transactionId, request));
+    }
+
+    @PatchMapping("/{transactionId}/net-amount")
+    public ResponseEntity<TransactionResponse> updateNetAmount(
+        @PathVariable UUID transactionId,
+        @Valid @RequestBody UpdateTransactionNetAmountRequest request
+    ) {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        return ResponseEntity.ok(transactionService.updateTransactionNetAmount(userId, transactionId, request));
     }
 
     @DeleteMapping("/{transactionId}")

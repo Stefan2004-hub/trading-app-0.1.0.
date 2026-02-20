@@ -1,16 +1,25 @@
-import { useMemo, useState } from 'react';
-import type { TradeFormPayload, UpdateTransactionPayload } from '../types/trading';
+import { useEffect, useMemo, useState } from 'react';
+import type {
+  TradeFormPayload,
+  UpdateTransactionNetAmountPayload,
+  UpdateTransactionPayload
+} from '../types/trading';
 import type { AssetOption, ExchangeOption, TransactionItem } from '../types/trading';
 import { formatDateTime, formatNumber, formatUsd } from '../utils/format';
 import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EditTransactionModal } from './EditTransactionModal';
+import { EditTransactionQuantityModal } from './EditTransactionQuantityModal';
 import { SellTransactionModal } from './SellTransactionModal';
 
 interface TransactionHistoryTableProps {
   transactions: TransactionItem[];
   assets: AssetOption[];
   exchanges: ExchangeOption[];
+  onEditTransactionQuantity: (
+    transactionId: string,
+    payload: UpdateTransactionNetAmountPayload
+  ) => Promise<boolean>;
   onEditTransaction: (transactionId: string, payload: UpdateTransactionPayload) => Promise<boolean>;
   onDeleteTransaction: (transactionId: string) => Promise<boolean>;
   onSellFromTransaction: (payload: TradeFormPayload) => Promise<boolean>;
@@ -28,16 +37,47 @@ export function TransactionHistoryTable({
   transactions,
   assets,
   exchanges,
+  onEditTransactionQuantity,
   onEditTransaction,
   onDeleteTransaction,
   onSellFromTransaction
 }: TransactionHistoryTableProps): JSX.Element {
   const [showHistory, setShowHistory] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [editQuantityTargetId, setEditQuantityTargetId] = useState<string | null>(null);
   const [editTargetId, setEditTargetId] = useState<string | null>(null);
   const [sellTargetId, setSellTargetId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  useEffect(() => {
+    if (!openMenuId) {
+      return;
+    }
+
+    function handleDocumentPointerDown(event: MouseEvent): void {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        setOpenMenuId(null);
+        return;
+      }
+      const rowMenuContainer = target.closest(`[data-actions-row-id="${openMenuId}"]`);
+      if (rowMenuContainer) {
+        return;
+      }
+      setOpenMenuId(null);
+    }
+
+    document.addEventListener('mousedown', handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown);
+    };
+  }, [openMenuId]);
+
+  const editQuantityTransaction = useMemo(
+    () => transactions.find((item) => item.id === editQuantityTargetId) ?? null,
+    [editQuantityTargetId, transactions]
+  );
   const editTransaction = useMemo(
     () => transactions.find((item) => item.id === editTargetId) ?? null,
     [editTargetId, transactions]
@@ -193,73 +233,125 @@ export function TransactionHistoryTable({
                         : 'pnl-negative';
 
                   return (
-                  <tr key={tx.id} className={groupClassName}>
-                    <td>{tx.transactionType}</td>
-                    <td>{labelAsset(tx.assetId, assets)}</td>
-                    <td>{labelExchange(tx.exchangeId, exchanges)}</td>
-                    <td>{formatNumber(tx.netAmount)}</td>
-                    <td>
-                      {formatNumber(tx.feeAmount)}
-                      {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
-                    </td>
-                    <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
-                    <td>{formatUsd(tx.unitPriceUsd)}</td>
-                    <td>
-                      {!symbol || !priceState || priceState.status === 'error'
-                        ? '---'
-                        : priceState.status === 'loading'
-                          ? <span className="table-price-loading" aria-label="Loading current price" />
-                          : formatUsd(priceState.priceUsd)}
-                    </td>
-                    <td>
-                      {unrealizedPnlValue === null ? (
-                        '---'
-                      ) : (
-                        <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
-                          {formatUsd(String(unrealizedPnlValue))}
-                        </span>
-                      )}
-                    </td>
-                    <td>{formatUsd(tx.totalSpentUsd)}</td>
-                    <td className={remainingClassName}>
-                      {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
-                    </td>
-                    <td>{formatUsd(tx.realizedPnl)}</td>
-                    <td>{formatDateTime(tx.transactionDate)}</td>
-                    <td>
-                      <div className="transaction-actions">
-                        <button
-                          type="button"
-                          className="row-action-button row-action-edit"
-                          onClick={() => setEditTargetId(tx.id)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="row-action-button row-action-delete"
-                          onClick={() => setDeleteTargetId(tx.id)}
-                        >
-                          Delete
-                        </button>
-                        {tx.transactionType === 'BUY' && !tx.matched ? (
+                    <tr key={tx.id} className={groupClassName}>
+                      <td>{tx.transactionType}</td>
+                      <td>{labelAsset(tx.assetId, assets)}</td>
+                      <td>{labelExchange(tx.exchangeId, exchanges)}</td>
+                      <td>{formatNumber(tx.netAmount)}</td>
+                      <td>
+                        {formatNumber(tx.feeAmount)}
+                        {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
+                      </td>
+                      <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
+                      <td>{formatUsd(tx.unitPriceUsd)}</td>
+                      <td>
+                        {!symbol || !priceState || priceState.status === 'error'
+                          ? '---'
+                          : priceState.status === 'loading'
+                            ? <span className="table-price-loading" aria-label="Loading current price" />
+                            : formatUsd(priceState.priceUsd)}
+                      </td>
+                      <td>
+                        {unrealizedPnlValue === null ? (
+                          '---'
+                        ) : (
+                          <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                            {formatUsd(String(unrealizedPnlValue))}
+                          </span>
+                        )}
+                      </td>
+                      <td>{formatUsd(tx.totalSpentUsd)}</td>
+                      <td className={remainingClassName}>
+                        {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
+                      </td>
+                      <td>{formatUsd(tx.realizedPnl)}</td>
+                      <td>{formatDateTime(tx.transactionDate)}</td>
+                      <td>
+                        <div className="transaction-actions" data-actions-row-id={tx.id}>
                           <button
                             type="button"
-                            className="row-action-button row-action-sell"
-                            onClick={() => setSellTargetId(tx.id)}
+                            className="row-action-button row-action-menu-trigger"
+                            aria-haspopup="menu"
+                            aria-expanded={openMenuId === tx.id}
+                            aria-label="Open actions menu"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenMenuId((current) => (current === tx.id ? null : tx.id));
+                            }}
                           >
-                            Sell
+                            <svg viewBox="0 0 4 16" aria-hidden="true" focusable="false">
+                              <circle cx="2" cy="2" r="1.25" />
+                              <circle cx="2" cy="8" r="1.25" />
+                              <circle cx="2" cy="14" r="1.25" />
+                            </svg>
                           </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                )})}
+                          {openMenuId === tx.id ? (
+                            <div className="transaction-actions-menu" role="menu" aria-label="Transaction actions">
+                              <button
+                                type="button"
+                                className="transaction-actions-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  setEditQuantityTargetId(tx.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Edit Quantity
+                              </button>
+                              <button
+                                type="button"
+                                className="transaction-actions-menu-item"
+                                role="menuitem"
+                                onClick={() => {
+                                  setEditTargetId(tx.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Edit Full Transaction
+                              </button>
+                              <button
+                                type="button"
+                                className="transaction-actions-menu-item transaction-actions-menu-item-danger"
+                                role="menuitem"
+                                onClick={() => {
+                                  setDeleteTargetId(tx.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Delete
+                              </button>
+                              <button
+                                type="button"
+                                className="transaction-actions-menu-item transaction-actions-menu-item-success"
+                                role="menuitem"
+                                disabled={!(tx.transactionType === 'BUY' && !tx.matched)}
+                                onClick={() => {
+                                  setSellTargetId(tx.id);
+                                  setOpenMenuId(null);
+                                }}
+                              >
+                                Sell
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
+
+      <EditTransactionQuantityModal
+        open={editQuantityTransaction !== null}
+        transaction={editQuantityTransaction}
+        assetLabel={editQuantityTransaction ? labelAsset(editQuantityTransaction.assetId, assets) : ''}
+        onClose={() => setEditQuantityTargetId(null)}
+        onSubmit={onEditTransactionQuantity}
+      />
 
       <EditTransactionModal
         open={editTransaction !== null}
