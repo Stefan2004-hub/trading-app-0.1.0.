@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { decimalToDisplay, divideDecimal, isPositiveDecimal, multiplyDecimal } from '../utils/decimal';
 import type { BuyInputMode, TradeFormPayload, TransactionType } from '../types/trading';
 import type { AssetOption, ExchangeOption } from '../types/trading';
 
@@ -39,19 +40,6 @@ const INITIAL_FORM: LocalTradeFormState = {
   inputMode: 'COIN_AMOUNT'
 };
 
-function parsePositive(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  const numeric = Number(trimmed);
-  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-function formatCalculated(value: number): string {
-  return Number.isFinite(value) ? value.toFixed(18).replace(/\.?0+$/, '') : '';
-}
-
 export function TradeForm({
   title,
   tradeType,
@@ -78,32 +66,30 @@ export function TradeForm({
 
   const effectiveGrossAmount = useMemo(() => {
     if (tradeType === 'BUY' && form.inputMode === 'USD_AMOUNT') {
-      const usdAmount = parsePositive(form.usdAmount);
-      const unitPrice = parsePositive(form.unitPriceUsd);
-      if (!usdAmount || !unitPrice) {
+      if (!isPositiveDecimal(form.usdAmount) || !isPositiveDecimal(form.unitPriceUsd)) {
         return null;
       }
-      return usdAmount / unitPrice;
+      return divideDecimal(form.usdAmount, form.unitPriceUsd, 18);
     }
-    return parsePositive(form.grossAmount);
+    return isPositiveDecimal(form.grossAmount) ? form.grossAmount.trim() : null;
   }, [form.grossAmount, form.inputMode, form.unitPriceUsd, form.usdAmount, tradeType]);
 
-  function effectiveGrossFrom(nextForm: LocalTradeFormState): number | null {
+  function effectiveGrossFrom(nextForm: LocalTradeFormState): string | null {
     if (tradeType === 'BUY' && nextForm.inputMode === 'USD_AMOUNT') {
-      const usdAmount = parsePositive(nextForm.usdAmount);
-      const unitPrice = parsePositive(nextForm.unitPriceUsd);
-      if (!usdAmount || !unitPrice) {
+      if (!isPositiveDecimal(nextForm.usdAmount) || !isPositiveDecimal(nextForm.unitPriceUsd)) {
         return null;
       }
-      return usdAmount / unitPrice;
+      return divideDecimal(nextForm.usdAmount, nextForm.unitPriceUsd, 18);
     }
-    return parsePositive(nextForm.grossAmount);
+    return isPositiveDecimal(nextForm.grossAmount) ? nextForm.grossAmount.trim() : null;
   }
 
   function syncFeeByMode(nextForm: LocalTradeFormState, mode: FeeInputMode): LocalTradeFormState {
     const grossAmount = effectiveGrossFrom(nextForm);
-    const unitPriceUsd = parsePositive(nextForm.unitPriceUsd);
-    const feeBaseAmount = tradeType === 'SELL' && grossAmount && unitPriceUsd ? grossAmount * unitPriceUsd : grossAmount;
+    const feeBaseAmount =
+      tradeType === 'SELL' && grossAmount && isPositiveDecimal(nextForm.unitPriceUsd)
+        ? multiplyDecimal(grossAmount, nextForm.unitPriceUsd)
+        : grossAmount;
     const nextAssetSymbol = assets.find((asset) => asset.id === nextForm.assetId)?.symbol ?? '';
     const feeCurrency = nextForm.feeCurrency || (tradeType === 'SELL' ? 'USD' : nextAssetSymbol);
     if (!mode || !feeBaseAmount) {
@@ -111,25 +97,26 @@ export function TradeForm({
     }
 
     if (mode === 'PERCENTAGE') {
-      const percentage = parsePositive(nextForm.feePercentage);
-      if (!percentage) {
+      if (!isPositiveDecimal(nextForm.feePercentage)) {
         return { ...nextForm, feeAmount: '' };
       }
+      const feeProduct = multiplyDecimal(feeBaseAmount, nextForm.feePercentage);
+      const feeAmount = feeProduct ? divideDecimal(feeProduct, '100', 18) : null;
       return {
         ...nextForm,
-        feeAmount: formatCalculated((feeBaseAmount * percentage) / 100),
+        feeAmount: feeAmount ?? '',
         feeCurrency
       };
     }
 
-    const amount = parsePositive(nextForm.feeAmount);
-    if (!amount) {
+    if (!isPositiveDecimal(nextForm.feeAmount)) {
       return { ...nextForm, feePercentage: '' };
     }
-
+    const ratio = divideDecimal(nextForm.feeAmount, feeBaseAmount, 18);
+    const feePercentage = ratio ? multiplyDecimal(ratio, '100') : null;
     return {
       ...nextForm,
-      feePercentage: formatCalculated((amount / feeBaseAmount) * 100),
+      feePercentage: feePercentage ?? '',
       feeCurrency
     };
   }
@@ -246,7 +233,7 @@ export function TradeForm({
           <input
             id={`${title}-calculatedAmount`}
             type="text"
-            value={effectiveGrossAmount ? formatCalculated(effectiveGrossAmount) : ''}
+            value={effectiveGrossAmount ? decimalToDisplay(effectiveGrossAmount, 18) ?? '' : ''}
             readOnly
           />
         </>

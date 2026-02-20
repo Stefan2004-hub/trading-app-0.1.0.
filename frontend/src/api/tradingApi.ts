@@ -1,4 +1,5 @@
 import { request } from './http';
+import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AssetOption,
   ExchangeOption,
@@ -10,10 +11,7 @@ import type {
 } from '../types/trading';
 
 function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
-  const feePercentage =
-    payload.feePercentage && Number.isFinite(Number(payload.feePercentage))
-      ? (Number(payload.feePercentage) / 100).toString()
-      : null;
+  const feePercentage = payload.feePercentage ? decimalToFractionalPercent(payload.feePercentage) : null;
   const feeAmount = payload.feeAmount?.trim() ? payload.feeAmount.trim() : null;
 
   return {
@@ -73,10 +71,7 @@ export const tradingApi = {
   },
 
   updateTransaction(id: string, payload: UpdateTransactionPayload): Promise<TransactionItem> {
-    const feePercentage =
-      payload.feePercentage && Number.isFinite(Number(payload.feePercentage))
-        ? (Number(payload.feePercentage) / 100).toString()
-        : null;
+    const feePercentage = payload.feePercentage ? decimalToFractionalPercent(payload.feePercentage) : null;
     const feeAmount = payload.feeAmount?.trim() ? payload.feeAmount.trim() : null;
 
     return request<TransactionItem>(`/api/transactions/${id}`, {
