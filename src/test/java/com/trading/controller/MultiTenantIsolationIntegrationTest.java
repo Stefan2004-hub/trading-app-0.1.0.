@@ -77,8 +77,8 @@ class MultiTenantIsolationIntegrationTest {
         Authentication authA = authenticationFor(userA);
         Authentication authB = authenticationFor(userB);
 
-        when(transactionService.list(userA)).thenReturn(List.of(txFor(userA)));
-        when(transactionService.list(userB)).thenReturn(List.of(txFor(userB)));
+        when(transactionService.list(userA, null)).thenReturn(List.of(txFor(userA)));
+        when(transactionService.list(userB, null)).thenReturn(List.of(txFor(userB)));
 
         mockMvc.perform(get("/api/transactions").with(authentication(authA)))
             .andExpect(status().isOk())
@@ -88,8 +88,8 @@ class MultiTenantIsolationIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].userId").value(userB.toString()));
 
-        verify(transactionService).list(eq(userA));
-        verify(transactionService).list(eq(userB));
+        verify(transactionService).list(eq(userA), eq(null));
+        verify(transactionService).list(eq(userB), eq(null));
     }
 
     @Test

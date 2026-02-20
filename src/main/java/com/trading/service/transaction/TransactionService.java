@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface TransactionService {
 
-    List<TransactionResponse> list(UUID userId);
+    List<TransactionResponse> list(UUID userId, String search);
 
     TransactionResponse buy(UUID userId, BuyTransactionRequest request);
 

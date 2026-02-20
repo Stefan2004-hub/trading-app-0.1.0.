@@ -63,8 +63,8 @@ export function TransactionHistoryTable({
 
   return (
     <>
-      <section className="history-panel">
-        <h3>Transaction History</h3>
+      <section className="history-panel history-panel-prominent">
+        <h3>Transactions</h3>
         {transactions.length === 0 ? (
           <p>No transactions yet.</p>
         ) : (
