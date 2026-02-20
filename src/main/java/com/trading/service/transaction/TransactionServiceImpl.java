@@ -59,9 +59,10 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<TransactionResponse> list(UUID userId) {
+    public List<TransactionResponse> list(UUID userId, String search) {
         Objects.requireNonNull(userId, "userId is required");
-        return transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId).stream()
+        String normalizedSearch = normalizeSearch(search);
+        return transactionRepository.findAllByUser_IdAndSearchOrderByTransactionDateDesc(userId, normalizedSearch).stream()
             .map(TransactionServiceImpl::toResponse)
             .toList();
     }
@@ -300,6 +301,13 @@ public class TransactionServiceImpl implements TransactionService {
             return null;
         }
         return feeCurrency.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private static String normalizeSearch(String search) {
+        if (search == null || search.isBlank()) {
+            return null;
+        }
+        return search.trim();
     }
 
     private static FeeState resolveFeeState(

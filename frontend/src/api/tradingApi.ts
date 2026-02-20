@@ -34,8 +34,10 @@ export const tradingApi = {
     return request<ExchangeOption[]>('/api/exchanges');
   },
 
-  listTransactions(): Promise<TransactionItem[]> {
-    return request<TransactionItem[]>('/api/transactions');
+  listTransactions(search?: string): Promise<TransactionItem[]> {
+    const trimmedSearch = search?.trim();
+    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
+    return request<TransactionItem[]>(`/api/transactions${query}`);
   },
 
   getPortfolioSummary(): Promise<PortfolioSummary> {

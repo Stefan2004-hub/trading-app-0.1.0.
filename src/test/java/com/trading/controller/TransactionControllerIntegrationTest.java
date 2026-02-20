@@ -75,7 +75,7 @@ class TransactionControllerIntegrationTest {
         Authentication auth = authenticationFor(userId);
 
         TransactionResponse tx = txResponse(userId, TransactionType.BUY);
-        when(transactionService.list(userId)).thenReturn(List.of(tx));
+        when(transactionService.list(userId, null)).thenReturn(List.of(tx));
 
         mockMvc.perform(get("/api/transactions").with(authentication(auth)))
             .andExpect(status().isOk())
@@ -84,7 +84,20 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$[0].transactionType").value("BUY"))
             .andExpect(jsonPath("$[0].grossAmount").value(0.5));
 
-        verify(transactionService).list(eq(userId));
+        verify(transactionService).list(eq(userId), eq(null));
+    }
+
+    @Test
+    void listEndpointPassesSearchParameter() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        when(transactionService.list(userId, "btc")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/transactions").queryParam("search", "btc").with(authentication(auth)))
+            .andExpect(status().isOk());
+
+        verify(transactionService).list(eq(userId), eq("btc"));
     }
 
     @Test
