@@ -142,7 +142,9 @@ class MultiTenantIsolationIntegrationTest {
             new BigDecimal("60000"),
             new BigDecimal("18000"),
             null,
-            OffsetDateTime.parse("2026-02-13T10:00:00Z")
+            OffsetDateTime.parse("2026-02-13T10:00:00Z"),
+            false,
+            null
         );
     }
 
