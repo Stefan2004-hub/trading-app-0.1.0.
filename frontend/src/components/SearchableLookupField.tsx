@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface LookupOption {
   id: string;
@@ -40,22 +40,58 @@ export function SearchableLookupField({
   const [results, setResults] = useState<LookupOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const requestCounterRef = useRef(0);
+  const onSearchRef = useRef(onSearch);
+
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
 
   useEffect(() => {
     setQuery(value ? formatOption(value) : '');
   }, [value]);
 
   useEffect(() => {
+    let cancelled = false;
+    const requestId = ++requestCounterRef.current;
+    setLoading(true);
+    void onSearchRef.current('')
+      .then((rows) => {
+        if (cancelled || requestId !== requestCounterRef.current) {
+          return;
+        }
+        setResults(rows);
+      })
+      .finally(() => {
+        if (cancelled || requestId !== requestCounterRef.current) {
+          return;
+        }
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open) {
       return;
     }
+    const requestId = ++requestCounterRef.current;
     const timeoutId = window.setTimeout(() => {
       void (async () => {
         setLoading(true);
         try {
-          setResults(await onSearch(query));
+          const rows = await onSearchRef.current(query);
+          if (requestId !== requestCounterRef.current) {
+            return;
+          }
+          setResults(rows);
         } finally {
-          setLoading(false);
+          if (requestId === requestCounterRef.current) {
+            setLoading(false);
+          }
         }
       })();
     }, 300);
@@ -63,7 +99,7 @@ export function SearchableLookupField({
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [open, onSearch, query]);
+  }, [open, query]);
 
   const canQuickAdd = useMemo(
     () => Boolean(onQuickAdd && query.trim() && !loading && results.length === 0),
