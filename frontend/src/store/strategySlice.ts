@@ -95,6 +95,30 @@ export const acknowledgeStrategyAlert = createAsyncThunk(
   }
 );
 
+export const deleteSellStrategy = createAsyncThunk(
+  'strategy/deleteSell',
+  async (strategyId: string, { dispatch }) => {
+    await strategyApi.deleteSellStrategy(strategyId);
+    await dispatch(loadStrategyData()).unwrap();
+  }
+);
+
+export const deleteBuyStrategy = createAsyncThunk(
+  'strategy/deleteBuy',
+  async (strategyId: string, { dispatch }) => {
+    await strategyApi.deleteBuyStrategy(strategyId);
+    await dispatch(loadStrategyData()).unwrap();
+  }
+);
+
+export const deleteStrategyAlert = createAsyncThunk(
+  'strategy/deleteAlert',
+  async (alertId: string, { dispatch }) => {
+    await strategyApi.deleteAlert(alertId);
+    await dispatch(loadStrategyData()).unwrap();
+  }
+);
+
 const strategySlice = createSlice({
   name: 'strategy',
   initialState,
@@ -156,6 +180,42 @@ const strategySlice = createSlice({
     builder.addCase(acknowledgeStrategyAlert.rejected, (state, action) => {
       state.submitting = false;
       state.error = action.error.message ?? 'Failed to acknowledge alert';
+    });
+
+    builder.addCase(deleteSellStrategy.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(deleteSellStrategy.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(deleteSellStrategy.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Failed to delete sell strategy';
+    });
+
+    builder.addCase(deleteBuyStrategy.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(deleteBuyStrategy.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(deleteBuyStrategy.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Failed to delete buy strategy';
+    });
+
+    builder.addCase(deleteStrategyAlert.pending, (state) => {
+      state.submitting = true;
+      state.error = null;
+    });
+    builder.addCase(deleteStrategyAlert.fulfilled, (state) => {
+      state.submitting = false;
+    });
+    builder.addCase(deleteStrategyAlert.rejected, (state, action) => {
+      state.submitting = false;
+      state.error = action.error.message ?? 'Failed to delete strategy alert';
     });
   }
 });

@@ -80,6 +80,16 @@ public class SellStrategyServiceImpl implements SellStrategyService {
         return toResponse(saved);
     }
 
+    @Override
+    public void delete(UUID userId, UUID strategyId) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(strategyId, "strategyId is required");
+
+        SellStrategy strategy = sellStrategyRepository.findByIdAndUser_Id(strategyId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Sell strategy not found: " + strategyId));
+        sellStrategyRepository.delete(strategy);
+    }
+
     private static SellStrategyResponse toResponse(SellStrategy strategy) {
         return new SellStrategyResponse(
             strategy.getId(),

@@ -6,13 +6,23 @@ interface StrategyTableProps {
   assets: AssetOption[];
   sellStrategies: SellStrategyItem[];
   buyStrategies: BuyStrategyItem[];
+  submitting: boolean;
+  onDeleteSell: (strategyId: string) => Promise<boolean>;
+  onDeleteBuy: (strategyId: string) => Promise<boolean>;
 }
 
 function assetLabel(assetId: string, assets: AssetOption[]): string {
   return assets.find((asset) => asset.id === assetId)?.symbol ?? assetId;
 }
 
-export function StrategyTable({ assets, sellStrategies, buyStrategies }: StrategyTableProps): JSX.Element {
+export function StrategyTable({
+  assets,
+  sellStrategies,
+  buyStrategies,
+  submitting,
+  onDeleteSell,
+  onDeleteBuy
+}: StrategyTableProps): JSX.Element {
   return (
     <section className="history-panel">
       <h3>Configured Strategies</h3>
@@ -26,6 +36,7 @@ export function StrategyTable({ assets, sellStrategies, buyStrategies }: Strateg
               <th>Buy Amount USD</th>
               <th>Active</th>
               <th>Updated</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -37,6 +48,18 @@ export function StrategyTable({ assets, sellStrategies, buyStrategies }: Strateg
                 <td>-</td>
                 <td>{item.active ? 'Yes' : 'No'}</td>
                 <td>{formatDateTime(item.updatedAt)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="row-action-button row-action-delete"
+                    disabled={submitting}
+                    onClick={() => {
+                      void onDeleteSell(item.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
             {buyStrategies.map((item) => (
@@ -47,6 +70,18 @@ export function StrategyTable({ assets, sellStrategies, buyStrategies }: Strateg
                 <td>{formatUsd(item.buyAmountUsd)}</td>
                 <td>{item.active ? 'Yes' : 'No'}</td>
                 <td>{formatDateTime(item.updatedAt)}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="row-action-button row-action-delete"
+                    disabled={submitting}
+                    onClick={() => {
+                      void onDeleteBuy(item.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

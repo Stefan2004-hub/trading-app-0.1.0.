@@ -295,4 +295,31 @@ class StrategyAlertServiceImplTest {
         assertEquals(StrategyAlertStatus.ACKNOWLEDGED, response.status());
         assertNotNull(response.acknowledgedAt());
     }
+
+    @Test
+    void deleteRemovesExistingAlert() {
+        StrategyAlert alert = new StrategyAlert();
+        alert.setId(UUID.randomUUID());
+        alert.setUser(user);
+        alert.setAsset(asset);
+
+        when(strategyAlertRepository.findByIdAndUser_Id(alert.getId(), userId)).thenReturn(Optional.of(alert));
+
+        strategyAlertService.delete(userId, alert.getId());
+
+        verify(strategyAlertRepository).delete(alert);
+    }
+
+    @Test
+    void deleteThrowsWhenAlertMissing() {
+        UUID alertId = UUID.randomUUID();
+        when(strategyAlertRepository.findByIdAndUser_Id(alertId, userId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> strategyAlertService.delete(userId, alertId)
+        );
+
+        assertEquals("Strategy alert not found: " + alertId, ex.getMessage());
+    }
 }

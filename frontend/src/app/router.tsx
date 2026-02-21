@@ -8,6 +8,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { AssetsPage } from '../pages/AssetsPage';
+import { AlertsPage } from '../pages/AlertsPage';
 import { StrategiesPage } from '../pages/StrategiesPage';
 import { TransactionsPage } from '../pages/TransactionsPage';
 
@@ -61,6 +62,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <TransactionsPage />
+      </RequireAuth>
+    )
+  },
+  {
+    path: '/alerts',
+    element: (
+      <RequireAuth>
+        <AlertsPage />
       </RequireAuth>
     )
   },
