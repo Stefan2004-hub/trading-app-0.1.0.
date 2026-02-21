@@ -1,55 +1,32 @@
 import { useMemo } from 'react';
 import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
-import type { AssetOption, TransactionItem } from '../types/trading';
+import type { AssetSummary } from '../types/trading';
 import { formatNumber, formatUsd } from '../utils/format';
 
 interface OpenPortfolioSectionProps {
-  transactions: TransactionItem[];
-  assets: AssetOption[];
+  assetSummary: AssetSummary[];
 }
 
 interface OpenPositionRow {
+  assetName: string;
   symbol: string;
   netAmount: number;
   usdInvested: number;
+  realizedProfit: number;
 }
 
-export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSectionProps): JSX.Element {
-  const assetSymbolById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const asset of assets) {
-      map.set(asset.id, asset.symbol.toUpperCase());
-    }
-    return map;
-  }, [assets]);
-
+export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps): JSX.Element {
   const openRows = useMemo(() => {
-    const aggregate = new Map<string, OpenPositionRow>();
-    for (const tx of transactions) {
-      if (tx.transactionType !== 'BUY' || tx.matched) {
-        continue;
-      }
-      const symbol = assetSymbolById.get(tx.assetId);
-      if (!symbol) {
-        continue;
-      }
-      const amount = Number(tx.netAmount);
-      const invested = Number(tx.totalSpentUsd);
-      const current = aggregate.get(symbol);
-      if (current) {
-        current.netAmount += Number.isFinite(amount) ? amount : 0;
-        current.usdInvested += Number.isFinite(invested) ? invested : 0;
-      } else {
-        aggregate.set(symbol, {
-          symbol,
-          netAmount: Number.isFinite(amount) ? amount : 0,
-          usdInvested: Number.isFinite(invested) ? invested : 0
-        });
-      }
-    }
-
-    return Array.from(aggregate.values()).sort((a, b) => a.symbol.localeCompare(b.symbol));
-  }, [assetSymbolById, transactions]);
+    return assetSummary
+      .map((row) => ({
+        assetName: row.assetName,
+        symbol: row.assetSymbol.toUpperCase(),
+        netAmount: Number.isFinite(Number(row.netQuantity)) ? Number(row.netQuantity) : 0,
+        usdInvested: Number.isFinite(Number(row.totalInvested)) ? Number(row.totalInvested) : 0,
+        realizedProfit: Number.isFinite(Number(row.totalRealizedProfit)) ? Number(row.totalRealizedProfit) : 0
+      }))
+      .sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [assetSummary]);
 
   const symbols = useMemo(() => openRows.map((row) => row.symbol), [openRows]);
   const pricesBySymbol = useAssetSpotPrices(symbols);
@@ -62,7 +39,7 @@ export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSect
           priceState?.status === 'success' && priceState.priceUsd && Number.isFinite(Number(priceState.priceUsd))
             ? Number(priceState.priceUsd)
             : null;
-        const currentValue = currentPrice === null ? null : row.netAmount * currentPrice;
+        const currentValue = row.netAmount === 0 ? 0 : currentPrice === null ? null : row.netAmount * currentPrice;
         return {
           ...row,
           priceState,
@@ -107,7 +84,7 @@ export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSect
       </div>
 
       {valuationRows.length === 0 ? (
-        <p>No open positions yet.</p>
+        <p>No portfolio history yet.</p>
       ) : (
         <div className="table-wrap">
           <table>
@@ -118,6 +95,7 @@ export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSect
                 <th>USD Invested</th>
                 <th>Current Price</th>
                 <th>Current Value</th>
+                <th>Realized Profit</th>
               </tr>
             </thead>
             <tbody>
@@ -127,22 +105,27 @@ export function OpenPortfolioSection({ transactions, assets }: OpenPortfolioSect
                     ? null
                     : row.currentValue - row.usdInvested;
                 const valueClassName = diff === null ? '' : diff >= 0 ? 'pnl-positive' : 'pnl-negative';
+                const realizedClassName =
+                  row.realizedProfit > 0 ? 'pnl-positive' : row.realizedProfit < 0 ? 'pnl-negative' : '';
 
                 return (
                   <tr key={row.symbol}>
-                    <td>{row.symbol}</td>
+                    <td title={row.assetName}>{row.symbol}</td>
                     <td>{formatNumber(String(row.netAmount))}</td>
                     <td>{formatUsd(String(row.usdInvested))}</td>
                     <td>
-                      {!row.priceState || row.priceState.status === 'loading'
-                        ? <span className="table-price-loading" aria-label="Loading current price" />
-                        : row.priceState.status === 'error' || row.currentPrice === null
-                          ? '---'
-                          : formatUsd(String(row.currentPrice))}
+                      {row.netAmount === 0
+                        ? '---'
+                        : !row.priceState || row.priceState.status === 'loading'
+                          ? <span className="table-price-loading" aria-label="Loading current price" />
+                          : row.priceState.status === 'error' || row.currentPrice === null
+                            ? '---'
+                            : formatUsd(String(row.currentPrice))}
                     </td>
                     <td className={valueClassName}>
                       {row.currentValue === null ? '---' : formatUsd(String(row.currentValue))}
                     </td>
+                    <td className={realizedClassName}>{formatUsd(String(row.realizedProfit))}</td>
                   </tr>
                 );
               })}

@@ -3,6 +3,7 @@ package com.trading.domain.repository;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.projection.UserAssetLatestPriceProjection;
 import com.trading.domain.projection.UserAssetRealizedPnlProjection;
+import com.trading.domain.projection.UserAssetSummaryProjection;
 import com.trading.domain.projection.SellOpportunityProjection;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
 import com.trading.domain.enums.TransactionType;
@@ -99,6 +100,52 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
         nativeQuery = true
     )
     List<UserAssetRealizedPnlProjection> findRealizedPnlByUserId(@Param("userId") UUID userId);
+
+    @Query(
+        value = """
+            SELECT
+                a.name AS assetName,
+                a.symbol AS assetSymbol,
+                SUM(
+                    CASE
+                        WHEN t.transaction_type = 'BUY' THEN t.net_amount
+                        ELSE -t.net_amount
+                    END
+                ) AS netQuantity,
+                SUM(
+                    CASE
+                        WHEN t.transaction_type = 'BUY' THEN t.total_spent_usd
+                        ELSE -(t.total_spent_usd - COALESCE(t.realized_pnl, 0))
+                    END
+                ) AS totalInvested,
+                SUM(
+                    CASE
+                        WHEN t.transaction_type = 'SELL' THEN COALESCE(t.realized_pnl, 0)
+                        ELSE 0
+                    END
+                ) AS totalRealizedProfit
+            FROM transactions t
+            JOIN assets a ON a.id = t.asset_id
+            WHERE t.user_id = :userId
+            GROUP BY a.id, a.name, a.symbol
+            HAVING
+                SUM(
+                    CASE
+                        WHEN t.transaction_type = 'BUY' THEN t.net_amount
+                        ELSE -t.net_amount
+                    END
+                ) <> 0
+                OR SUM(
+                    CASE
+                        WHEN t.transaction_type = 'SELL' THEN COALESCE(t.realized_pnl, 0)
+                        ELSE 0
+                    END
+                ) <> 0
+            ORDER BY a.symbol
+            """,
+        nativeQuery = true
+    )
+    List<UserAssetSummaryProjection> findAssetSummariesByUserId(@Param("userId") UUID userId);
 
     @Query(
         value = """

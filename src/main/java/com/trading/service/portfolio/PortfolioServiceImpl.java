@@ -2,10 +2,13 @@ package com.trading.service.portfolio;
 
 import com.trading.domain.projection.UserAssetLatestPriceProjection;
 import com.trading.domain.projection.UserAssetRealizedPnlProjection;
+import com.trading.domain.projection.UserAssetSummaryProjection;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
 import com.trading.domain.repository.TransactionRepository;
+import com.trading.dto.portfolio.AssetSummaryDTO;
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -86,6 +89,15 @@ public class PortfolioServiceImpl implements PortfolioService {
             .toList();
     }
 
+    @Override
+    @Cacheable(cacheNames = "portfolioAssetSummary", key = "#userId")
+    public List<AssetSummaryDTO> getAssetSummary(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+        return transactionRepository.findAssetSummariesByUserId(userId).stream()
+            .map(PortfolioServiceImpl::toAssetSummary)
+            .toList();
+    }
+
     private static PortfolioAssetPerformanceResponse toPerformanceRow(
         UserPortfolioPerformanceProjection row,
         Map<String, BigDecimal> latestPrices,
@@ -120,6 +132,16 @@ public class PortfolioServiceImpl implements PortfolioService {
 
     private static BigDecimal nullSafe(BigDecimal value) {
         return value == null ? ZERO : value;
+    }
+
+    private static AssetSummaryDTO toAssetSummary(UserAssetSummaryProjection row) {
+        return new AssetSummaryDTO(
+            row.getAssetName(),
+            row.getAssetSymbol(),
+            nullSafe(row.getNetQuantity()),
+            nullSafe(row.getTotalInvested()),
+            nullSafe(row.getTotalRealizedProfit())
+        );
     }
 
     private static String key(String symbol, String exchange) {
