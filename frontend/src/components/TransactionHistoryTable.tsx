@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type {
   AccumulationTradeItem,
   TradeFormPayload,
+  TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
@@ -15,6 +16,8 @@ import { SellTransactionModal } from './SellTransactionModal';
 
 interface TransactionHistoryTableProps {
   transactions: TransactionItem[];
+  transactionView: TransactionView;
+  onTransactionViewChange: (view: TransactionView) => void;
   accumulationTrades: AccumulationTradeItem[];
   assets: AssetOption[];
   exchanges: ExchangeOption[];
@@ -44,6 +47,8 @@ function labelExchange(exchangeId: string, exchanges: ExchangeOption[]): string 
 
 export function TransactionHistoryTable({
   transactions,
+  transactionView,
+  onTransactionViewChange,
   accumulationTrades,
   assets,
   exchanges,
@@ -54,7 +59,6 @@ export function TransactionHistoryTable({
   onOpenAccumulationTrade,
   onCompleteAccumulationTrade
 }: TransactionHistoryTableProps): JSX.Element {
-  const [showHistory, setShowHistory] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editQuantityTargetId, setEditQuantityTargetId] = useState<string | null>(null);
   const [editTargetId, setEditTargetId] = useState<string | null>(null);
@@ -142,7 +146,7 @@ export function TransactionHistoryTable({
     return map;
   }, [accumulationTrades]);
   const rowsToRender = useMemo(() => {
-    if (!showHistory) {
+    if (transactionView === 'OPEN') {
       return openBuyTransactions.map((tx) => ({ tx, groupClassName: '' }));
     }
 
@@ -167,7 +171,7 @@ export function TransactionHistoryTable({
     }
 
     return groupedRows;
-  }, [openBuyTransactions, showHistory, transactions, transactionsById]);
+  }, [openBuyTransactions, transactionView, transactions, transactionsById]);
 
   async function confirmDelete(): Promise<void> {
     if (!deleteTargetId) {
@@ -223,18 +227,29 @@ export function TransactionHistoryTable({
       <section className="history-panel history-panel-prominent">
         <div className="transaction-table-header">
           <h3>Transactions</h3>
-          <label className="checkbox-row transaction-history-toggle" htmlFor="show-transaction-history">
-            <input
-              id="show-transaction-history"
-              type="checkbox"
-              checked={showHistory}
-              onChange={(event) => setShowHistory(event.target.checked)}
-            />
-            Show History
-          </label>
+          <div className="transactions-view-tabs" role="tablist" aria-label="Transaction views">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={transactionView === 'OPEN'}
+              className={`transactions-view-tab ${transactionView === 'OPEN' ? 'active' : ''}`.trim()}
+              onClick={() => onTransactionViewChange('OPEN')}
+            >
+              Open
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={transactionView === 'MATCHED'}
+              className={`transactions-view-tab ${transactionView === 'MATCHED' ? 'active' : ''}`.trim()}
+              onClick={() => onTransactionViewChange('MATCHED')}
+            >
+              Matched
+            </button>
+          </div>
         </div>
         {rowsToRender.length === 0 ? (
-          <p>{showHistory ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
+          <p>{transactionView === 'MATCHED' ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
         ) : (
           <>
             <div className="table-wrap transaction-table-wrap">

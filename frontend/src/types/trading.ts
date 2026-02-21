@@ -11,6 +11,7 @@ export interface ExchangeOption {
 }
 
 export type TransactionType = 'BUY' | 'SELL';
+export type TransactionView = 'OPEN' | 'MATCHED';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
 export type AccumulationTradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type TransactionAccumulationRole = 'NONE' | 'ACCUMULATION_EXIT' | 'ACCUMULATION_REENTRY';
