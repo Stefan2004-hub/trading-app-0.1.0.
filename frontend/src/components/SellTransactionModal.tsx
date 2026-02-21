@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TradeFormPayload, TransactionItem } from '../types/trading';
 import {
   decimalToDisplay,
@@ -7,6 +7,7 @@ import {
   isPositiveDecimal,
   multiplyDecimal
 } from '../utils/decimal';
+import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
 import { Button } from './ui/button';
 import { Dialog } from './ui/dialog';
 import { Input } from './ui/input';
@@ -16,6 +17,7 @@ interface SellTransactionModalProps {
   open: boolean;
   transaction: TransactionItem | null;
   assetLabel: string;
+  assetSymbol: string;
   exchangeLabel: string;
   onClose: () => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
@@ -84,20 +86,58 @@ export function SellTransactionModal({
   open,
   transaction,
   assetLabel,
+  assetSymbol,
   exchangeLabel,
   onClose,
   onSubmit
 }: SellTransactionModalProps): JSX.Element | null {
   const [form, setForm] = useState<SellFormState>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const unitPriceManuallyEditedRef = useRef(false);
+
+  const normalizedAssetSymbol = assetSymbol.trim().toUpperCase();
+  const priceStatesBySymbol = useAssetSpotPrices(normalizedAssetSymbol ? [normalizedAssetSymbol] : []);
+  const selectedAssetPriceState = normalizedAssetSymbol ? priceStatesBySymbol[normalizedAssetSymbol] : undefined;
+  const isPriceLoading = Boolean(normalizedAssetSymbol) && selectedAssetPriceState?.status === 'loading';
 
   useEffect(() => {
     if (!transaction || !open) {
+      unitPriceManuallyEditedRef.current = false;
       setForm(EMPTY_FORM);
       return;
     }
+    unitPriceManuallyEditedRef.current = false;
     setForm(toInitialState(transaction));
   }, [open, transaction]);
+
+  useEffect(() => {
+    if (!open || !transaction) {
+      return;
+    }
+    if (!normalizedAssetSymbol || selectedAssetPriceState?.status !== 'success' || !selectedAssetPriceState.priceUsd) {
+      return;
+    }
+    if (unitPriceManuallyEditedRef.current) {
+      return;
+    }
+
+    setForm((current) => {
+      const next = { ...current, unitPriceUsd: selectedAssetPriceState.priceUsd ?? '' };
+      if (next.feePercentage.trim()) {
+        return syncFee(next, transaction.netAmount, 'PERCENTAGE');
+      }
+      if (next.feeAmountUsd.trim()) {
+        return syncFee(next, transaction.netAmount, 'AMOUNT');
+      }
+      return next;
+    });
+  }, [
+    normalizedAssetSymbol,
+    open,
+    selectedAssetPriceState?.priceUsd,
+    selectedAssetPriceState?.status,
+    transaction
+  ]);
 
   const sellQuantity = useMemo(() => asText(transaction?.netAmount ?? ''), [transaction]);
 
@@ -166,14 +206,17 @@ export function SellTransactionModal({
             }}
           />
 
-        <Label htmlFor="sell-unit-price">Unit Price (USD)</Label>
+        <Label htmlFor="sell-unit-price">Unit Price (USD){isPriceLoading ? ' (Loading market price...)' : ''}</Label>
         <Input
           id="sell-unit-price"
           type="number"
           min="0.000000000000000001"
           step="any"
           value={asText(form.unitPriceUsd)}
-          onChange={(event) =>
+          placeholder={isPriceLoading ? 'Fetching current market price...' : undefined}
+          aria-busy={isPriceLoading}
+          onChange={(event) => {
+            unitPriceManuallyEditedRef.current = true;
             setForm((current) => {
               const next = { ...current, unitPriceUsd: event.target.value };
               if (next.feePercentage.trim()) {
@@ -183,8 +226,8 @@ export function SellTransactionModal({
                 return syncFee(next, sellQuantity, 'AMOUNT');
               }
               return next;
-            })
-          }
+            });
+          }}
           required
         />
       </div>

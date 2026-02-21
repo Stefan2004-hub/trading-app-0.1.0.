@@ -5,6 +5,7 @@ import { BuyTransactionModal } from '../components/BuyTransactionModal';
 import { OpenTransactionSummaryCards } from '../components/OpenTransactionSummaryCards';
 import { TransactionHistoryTable } from '../components/TransactionHistoryTable';
 import { ToastContainer, type ToastItem, type ToastVariant } from '../components/ui/toast';
+import { multiplyDecimal } from '../utils/decimal';
 import {
   clearTradingError,
   deleteTransaction,
@@ -32,8 +33,10 @@ export function TransactionsPage(): JSX.Element {
   const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
   const [buyModalContext, setBuyModalContext] = useState<{
     accumulationTradeId: string | null;
+    exitTransactionId?: string;
     initialAssetId?: string;
     initialExchangeId?: string;
+    initialUsdAmount?: string;
   }>({
     accumulationTradeId: null
   });
@@ -232,12 +235,18 @@ export function TransactionsPage(): JSX.Element {
           onDeleteTransaction={submitDeleteTransaction}
           onSellFromTransaction={submitSellFromTransaction}
           onOpenAccumulationTrade={submitOpenAccumulationTrade}
-          onCompleteAccumulationTrade={({ accumulationTradeId, assetId, exchangeId }) => {
+          onCompleteAccumulationTrade={({ accumulationTradeId, exitTransactionId, assetId, exchangeId }) => {
+            const exitTransaction = transactions.find((tx) => tx.id === exitTransactionId) ?? null;
+            const inheritedUsdAmount =
+              exitTransaction ? multiplyDecimal(exitTransaction.grossAmount, exitTransaction.unitPriceUsd) ?? exitTransaction.totalSpentUsd : undefined;
             setBuyModalContext({
               accumulationTradeId,
+              exitTransactionId,
               initialAssetId: assetId,
-              initialExchangeId: exchangeId
+              initialExchangeId: exchangeId,
+              initialUsdAmount: inheritedUsdAmount
             });
+            void dispatch(updateDefaultBuyInputMode('USD_AMOUNT'));
             setIsBuyModalOpen(true);
           }}
         />
@@ -294,8 +303,10 @@ export function TransactionsPage(): JSX.Element {
           exchanges={exchanges}
           submitting={submitting}
           defaultBuyInputMode={userPreferences?.defaultBuyInputMode}
+          forcedBuyInputMode={buyModalContext.accumulationTradeId ? 'USD_AMOUNT' : undefined}
           initialAssetId={buyModalContext.initialAssetId}
           initialExchangeId={buyModalContext.initialExchangeId}
+          initialUsdAmount={buyModalContext.initialUsdAmount}
           onClose={() => {
             setIsBuyModalOpen(false);
             setBuyModalContext({ accumulationTradeId: null });

@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -445,6 +446,164 @@ class TransactionServiceImplTest {
 
         assertEquals(true, response.matched());
         assertEquals(sellId, response.matchedTransactionId());
+    }
+
+    @Test
+    void listMatchesWhenBuyAndSellAmountsDifferWithinEpsilon() {
+        UUID buyId = UUID.randomUUID();
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buy = existingBuy("1.0000000000005", "50000", "2026-02-12T10:00:00Z");
+        buy.setId(buyId);
+        buy.setUser(user(userId));
+        buy.setAsset(asset(assetId, "BTC"));
+        buy.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0000000000000", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buy));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(true, response.matched());
+        assertEquals(buyId, response.matchedTransactionId());
+    }
+
+    @Test
+    void listDoesNotMatchWhenBuyAndSellAmountsDifferAboveEpsilon() {
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buy = existingBuy("1.000000000002", "50000", "2026-02-12T10:00:00Z");
+        buy.setId(UUID.randomUUID());
+        buy.setUser(user(userId));
+        buy.setAsset(asset(assetId, "BTC"));
+        buy.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.000000000000", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buy));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(false, response.matched());
+        assertNull(response.matchedTransactionId());
+    }
+
+    @Test
+    void listMatchesSellToClosestBuyWithinEpsilon() {
+        UUID buyFartherId = UUID.randomUUID();
+        UUID buyCloserId = UUID.randomUUID();
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buyFarther = existingBuy("1.0000000000009", "50000", "2026-02-12T10:00:00Z");
+        buyFarther.setId(buyFartherId);
+        buyFarther.setUser(user(userId));
+        buyFarther.setAsset(asset(assetId, "BTC"));
+        buyFarther.setExchange(exchange(exchangeId));
+
+        Transaction buyCloser = existingBuy("1.0000000000001", "50000", "2026-02-12T11:00:00Z");
+        buyCloser.setId(buyCloserId);
+        buyCloser.setUser(user(userId));
+        buyCloser.setAsset(asset(assetId, "BTC"));
+        buyCloser.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0000000000000", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buyCloser, buyFarther));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(true, response.matched());
+        assertEquals(buyCloserId, response.matchedTransactionId());
+    }
+
+    @Test
+    void listMatchesSellToOldestBuyWhenDifferencesAreEqual() {
+        UUID buyOlderId = UUID.randomUUID();
+        UUID buyNewerId = UUID.randomUUID();
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buyOlder = existingBuy("1.0000000000005", "50000", "2026-02-12T10:00:00Z");
+        buyOlder.setId(buyOlderId);
+        buyOlder.setUser(user(userId));
+        buyOlder.setAsset(asset(assetId, "BTC"));
+        buyOlder.setExchange(exchange(exchangeId));
+
+        Transaction buyNewer = existingBuy("0.9999999999995", "50000", "2026-02-12T11:00:00Z");
+        buyNewer.setId(buyNewerId);
+        buyNewer.setUser(user(userId));
+        buyNewer.setAsset(asset(assetId, "BTC"));
+        buyNewer.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0000000000000", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buyNewer, buyOlder));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(true, response.matched());
+        assertEquals(buyOlderId, response.matchedTransactionId());
+    }
+
+    @Test
+    void listDoesNotMatchAcrossDifferentExchanges() {
+        UUID sellId = UUID.randomUUID();
+        UUID otherExchangeId = UUID.randomUUID();
+
+        Transaction buy = existingBuy("1.0000000000000", "50000", "2026-02-12T10:00:00Z");
+        buy.setId(UUID.randomUUID());
+        buy.setUser(user(userId));
+        buy.setAsset(asset(assetId, "BTC"));
+        buy.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0000000000005", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(otherExchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buy));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(false, response.matched());
+        assertNull(response.matchedTransactionId());
     }
 
     private BuyTransactionRequest buyRequest(
