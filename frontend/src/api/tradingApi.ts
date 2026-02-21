@@ -15,6 +15,13 @@ import type {
   UpdateTransactionPayload
 } from '../types/trading';
 
+function extractLookupContent<T>(response: T[] | PaginatedResponse<T>): T[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+  return Array.isArray(response.content) ? response.content : [];
+}
+
 function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
   const feePercentage = payload.feePercentage ? decimalToFractionalPercent(payload.feePercentage) : null;
   const feeAmount = payload.feeAmount?.trim() ? payload.feeAmount.trim() : null;
@@ -32,9 +39,10 @@ function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> 
 
 export const tradingApi = {
   listAssets(search?: string): Promise<AssetOption[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<AssetOption[]>(`/api/assets${query}`);
+    const normalizedSearch = search?.trim() ?? '';
+    return request<AssetOption[] | PaginatedResponse<AssetOption>>(
+      `/api/assets?search=${encodeURIComponent(normalizedSearch)}`
+    ).then(extractLookupContent);
   },
 
   createAsset(payload: { symbol: string; name: string }): Promise<AssetOption> {
@@ -58,9 +66,10 @@ export const tradingApi = {
   },
 
   listExchanges(search?: string): Promise<ExchangeOption[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<ExchangeOption[]>(`/api/exchanges${query}`);
+    const normalizedSearch = search?.trim() ?? '';
+    return request<ExchangeOption[] | PaginatedResponse<ExchangeOption>>(
+      `/api/exchanges?search=${encodeURIComponent(normalizedSearch)}`
+    ).then(extractLookupContent);
   },
 
   createExchange(payload: { symbol: string; name: string }): Promise<ExchangeOption> {
