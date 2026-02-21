@@ -39,6 +39,13 @@ export const strategyApi = {
     return request<StrategyAlertItem[]>('/api/strategies/alerts');
   },
 
+  generateAlerts(payload: { assetId: string; currentPriceUsd: string }): Promise<StrategyAlertItem[]> {
+    return request<StrategyAlertItem[]>('/api/strategies/alerts/generate', {
+      method: 'POST',
+      body: payload
+    });
+  },
+
   acknowledgeAlert(alertId: string): Promise<StrategyAlertItem> {
     return request<StrategyAlertItem>(`/api/strategies/alerts/${alertId}/acknowledge`, {
       method: 'POST'

@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { strategyApi } from '../api/strategyApi';
+import { resolveAssetSpotPrice } from '../hooks/useAssetSpotPrices';
 import type {
   BuyStrategyItem,
   SellStrategyItem,
@@ -8,6 +9,7 @@ import type {
   UpsertSellStrategyPayload
 } from '../types/strategy';
 import type { AssetOption } from '../types/trading';
+import type { RootState } from './index';
 
 interface StrategyState {
   assets: AssetOption[];
@@ -52,9 +54,36 @@ export const upsertSellStrategy = createAsyncThunk(
 
 export const upsertBuyStrategy = createAsyncThunk(
   'strategy/upsertBuy',
-  async (payload: UpsertBuyStrategyPayload, { dispatch }) => {
+  async (payload: UpsertBuyStrategyPayload, { dispatch, getState }) => {
     await strategyApi.upsertBuyStrategy(payload);
     await dispatch(loadStrategyData()).unwrap();
+
+    const state = getState() as RootState;
+    let asset = state.strategy.assets.find((row) => row.id === payload.assetId) ?? null;
+    if (!asset) {
+      const assets = await strategyApi.listAssets();
+      asset = assets.find((row) => row.id === payload.assetId) ?? null;
+    }
+    if (!asset?.symbol) {
+      return;
+    }
+
+    try {
+      const priceState = await resolveAssetSpotPrice(asset.symbol);
+      if (!priceState.priceUsd) {
+        return;
+      }
+
+      const generated = await strategyApi.generateAlerts({
+        assetId: payload.assetId,
+        currentPriceUsd: priceState.priceUsd
+      });
+      if (generated.length > 0) {
+        await dispatch(loadStrategyData()).unwrap();
+      }
+    } catch {
+      // Saving strategy should not fail when live price lookup/alert generation is temporarily unavailable.
+    }
   }
 );
 
