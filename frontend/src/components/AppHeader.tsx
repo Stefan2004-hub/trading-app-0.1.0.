@@ -13,6 +13,7 @@ export function AppHeader(): JSX.Element {
   const menuItems = [
     { label: 'Dashboard', to: '/dashboard' },
     { label: 'Transactions', to: '/transactions' },
+    { label: 'Alerts', to: '/alerts' },
     { label: 'Assets', to: '/assets' },
     { label: 'Exchanges', to: '/exchanges' },
     { label: 'Strategies', to: '/strategies' },

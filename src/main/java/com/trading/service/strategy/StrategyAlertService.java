@@ -13,4 +13,6 @@ public interface StrategyAlertService {
     List<StrategyAlertResponse> generate(UUID userId, GenerateStrategyAlertsRequest request);
 
     StrategyAlertResponse acknowledge(UUID userId, UUID alertId);
+
+    void delete(UUID userId, UUID alertId);
 }

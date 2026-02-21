@@ -197,6 +197,29 @@ p {
   margin-top: 1rem;
 }
 
+.section-header-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.section-header-inline h3 {
+  margin: 0;
+}
+
+.inline-link-button {
+  display: inline-block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0369a1;
+  text-decoration: none;
+}
+
+.inline-link-button:hover {
+  text-decoration: underline;
+}
+
 .history-panel-prominent {
   margin-top: 0.85rem;
   padding: 1rem;

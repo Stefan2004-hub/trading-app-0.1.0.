@@ -86,6 +86,16 @@ public class BuyStrategyServiceImpl implements BuyStrategyService {
         return toResponse(saved);
     }
 
+    @Override
+    public void delete(UUID userId, UUID strategyId) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(strategyId, "strategyId is required");
+
+        BuyStrategy strategy = buyStrategyRepository.findByIdAndUser_Id(strategyId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Buy strategy not found: " + strategyId));
+        buyStrategyRepository.delete(strategy);
+    }
+
     private static BuyStrategyResponse toResponse(BuyStrategy strategy) {
         return new BuyStrategyResponse(
             strategy.getId(),

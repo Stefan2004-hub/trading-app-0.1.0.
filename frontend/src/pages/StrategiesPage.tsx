@@ -6,6 +6,9 @@ import { StrategyTable } from '../components/StrategyTable';
 import {
   acknowledgeStrategyAlert,
   clearStrategyError,
+  deleteBuyStrategy,
+  deleteSellStrategy,
+  deleteStrategyAlert,
   loadStrategyData,
   upsertBuyStrategy,
   upsertSellStrategy
@@ -56,9 +59,29 @@ export function StrategiesPage(): JSX.Element {
             const action = await dispatch(acknowledgeStrategyAlert(alertId));
             return acknowledgeStrategyAlert.fulfilled.match(action);
           }}
+          onDelete={async (alertId) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(deleteStrategyAlert(alertId));
+            return deleteStrategyAlert.fulfilled.match(action);
+          }}
         />
 
-        <StrategyTable assets={assets} sellStrategies={sellStrategies} buyStrategies={buyStrategies} />
+        <StrategyTable
+          assets={assets}
+          sellStrategies={sellStrategies}
+          buyStrategies={buyStrategies}
+          submitting={submitting}
+          onDeleteSell={async (strategyId) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(deleteSellStrategy(strategyId));
+            return deleteSellStrategy.fulfilled.match(action);
+          }}
+          onDeleteBuy={async (strategyId) => {
+            dispatch(clearStrategyError());
+            const action = await dispatch(deleteBuyStrategy(strategyId));
+            return deleteBuyStrategy.fulfilled.match(action);
+          }}
+        />
       </section>
     </main>
   );

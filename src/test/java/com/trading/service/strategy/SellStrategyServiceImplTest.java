@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -121,5 +122,32 @@ class SellStrategyServiceImplTest {
         );
 
         assertEquals("thresholdPercent must be positive", ex.getMessage());
+    }
+
+    @Test
+    void deleteRemovesExistingStrategy() {
+        SellStrategy existing = new SellStrategy();
+        existing.setId(UUID.randomUUID());
+        existing.setUser(user);
+        existing.setAsset(asset);
+
+        when(sellStrategyRepository.findByIdAndUser_Id(existing.getId(), userId)).thenReturn(Optional.of(existing));
+
+        sellStrategyService.delete(userId, existing.getId());
+
+        verify(sellStrategyRepository).delete(existing);
+    }
+
+    @Test
+    void deleteThrowsWhenStrategyMissing() {
+        UUID strategyId = UUID.randomUUID();
+        when(sellStrategyRepository.findByIdAndUser_Id(strategyId, userId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> sellStrategyService.delete(userId, strategyId)
+        );
+
+        assertEquals("Sell strategy not found: " + strategyId, ex.getMessage());
     }
 }
