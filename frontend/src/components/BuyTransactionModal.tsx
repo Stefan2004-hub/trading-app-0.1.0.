@@ -6,10 +6,14 @@ import type { AssetOption, ExchangeOption } from '../types/trading';
 
 interface BuyTransactionModalProps {
   open: boolean;
+  title?: string;
+  submitLabel?: string;
   assets: AssetOption[];
   exchanges: ExchangeOption[];
   submitting: boolean;
   defaultBuyInputMode?: BuyInputMode;
+  initialAssetId?: string;
+  initialExchangeId?: string;
   onClose: () => void;
   onBuyInputModeChange: (mode: BuyInputMode) => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
@@ -17,10 +21,14 @@ interface BuyTransactionModalProps {
 
 export function BuyTransactionModal({
   open,
+  title = 'Buy Transaction',
+  submitLabel = 'Buy',
   assets,
   exchanges,
   submitting,
   defaultBuyInputMode,
+  initialAssetId,
+  initialExchangeId,
   onClose,
   onBuyInputModeChange,
   onSubmit
@@ -34,7 +42,7 @@ export function BuyTransactionModal({
   return (
     <Dialog
       open={open}
-      title="Buy Transaction"
+      title={title}
       onClose={submitting ? () => undefined : onClose}
       panelClassName="buy-transaction-modal"
     >
@@ -48,6 +56,8 @@ export function BuyTransactionModal({
           exchanges={exchanges}
           submitting={submitting}
           defaultBuyInputMode={defaultBuyInputMode}
+          initialAssetId={initialAssetId}
+          initialExchangeId={initialExchangeId}
           onBuyInputModeChange={onBuyInputModeChange}
           onSubmit={async (payload) => {
             const ok = await onSubmit(payload);
@@ -61,7 +71,7 @@ export function BuyTransactionModal({
 
       <div className="buy-modal-footer">
         <Button type="submit" form={formId} variant="default" disabled={submitting}>
-          {submitting ? 'Submitting...' : 'Buy'}
+          {submitting ? 'Submitting...' : submitLabel}
         </Button>
       </div>
     </Dialog>

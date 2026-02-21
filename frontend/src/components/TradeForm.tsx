@@ -18,6 +18,8 @@ interface TradeFormProps {
   hideSubmitButton?: boolean;
   submitLabel?: string;
   defaultBuyInputMode?: BuyInputMode;
+  initialAssetId?: string;
+  initialExchangeId?: string;
   onBuyInputModeChange?: (mode: BuyInputMode) => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
 }
@@ -57,6 +59,8 @@ export function TradeForm({
   hideSubmitButton = false,
   submitLabel,
   defaultBuyInputMode,
+  initialAssetId,
+  initialExchangeId,
   onBuyInputModeChange,
   onSubmit
 }: TradeFormProps): JSX.Element {
@@ -70,6 +74,28 @@ export function TradeForm({
       setForm((current) => ({ ...current, inputMode: defaultBuyInputMode }));
     }
   }, [defaultBuyInputMode, form.inputMode, tradeType]);
+
+  useEffect(() => {
+    if (!initialAssetId) {
+      return;
+    }
+    const asset = assets.find((row) => row.id === initialAssetId) ?? null;
+    setSelectedAsset(asset);
+    setForm((current) =>
+      current.assetId === initialAssetId ? current : { ...current, assetId: initialAssetId }
+    );
+  }, [assets, initialAssetId]);
+
+  useEffect(() => {
+    if (!initialExchangeId) {
+      return;
+    }
+    const exchange = exchanges.find((row) => row.id === initialExchangeId) ?? null;
+    setSelectedExchange(exchange);
+    setForm((current) =>
+      current.exchangeId === initialExchangeId ? current : { ...current, exchangeId: initialExchangeId }
+    );
+  }, [exchanges, initialExchangeId]);
 
   useEffect(() => {
     if (form.assetId && (!selectedAsset || selectedAsset.id !== form.assetId)) {

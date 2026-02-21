@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type {
+  AccumulationTradeItem,
   TradeFormPayload,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
@@ -14,6 +15,7 @@ import { SellTransactionModal } from './SellTransactionModal';
 
 interface TransactionHistoryTableProps {
   transactions: TransactionItem[];
+  accumulationTrades: AccumulationTradeItem[];
   assets: AssetOption[];
   exchanges: ExchangeOption[];
   onEditTransactionQuantity: (
@@ -23,6 +25,13 @@ interface TransactionHistoryTableProps {
   onEditTransaction: (transactionId: string, payload: UpdateTransactionPayload) => Promise<boolean>;
   onDeleteTransaction: (transactionId: string) => Promise<boolean>;
   onSellFromTransaction: (payload: TradeFormPayload) => Promise<boolean>;
+  onOpenAccumulationTrade: (exitTransactionId: string) => Promise<boolean>;
+  onCompleteAccumulationTrade: (payload: {
+    accumulationTradeId: string;
+    exitTransactionId: string;
+    assetId: string;
+    exchangeId: string;
+  }) => void;
 }
 
 function labelAsset(assetId: string, assets: AssetOption[]): string {
@@ -35,12 +44,15 @@ function labelExchange(exchangeId: string, exchanges: ExchangeOption[]): string 
 
 export function TransactionHistoryTable({
   transactions,
+  accumulationTrades,
   assets,
   exchanges,
   onEditTransactionQuantity,
   onEditTransaction,
   onDeleteTransaction,
-  onSellFromTransaction
+  onSellFromTransaction,
+  onOpenAccumulationTrade,
+  onCompleteAccumulationTrade
 }: TransactionHistoryTableProps): JSX.Element {
   const [showHistory, setShowHistory] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -120,6 +132,15 @@ export function TransactionHistoryTable({
     () => transactions.filter((tx) => tx.transactionType === 'BUY' && !tx.matched),
     [transactions]
   );
+  const openAccumulationByExitTransactionId = useMemo(() => {
+    const map = new Map<string, AccumulationTradeItem>();
+    for (const trade of accumulationTrades) {
+      if (trade.status === 'OPEN') {
+        map.set(trade.exitTransactionId, trade);
+      }
+    }
+    return map;
+  }, [accumulationTrades]);
   const rowsToRender = useMemo(() => {
     if (!showHistory) {
       return openBuyTransactions.map((tx) => ({ tx, groupClassName: '' }));
@@ -240,9 +261,12 @@ export function TransactionHistoryTable({
                 {rowsToRender.map(({ tx, groupClassName }) => {
                   const { symbol, priceState, unrealizedPnlValue, remainingDollarsValue, remainingClassName } =
                     getRowComputedValues(tx);
+                  const openAccumulationTrade =
+                    tx.transactionType === 'SELL' ? openAccumulationByExitTransactionId.get(tx.id) : undefined;
+                  const accumulationClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
 
                   return (
-                    <tr key={tx.id} className={groupClassName}>
+                    <tr key={tx.id} className={`${groupClassName} ${accumulationClassName}`.trim()}>
                       <td>{tx.transactionType}</td>
                       <td>{labelAsset(tx.assetId, assets)}</td>
                       <td>{labelExchange(tx.exchangeId, exchanges)}</td>
@@ -341,6 +365,37 @@ export function TransactionHistoryTable({
                               >
                                 Sell
                               </button>
+                              {tx.transactionType === 'SELL' && !openAccumulationTrade ? (
+                                <button
+                                  type="button"
+                                  className="transaction-actions-menu-item transaction-actions-menu-item-warning"
+                                  role="menuitem"
+                                  onClick={async () => {
+                                    await onOpenAccumulationTrade(tx.id);
+                                    setOpenMenuId(null);
+                                  }}
+                                >
+                                  Open Accumulation
+                                </button>
+                              ) : null}
+                              {tx.transactionType === 'SELL' && openAccumulationTrade ? (
+                                <button
+                                  type="button"
+                                  className="transaction-actions-menu-item transaction-actions-menu-item-warning"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    onCompleteAccumulationTrade({
+                                      accumulationTradeId: openAccumulationTrade.id,
+                                      exitTransactionId: tx.id,
+                                      assetId: tx.assetId,
+                                      exchangeId: tx.exchangeId
+                                    });
+                                    setOpenMenuId(null);
+                                  }}
+                                >
+                                  Complete Accumulation
+                                </button>
+                              ) : null}
                             </div>
                           ) : null}
                         </div>
@@ -354,9 +409,12 @@ export function TransactionHistoryTable({
             <div className="transaction-mobile-list">
               {rowsToRender.map(({ tx, groupClassName }) => {
                 const { symbol, priceState, unrealizedPnlValue, remainingDollarsValue } = getRowComputedValues(tx);
+                const openAccumulationTrade =
+                  tx.transactionType === 'SELL' ? openAccumulationByExitTransactionId.get(tx.id) : undefined;
+                const accumulationClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
 
                 return (
-                  <article key={tx.id} className={`transaction-mobile-card ${groupClassName}`.trim()}>
+                  <article key={tx.id} className={`transaction-mobile-card ${groupClassName} ${accumulationClassName}`.trim()}>
                   <div className="transaction-mobile-card-top">
                     <div>
                       <p className="transaction-mobile-asset">{labelAsset(tx.assetId, assets)}</p>
@@ -427,6 +485,37 @@ export function TransactionHistoryTable({
                           >
                             Sell
                           </button>
+                          {tx.transactionType === 'SELL' && !openAccumulationTrade ? (
+                            <button
+                              type="button"
+                              className="transaction-actions-menu-item transaction-actions-menu-item-warning"
+                              role="menuitem"
+                              onClick={async () => {
+                                await onOpenAccumulationTrade(tx.id);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              Open Accumulation
+                            </button>
+                          ) : null}
+                          {tx.transactionType === 'SELL' && openAccumulationTrade ? (
+                            <button
+                              type="button"
+                              className="transaction-actions-menu-item transaction-actions-menu-item-warning"
+                              role="menuitem"
+                              onClick={() => {
+                                onCompleteAccumulationTrade({
+                                  accumulationTradeId: openAccumulationTrade.id,
+                                  exitTransactionId: tx.id,
+                                  assetId: tx.assetId,
+                                  exchangeId: tx.exchangeId
+                                });
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              Complete Accumulation
+                            </button>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
