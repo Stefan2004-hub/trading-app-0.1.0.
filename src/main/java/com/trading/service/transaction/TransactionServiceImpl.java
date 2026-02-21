@@ -50,6 +50,7 @@ public class TransactionServiceImpl implements TransactionService {
     private static final int DIVISION_SCALE = 18;
     private static final int FEE_PERCENTAGE_SCALE = 6;
     private static final int COST_SCALE = 18;
+    private static final BigDecimal MATCH_EPSILON = new BigDecimal("0.000000000001");
 
     private final TransactionRepository transactionRepository;
     private final AccumulationTradeRepository accumulationTradeRepository;
@@ -564,27 +565,45 @@ public class TransactionServiceImpl implements TransactionService {
             ).thenComparing(Transaction::getId, Comparator.nullsFirst(Comparator.naturalOrder()))
         );
 
-        Map<AssetAmountKey, Deque<Transaction>> unmatchedBuysByAssetAmount = new HashMap<>();
+        Map<AssetExchangeKey, List<Transaction>> unmatchedBuysByAssetExchange = new HashMap<>();
         Map<UUID, UUID> matchedPairsByTransactionId = new HashMap<>();
 
         for (Transaction tx : ordered) {
             if (tx.getTransactionType() == TransactionType.BUY) {
-                AssetAmountKey key = new AssetAmountKey(tx.getAsset().getId(), normalizeAmountKey(tx.getNetAmount()));
-                unmatchedBuysByAssetAmount.computeIfAbsent(key, ignored -> new LinkedList<>()).addLast(tx);
+                AssetExchangeKey key = new AssetExchangeKey(tx.getAsset().getId(), tx.getExchange().getId());
+                unmatchedBuysByAssetExchange.computeIfAbsent(key, ignored -> new LinkedList<>()).add(tx);
                 continue;
             }
 
             if (tx.getTransactionType() == TransactionType.SELL) {
-                AssetAmountKey key = new AssetAmountKey(tx.getAsset().getId(), normalizeAmountKey(tx.getGrossAmount()));
-                Deque<Transaction> candidates = unmatchedBuysByAssetAmount.get(key);
+                AssetExchangeKey key = new AssetExchangeKey(tx.getAsset().getId(), tx.getExchange().getId());
+                List<Transaction> candidates = unmatchedBuysByAssetExchange.get(key);
                 if (candidates == null || candidates.isEmpty()) {
                     continue;
                 }
 
-                Transaction matchedBuy = candidates.pollFirst();
-                if (matchedBuy == null) {
+                int bestIndex = -1;
+                BigDecimal bestDifference = null;
+                for (int i = 0; i < candidates.size(); i++) {
+                    Transaction candidate = candidates.get(i);
+                    BigDecimal difference = candidate.getNetAmount().subtract(tx.getGrossAmount()).abs();
+                    if (difference.compareTo(MATCH_EPSILON) > 0) {
+                        continue;
+                    }
+                    if (bestDifference == null || difference.compareTo(bestDifference) < 0) {
+                        bestDifference = difference;
+                        bestIndex = i;
+                        continue;
+                    }
+                    if (difference.compareTo(bestDifference) == 0 && isOlderThan(candidate, candidates.get(bestIndex))) {
+                        bestIndex = i;
+                    }
+                }
+
+                if (bestIndex < 0) {
                     continue;
                 }
+                Transaction matchedBuy = candidates.remove(bestIndex);
 
                 matchedPairsByTransactionId.put(matchedBuy.getId(), tx.getId());
                 matchedPairsByTransactionId.put(tx.getId(), matchedBuy.getId());
@@ -594,11 +613,35 @@ public class TransactionServiceImpl implements TransactionService {
         return matchedPairsByTransactionId;
     }
 
-    private static String normalizeAmountKey(BigDecimal value) {
-        if (value == null) {
-            return "0";
+    private static boolean isOlderThan(Transaction left, Transaction right) {
+        OffsetDateTime leftDate = left.getTransactionDate();
+        OffsetDateTime rightDate = right.getTransactionDate();
+
+        if (leftDate == null && rightDate != null) {
+            return true;
         }
-        return value.stripTrailingZeros().toPlainString();
+        if (leftDate != null && rightDate == null) {
+            return false;
+        }
+        if (leftDate != null && rightDate != null) {
+            int dateCompare = leftDate.compareTo(rightDate);
+            if (dateCompare != 0) {
+                return dateCompare < 0;
+            }
+        }
+
+        UUID leftId = left.getId();
+        UUID rightId = right.getId();
+        if (leftId == null && rightId != null) {
+            return true;
+        }
+        if (leftId != null && rightId == null) {
+            return false;
+        }
+        if (leftId == null && rightId == null) {
+            return false;
+        }
+        return leftId.compareTo(rightId) < 0;
     }
 
     private Map<UUID, TransactionAccumulationRole> buildAccumulationRolesByTransactionId(UUID userId) {
@@ -642,7 +685,7 @@ public class TransactionServiceImpl implements TransactionService {
         );
     }
 
-    private record AssetAmountKey(UUID assetId, String amount) {
+    private record AssetExchangeKey(UUID assetId, UUID exchangeId) {
     }
 
     private record FeeState(BigDecimal feeAmount, BigDecimal feePercentage, String feeCurrency) {
