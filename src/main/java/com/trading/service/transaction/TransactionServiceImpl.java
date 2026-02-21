@@ -15,7 +15,12 @@ import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
+import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -63,16 +68,21 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<TransactionResponse> list(UUID userId, String search) {
+    public Page<TransactionResponse> list(UUID userId, int page, int size, String search) {
         Objects.requireNonNull(userId, "userId is required");
-        String normalizedSearch = normalizeSearch(search);
-        List<Transaction> transactions =
-            transactionRepository.findAllByUser_IdAndSearchOrderByTransactionDateDesc(userId, normalizedSearch);
-        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactions);
-
-        return transactions.stream()
+        String searchPattern = toSearchPattern(search);
+        Sort sort = Sort.by(
+            Sort.Order.asc("exchange.name"),
+            Sort.Order.asc("asset.symbol"),
+            Sort.Order.desc("transactionDate")
+        );
+        PageRequest pageRequest = PageRequest.of(page, size, sort);
+        Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, searchPattern, pageRequest);
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactionPage.getContent());
+        List<TransactionResponse> content = transactionPage.getContent().stream()
             .map((transaction) -> toResponse(transaction, matchedPairs.get(transaction.getId())))
             .toList();
+        return new PageImpl<>(content, pageRequest, transactionPage.getTotalElements());
     }
 
     @Override
@@ -199,6 +209,28 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public TransactionResponse updateTransactionNetAmount(
+        UUID userId,
+        UUID transactionId,
+        UpdateTransactionNetAmountRequest request
+    ) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(transactionId, "transactionId is required");
+        Objects.requireNonNull(request, "request is required");
+        Objects.requireNonNull(request.netAmount(), "netAmount is required");
+        if (request.netAmount().compareTo(ZERO) <= 0) {
+            throw new IllegalArgumentException("netAmount must be positive");
+        }
+
+        Transaction tx = transactionRepository.findByIdAndUser_Id(transactionId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
+
+        tx.setNetAmount(request.netAmount());
+        Transaction saved = transactionRepository.save(tx);
+        return toResponse(saved, null);
+    }
+
+    @Override
     public void deleteTransaction(UUID userId, UUID transactionId) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(transactionId, "transactionId is required");
@@ -318,6 +350,14 @@ public class TransactionServiceImpl implements TransactionService {
             return null;
         }
         return search.trim();
+    }
+
+    private static String toSearchPattern(String search) {
+        String normalizedSearch = normalizeSearch(search);
+        if (normalizedSearch == null) {
+            return null;
+        }
+        return "%" + normalizedSearch + "%";
     }
 
     private static FeeState resolveFeeState(

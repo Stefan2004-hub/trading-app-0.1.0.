@@ -15,6 +15,7 @@ import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
+import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -353,6 +354,43 @@ class TransactionServiceImplTest {
         transactionService.deleteTransaction(userId, sellTx.getId());
 
         verify(pricePeakRepository, never()).save(any(PricePeak.class));
+    }
+
+    @Test
+    void updateTransactionNetAmountUpdatesOnlyNetAmountField() {
+        UUID transactionId = UUID.randomUUID();
+        Transaction tx = new Transaction();
+        tx.setId(transactionId);
+        tx.setTransactionType(TransactionType.BUY);
+        tx.setGrossAmount(new BigDecimal("1.0"));
+        tx.setNetAmount(new BigDecimal("1.0"));
+        tx.setUnitPriceUsd(new BigDecimal("50000"));
+        tx.setTotalSpentUsd(new BigDecimal("50000"));
+        tx.setTransactionDate(OffsetDateTime.parse("2026-02-13T10:00:00Z"));
+        Asset asset = new Asset();
+        asset.setId(assetId);
+        asset.setSymbol("BTC");
+        tx.setAsset(asset);
+        Exchange exchange = new Exchange();
+        exchange.setId(exchangeId);
+        tx.setExchange(exchange);
+        User user = new User();
+        user.setId(userId);
+        tx.setUser(user);
+
+        when(transactionRepository.findByIdAndUser_Id(transactionId, userId)).thenReturn(Optional.of(tx));
+        when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> invocation.getArgument(0, Transaction.class));
+
+        TransactionResponse response = transactionService.updateTransactionNetAmount(
+            userId,
+            transactionId,
+            new UpdateTransactionNetAmountRequest(new BigDecimal("0.75"))
+        );
+
+        assertEquals(0, response.netAmount().compareTo(new BigDecimal("0.75")));
+        assertEquals(0, tx.getGrossAmount().compareTo(new BigDecimal("1.0")));
+        assertEquals(0, tx.getTotalSpentUsd().compareTo(new BigDecimal("50000")));
+        verify(transactionRepository, never()).findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId);
     }
 
     private BuyTransactionRequest buyRequest(

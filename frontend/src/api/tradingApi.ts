@@ -1,12 +1,16 @@
 import { request } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
+  AccumulationTradeItem,
+  AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
+  PaginatedResponse,
   PortfolioAssetPerformance,
   PortfolioSummary,
   TradeFormPayload,
   TransactionItem,
+  UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
 
@@ -78,10 +82,17 @@ export const tradingApi = {
     });
   },
 
-  listTransactions(search?: string): Promise<TransactionItem[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<TransactionItem[]>(`/api/transactions${query}`);
+  listTransactions(params?: { page?: number; size?: number; search?: string }): Promise<PaginatedResponse<TransactionItem>> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('page', String(params?.page ?? 0));
+    queryParams.set('size', String(params?.size ?? 20));
+
+    const trimmedSearch = params?.search?.trim();
+    if (trimmedSearch) {
+      queryParams.set('search', trimmedSearch);
+    }
+
+    return request<PaginatedResponse<TransactionItem>>(`/api/transactions?${queryParams.toString()}`);
   },
 
   getPortfolioSummary(): Promise<PortfolioSummary> {
@@ -131,9 +142,65 @@ export const tradingApi = {
     });
   },
 
+  updateTransactionNetAmount(id: string, payload: UpdateTransactionNetAmountPayload): Promise<TransactionItem> {
+    return request<TransactionItem>(`/api/transactions/${id}/net-amount`, {
+      method: 'PATCH',
+      body: {
+        netAmount: payload.netAmount
+      }
+    });
+  },
+
   deleteTransaction(id: string): Promise<void> {
     return request<void>(`/api/transactions/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  listAccumulationTrades(params?: {
+    status?: AccumulationTradeStatus;
+    userId?: string;
+  }): Promise<AccumulationTradeItem[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) {
+      queryParams.set('status', params.status);
+    }
+    if (params?.userId) {
+      queryParams.set('userId', params.userId);
+    }
+    const query = queryParams.toString();
+    return request<AccumulationTradeItem[]>(`/api/accumulation-trades${query ? `?${query}` : ''}`);
+  },
+
+  openAccumulationTrade(payload: {
+    exitTransactionId: string;
+    predictionNotes?: string;
+    userId?: string;
+  }): Promise<AccumulationTradeItem> {
+    const query = payload.userId ? `?userId=${encodeURIComponent(payload.userId)}` : '';
+    return request<AccumulationTradeItem>(`/api/accumulation-trades/open${query}`, {
+      method: 'POST',
+      body: {
+        exitTransactionId: payload.exitTransactionId,
+        predictionNotes: payload.predictionNotes ?? null
+      }
+    });
+  },
+
+  closeAccumulationTrade(payload: {
+    accumulationTradeId: string;
+    reentryTransactionId: string;
+    predictionNotes?: string;
+    userId?: string;
+  }): Promise<AccumulationTradeItem> {
+    const query = payload.userId ? `?userId=${encodeURIComponent(payload.userId)}` : '';
+    return request<AccumulationTradeItem>(`/api/accumulation-trades/close${query}`, {
+      method: 'POST',
+      body: {
+        accumulationTradeId: payload.accumulationTradeId,
+        reentryTransactionId: payload.reentryTransactionId,
+        predictionNotes: payload.predictionNotes ?? null
+      }
     });
   }
 };

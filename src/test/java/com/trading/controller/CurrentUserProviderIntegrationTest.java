@@ -8,6 +8,7 @@ import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
+import com.trading.service.transaction.AccumulationTradeService;
 import com.trading.service.transaction.TransactionService;
 import com.trading.service.user.UserPreferenceService;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,10 @@ class CurrentUserProviderIntegrationTest {
 
     @MockBean
     private TransactionService transactionService;
+    
+    
+    @MockBean
+    private AccumulationTradeService accumulationTradeService;
 
     @MockBean
     private PortfolioService portfolioService;

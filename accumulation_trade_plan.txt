@@ -1,0 +1,35 @@
+Suggested Prompt for CODEX
+"Integrate the existing AccumulationTrade backend logic into the React frontend.
+
+1. Transaction List Enhancement:
+
+Update the TransactionResponse DTO or fetch a list of active accumulation trades to identify which SELL transactions are 'OPEN' accumulation trades.
+
+Visuals: Any transaction linked to an OPEN AccumulationTrade must have an orange background (Hex: #FFF7ED or similar).
+
+Actions: >    - For standard SELL rows: Add an 'Open Accumulation' option to the action hamburger menu.
+
+For 'Orange' (Open) rows: Add a 'Complete Accumulation' option. This should open the standard 'Buy' modal.
+
+2. Closing the Loop:
+
+When the 'Buy' modal is submitted from an 'Orange' row, the frontend must:
+
+Create the new BUY transaction.
+
+Immediately call AccumulationTradeService.close() using the id of the newly created BUY transaction and the existing accumulationTradeId.
+
+3. Summary View:
+
+Create a new section called 'Accumulation Strategy'.
+
+Use the toResponse logic to display a table of all closed trades, showing the exitPriceUsd, reentryPriceUsd, and the accumulationDelta (highlighting the delta in green if positive).
+
+4. Technical Constraint:
+
+Use the existing UUID-based ID system and ensure userId is passed correctly from the auth context to the open/close endpoints."
+
+4. Key Logic Addition for CODEX
+Since your accumulation_delta is insertable = false, updatable = false (likely handled by a DB trigger or calculated column), tell CODEX to:
+
+"Ensure the frontend displays the derivedDelta from the toResponse method rather than calculating it manually, to stay consistent with the backend's BigDecimal precision."

@@ -10,6 +10,7 @@ import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
+import com.trading.service.transaction.AccumulationTradeService;
 import com.trading.service.transaction.TransactionService;
 import com.trading.service.user.UserPreferenceService;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -34,6 +37,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +56,10 @@ class TransactionControllerIntegrationTest {
 
     @MockBean
     private TransactionService transactionService;
+    
+    
+    @MockBean
+    private AccumulationTradeService accumulationTradeService;
 
     @MockBean
     private PortfolioService portfolioService;
@@ -83,16 +91,19 @@ class TransactionControllerIntegrationTest {
         Authentication auth = authenticationFor(userId);
 
         TransactionResponse tx = txResponse(userId, TransactionType.BUY);
-        when(transactionService.list(userId, null)).thenReturn(List.of(tx));
+        when(transactionService.list(userId, 0, 20, null))
+            .thenReturn(pageOf(List.of(tx), 0, 20, 1));
 
         mockMvc.perform(get("/api/transactions").with(authentication(auth)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(tx.id().toString()))
-            .andExpect(jsonPath("$[0].userId").value(userId.toString()))
-            .andExpect(jsonPath("$[0].transactionType").value("BUY"))
-            .andExpect(jsonPath("$[0].grossAmount").value(0.5));
+            .andExpect(jsonPath("$.content[0].id").value(tx.id().toString()))
+            .andExpect(jsonPath("$.content[0].userId").value(userId.toString()))
+            .andExpect(jsonPath("$.content[0].transactionType").value("BUY"))
+            .andExpect(jsonPath("$.content[0].grossAmount").value(0.5))
+            .andExpect(jsonPath("$.totalElements").value(1))
+            .andExpect(jsonPath("$.totalPages").value(1));
 
-        verify(transactionService).list(eq(userId), eq(null));
+        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null));
     }
 
     @Test
@@ -100,12 +111,19 @@ class TransactionControllerIntegrationTest {
         UUID userId = UUID.randomUUID();
         Authentication auth = authenticationFor(userId);
 
-        when(transactionService.list(userId, "btc")).thenReturn(List.of());
+        when(transactionService.list(userId, 2, 50, "btc"))
+            .thenReturn(pageOf(List.of(), 2, 50, 0));
 
-        mockMvc.perform(get("/api/transactions").queryParam("search", "btc").with(authentication(auth)))
+        mockMvc.perform(
+                get("/api/transactions")
+                    .queryParam("page", "2")
+                    .queryParam("size", "50")
+                    .queryParam("search", "btc")
+                    .with(authentication(auth))
+            )
             .andExpect(status().isOk());
 
-        verify(transactionService).list(eq(userId), eq("btc"));
+        verify(transactionService).list(eq(userId), eq(2), eq(50), eq("btc"));
     }
 
     @Test
@@ -178,6 +196,33 @@ class TransactionControllerIntegrationTest {
     }
 
     @Test
+    void updateNetAmountEndpointReturnsUpdatedPayload() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        TransactionResponse response = txResponse(userId, TransactionType.BUY);
+        when(transactionService.updateTransactionNetAmount(eq(userId), eq(transactionId), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(response);
+
+        mockMvc.perform(
+                patch("/api/transactions/{transactionId}/net-amount", transactionId)
+                    .with(authentication(auth))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {
+                          "netAmount": 0.42
+                        }
+                        """)
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(response.id().toString()))
+            .andExpect(jsonPath("$.userId").value(userId.toString()));
+
+        verify(transactionService).updateTransactionNetAmount(eq(userId), eq(transactionId), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void protectedEndpointsRequireAuthentication() throws Exception {
         mockMvc.perform(get("/api/transactions"))
             .andExpect(status().isUnauthorized());
@@ -244,6 +289,19 @@ class TransactionControllerIntegrationTest {
             OffsetDateTime.parse("2026-02-13T10:00:00Z"),
             false,
             null
+        );
+    }
+
+    private static Page<TransactionResponse> pageOf(
+        List<TransactionResponse> content,
+        int page,
+        int size,
+        long totalElements
+    ) {
+        return new PageImpl<>(
+            content,
+            org.springframework.data.domain.PageRequest.of(page, size),
+            totalElements
         );
     }
 }
