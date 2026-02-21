@@ -614,6 +614,7 @@ export function TransactionHistoryTable({
         open={sellTransaction !== null}
         transaction={sellTransaction}
         assetLabel={sellTransaction ? labelAsset(sellTransaction.assetId, assets) : ''}
+        assetSymbol={sellTransaction ? assets.find((asset) => asset.id === sellTransaction.assetId)?.symbol ?? '' : ''}
         exchangeLabel={sellTransaction ? labelExchange(sellTransaction.exchangeId, exchanges) : ''}
         onClose={() => setSellTargetId(null)}
         onSubmit={onSellFromTransaction}

@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { decimalToDisplay, divideDecimal, isPositiveDecimal, multiplyDecimal } from '../utils/decimal';
 import type { BuyInputMode, TradeFormPayload, TransactionType } from '../types/trading';
 import type { AssetOption, ExchangeOption } from '../types/trading';
 import { tradingApi } from '../api/tradingApi';
+import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
 import { SearchableLookupField } from './SearchableLookupField';
 
 type FeeInputMode = 'PERCENTAGE' | 'AMOUNT' | null;
@@ -68,6 +69,7 @@ export function TradeForm({
   const [feeInputMode, setFeeInputMode] = useState<FeeInputMode>(null);
   const [selectedAsset, setSelectedAsset] = useState<AssetOption | null>(null);
   const [selectedExchange, setSelectedExchange] = useState<ExchangeOption | null>(null);
+  const unitPriceManuallyEditedRef = useRef(false);
 
   useEffect(() => {
     if (tradeType === 'BUY' && defaultBuyInputMode && defaultBuyInputMode !== form.inputMode) {
@@ -119,6 +121,10 @@ export function TradeForm({
     () => selectedAsset?.symbol ?? assets.find((asset) => asset.id === form.assetId)?.symbol ?? '',
     [assets, form.assetId, selectedAsset]
   );
+  const sellSymbol = tradeType === 'SELL' ? selectedAssetSymbol.trim().toUpperCase() : '';
+  const sellPriceStates = useAssetSpotPrices(sellSymbol ? [sellSymbol] : []);
+  const sellPriceState = sellSymbol ? sellPriceStates[sellSymbol] : undefined;
+  const isSellPriceLoading = tradeType === 'SELL' && Boolean(sellSymbol) && sellPriceState?.status === 'loading';
 
   const effectiveGrossAmount = useMemo(() => {
     if (tradeType === 'BUY' && form.inputMode === 'USD_AMOUNT') {
@@ -177,6 +183,28 @@ export function TradeForm({
     };
   }
 
+  useEffect(() => {
+    if (tradeType !== 'SELL') {
+      return;
+    }
+
+    unitPriceManuallyEditedRef.current = false;
+  }, [form.assetId, tradeType]);
+
+  useEffect(() => {
+    if (tradeType !== 'SELL') {
+      return;
+    }
+    if (!sellSymbol || sellPriceState?.status !== 'success' || !sellPriceState.priceUsd) {
+      return;
+    }
+    if (unitPriceManuallyEditedRef.current) {
+      return;
+    }
+
+    setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: sellPriceState.priceUsd ?? '' }, feeInputMode));
+  }, [feeInputMode, sellPriceState?.priceUsd, sellPriceState?.status, sellSymbol, tradeType]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
@@ -202,6 +230,7 @@ export function TradeForm({
 
     const ok = await onSubmit(payload);
     if (ok) {
+      unitPriceManuallyEditedRef.current = false;
       setForm((current) => ({
         ...INITIAL_FORM,
         assetId: current.assetId,
@@ -226,6 +255,7 @@ export function TradeForm({
         onSelect={(option) => {
           const asset = option as AssetOption | null;
           setSelectedAsset(asset);
+          unitPriceManuallyEditedRef.current = false;
           setForm((current) => {
             const next = { ...current, assetId: asset?.id ?? '' };
             return syncFeeByMode(next, feeInputMode);
@@ -324,16 +354,22 @@ export function TradeForm({
         </>
       )}
 
-      <label htmlFor={`${title}-unitPrice`}>Unit Price (USD)</label>
+      <label htmlFor={`${title}-unitPrice`}>
+        Unit Price (USD)
+        {isSellPriceLoading ? ' (Loading market price...)' : ''}
+      </label>
       <input
         id={`${title}-unitPrice`}
         type="number"
         min="0.000000000000000001"
         step="any"
         value={form.unitPriceUsd}
-        onChange={(event) =>
-          setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: event.target.value }, feeInputMode))
-        }
+        placeholder={isSellPriceLoading ? 'Fetching current market price...' : undefined}
+        aria-busy={isSellPriceLoading}
+        onChange={(event) => {
+          unitPriceManuallyEditedRef.current = true;
+          setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: event.target.value }, feeInputMode));
+        }}
         required
       />
 
