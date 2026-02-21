@@ -21,6 +21,7 @@ import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -220,6 +221,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
     public TransactionResponse buy(UUID userId, BuyTransactionRequest request) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(request, "request is required");
@@ -271,6 +273,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
     public TransactionResponse sell(UUID userId, SellTransactionRequest request) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(request, "request is required");
@@ -321,6 +324,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
     public TransactionResponse updateTransaction(UUID userId, UUID transactionId, UpdateTransactionRequest request) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(transactionId, "transactionId is required");
@@ -345,6 +349,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
     public TransactionResponse updateTransactionNetAmount(
         UUID userId,
         UUID transactionId,
@@ -368,6 +373,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
     public void deleteTransaction(UUID userId, UUID transactionId) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(transactionId, "transactionId is required");

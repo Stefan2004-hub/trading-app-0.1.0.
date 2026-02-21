@@ -2,6 +2,7 @@ import { request } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AccumulationTradeItem,
+  AssetSummary,
   AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
@@ -141,6 +142,10 @@ export const tradingApi = {
 
   getPortfolioPerformance(): Promise<PortfolioAssetPerformance[]> {
     return request<PortfolioAssetPerformance[]>('/api/portfolio/performance');
+  },
+
+  getAssetSummary(): Promise<AssetSummary[]> {
+    return request<AssetSummary[]>('/api/portfolio/asset-summary');
   },
 
   buy(payload: TradeFormPayload): Promise<TransactionItem> {

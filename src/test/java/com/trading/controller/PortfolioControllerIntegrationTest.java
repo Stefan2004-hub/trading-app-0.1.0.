@@ -2,6 +2,7 @@ package com.trading.controller;
 
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
+import com.trading.dto.portfolio.AssetSummaryDTO;
 import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
@@ -124,11 +125,31 @@ class PortfolioControllerIntegrationTest {
     }
 
     @Test
+    void assetSummaryEndpointReturnsUserScopedData() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        when(portfolioService.getAssetSummary(userId)).thenReturn(
+            List.of(new AssetSummaryDTO("Bitcoin", "BTC", new BigDecimal("0"), new BigDecimal("0"), new BigDecimal("1300")))
+        );
+
+        mockMvc.perform(get("/api/portfolio/asset-summary").with(authentication(auth)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].assetSymbol").value("BTC"))
+            .andExpect(jsonPath("$[0].totalRealizedProfit").value(1300));
+
+        verify(portfolioService).getAssetSummary(eq(userId));
+    }
+
+    @Test
     void portfolioEndpointsRequireAuthentication() throws Exception {
         mockMvc.perform(get("/api/portfolio/summary"))
             .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/api/portfolio/performance"))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/portfolio/asset-summary"))
             .andExpect(status().isUnauthorized());
     }
 

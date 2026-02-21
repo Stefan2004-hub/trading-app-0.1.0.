@@ -88,6 +88,14 @@ export interface PortfolioAssetPerformance {
   totalPnlUsd: string;
 }
 
+export interface AssetSummary {
+  assetName: string;
+  assetSymbol: string;
+  netQuantity: string;
+  totalInvested: string;
+  totalRealizedProfit: string;
+}
+
 export interface PortfolioSummary {
   totalInvestedUsd: string;
   totalCurrentValueUsd: string;

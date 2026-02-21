@@ -3,6 +3,7 @@ import { tradingApi } from '../api/tradingApi';
 import { userApi } from '../api/userApi';
 import type {
   AccumulationTradeItem,
+  AssetSummary,
   AssetOption,
   BuyInputMode,
   ExchangeOption,
@@ -27,6 +28,7 @@ interface TradingState {
   transactionTotalElements: number;
   summary: PortfolioSummary | null;
   performance: PortfolioAssetPerformance[];
+  assetSummary: AssetSummary[];
   userPreferences: UserPreferences | null;
   bootstrapAttempted: boolean;
   loading: boolean;
@@ -45,6 +47,7 @@ const initialState: TradingState = {
   transactionTotalElements: 0,
   summary: null,
   performance: [],
+  assetSummary: [],
   userPreferences: null,
   bootstrapAttempted: false,
   loading: false,
@@ -54,17 +57,19 @@ const initialState: TradingState = {
 
 export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', async (userId?: string) => {
   const accumulationTradesPromise = tradingApi.listAccumulationTrades({ userId }).catch(() => [] as AccumulationTradeItem[]);
-  const [assets, exchanges, transactionsPage, summary, performance, userPreferences, accumulationTrades] = await Promise.all([
+  const [assets, exchanges, transactionsPage, summary, performance, assetSummary, userPreferences, accumulationTrades] =
+    await Promise.all([
     tradingApi.listAssets(),
     tradingApi.listExchanges(),
     tradingApi.listTransactions({ page: 0, size: 20 }),
     tradingApi.getPortfolioSummary(),
     tradingApi.getPortfolioPerformance(),
+    tradingApi.getAssetSummary(),
     userApi.getPreferences(),
     accumulationTradesPromise
   ]);
 
-  return { assets, exchanges, transactionsPage, summary, performance, userPreferences, accumulationTrades };
+  return { assets, exchanges, transactionsPage, summary, performance, assetSummary, userPreferences, accumulationTrades };
 });
 
 export const loadTransactions = createAsyncThunk(
@@ -201,6 +206,7 @@ const tradingSlice = createSlice({
       state.accumulationTrades = action.payload.accumulationTrades;
       state.summary = action.payload.summary;
       state.performance = action.payload.performance;
+      state.assetSummary = action.payload.assetSummary;
       state.userPreferences = action.payload.userPreferences;
     });
     builder.addCase(loadTradingBootstrap.rejected, (state, action) => {
