@@ -10,6 +10,7 @@ import type {
   PortfolioSummary,
   TradeFormPayload,
   TransactionItem,
+  TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
@@ -68,8 +69,19 @@ export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', as
 
 export const loadTransactions = createAsyncThunk(
   'trading/loadTransactions',
-  async ({ page, size, search }: { page: number; size: number; search?: string }) =>
-    tradingApi.listTransactions({ page, size, search })
+  async ({
+    page,
+    size,
+    search,
+    view,
+    groupSize
+  }: {
+    page: number;
+    size: number;
+    search?: string;
+    view?: TransactionView;
+    groupSize?: number;
+  }) => tradingApi.listTransactions({ page, size, search, view, groupSize })
 );
 
 export const submitBuyTrade = createAsyncThunk(

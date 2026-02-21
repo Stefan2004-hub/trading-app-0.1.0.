@@ -22,6 +22,7 @@ import {
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import type {
   TradeFormPayload,
+  TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
@@ -43,6 +44,7 @@ export function TransactionsPage(): JSX.Element {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [transactionView, setTransactionView] = useState<TransactionView>('OPEN');
   const {
     assets,
     exchanges,
@@ -74,14 +76,16 @@ export function TransactionsPage(): JSX.Element {
         loadTransactions({
           page: currentPage,
           size: pageSize,
-          search: searchTerm.trim() ? searchTerm : undefined
+          search: searchTerm.trim() ? searchTerm : undefined,
+          view: transactionView,
+          groupSize: transactionView === 'MATCHED' ? pageSize : undefined
         })
       );
     }, 250);
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [bootstrapAttempted, currentPage, dispatch, pageSize, searchTerm]);
+  }, [bootstrapAttempted, currentPage, dispatch, pageSize, searchTerm, transactionView]);
 
   useEffect(() => {
     if (transactionTotalPages > 0 && currentPage >= transactionTotalPages) {
@@ -94,10 +98,12 @@ export function TransactionsPage(): JSX.Element {
       loadTransactions({
         page: currentPage,
         size: pageSize,
-        search: searchTerm.trim() ? searchTerm : undefined
+        search: searchTerm.trim() ? searchTerm : undefined,
+        view: transactionView,
+        groupSize: transactionView === 'MATCHED' ? pageSize : undefined
       })
     ).unwrap();
-  }, [currentPage, dispatch, pageSize, searchTerm]);
+  }, [currentPage, dispatch, pageSize, searchTerm, transactionView]);
 
   const showToast = useCallback((message: string, variant: ToastVariant): void => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -194,7 +200,7 @@ export function TransactionsPage(): JSX.Element {
         <h1>Trading</h1>
         {error ? <p className="auth-error">{error}</p> : null}
 
-        <OpenTransactionSummaryCards transactions={transactions} assets={assets} />
+        {transactionView === 'OPEN' ? <OpenTransactionSummaryCards transactions={transactions} assets={assets} /> : null}
 
         <section className="transactions-title-row">
           <h2>Transaction List</h2>
@@ -227,6 +233,11 @@ export function TransactionsPage(): JSX.Element {
 
         <TransactionHistoryTable
           transactions={transactions}
+          transactionView={transactionView}
+          onTransactionViewChange={(view) => {
+            setTransactionView(view);
+            setCurrentPage(0);
+          }}
           accumulationTrades={accumulationTrades}
           assets={assets}
           exchanges={exchanges}
@@ -254,7 +265,9 @@ export function TransactionsPage(): JSX.Element {
         <AccumulationStrategySection trades={accumulationTrades} assets={assets} />
 
         <div className="transactions-pagination-footer">
-          <label htmlFor="transactions-page-size">Rows per page</label>
+          <label htmlFor="transactions-page-size">
+            {transactionView === 'MATCHED' ? 'Pairs per page' : 'Rows per page'}
+          </label>
           <select
             id="transactions-page-size"
             className="transactions-page-size-select"
@@ -272,7 +285,10 @@ export function TransactionsPage(): JSX.Element {
 
           <span className="transactions-pagination-label">
             Page {transactionTotalPages === 0 ? 0 : currentPage + 1} of {transactionTotalPages}
-            {' '}({transactionTotalElements} total)
+            {' '}(
+            {transactionView === 'MATCHED' ? Math.floor(transactionTotalElements / 2) : transactionTotalElements}
+            {' '}
+            {transactionView === 'MATCHED' ? 'pairs' : 'total'})
           </span>
 
           <div className="transactions-pagination-buttons">

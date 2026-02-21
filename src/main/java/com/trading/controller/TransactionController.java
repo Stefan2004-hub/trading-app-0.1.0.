@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.domain.enums.TransactionListView;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
@@ -46,10 +47,13 @@ public class TransactionController {
     public ResponseEntity<Page<TransactionResponse>> list(
         @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
         @RequestParam(name = "size", defaultValue = "20") @Min(1) int size,
-        @RequestParam(name = "search", required = false) String search
+        @RequestParam(name = "search", required = false) String search,
+        @RequestParam(name = "view", defaultValue = "OPEN") TransactionListView view,
+        @RequestParam(name = "groupSize", required = false) @Min(1) Integer groupSize
     ) {
         UUID userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.list(userId, page, size, search));
+        int resolvedGroupSize = groupSize == null ? size : groupSize;
+        return ResponseEntity.ok(transactionService.list(userId, page, size, search, view, resolvedGroupSize));
     }
 
     @PostMapping("/buy")

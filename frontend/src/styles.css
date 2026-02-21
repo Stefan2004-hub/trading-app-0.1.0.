@@ -221,6 +221,32 @@ p {
   font-weight: 500;
 }
 
+.transactions-view-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.transactions-view-tab {
+  width: auto;
+  margin: 0;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.transactions-view-tab:hover {
+  background: #e2e8f0;
+}
+
+.transactions-view-tab.active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
 .transactions-title-row {
   margin-top: 1rem;
   display: flex;
