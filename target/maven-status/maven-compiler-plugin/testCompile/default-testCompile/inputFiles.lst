@@ -3,6 +3,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/LookupControllerIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/MultiTenantIsolationIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/PortfolioControllerIntegrationTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/PricePeakControllerIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/SecurityRulesIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/StrategyControllerIntegrationTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/controller/TransactionControllerIntegrationTest.java
@@ -16,6 +17,7 @@
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthLogoutServiceTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthOAuthServiceTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/auth/InMemoryAuthRegistrationServiceTest.java
+/home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/lookup/PricePeakServiceImplTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/portfolio/PortfolioServiceImplTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/strategy/BuyStrategyServiceImplTest.java
 /home/dstefan/Documents/work/tools/tradingApp/trading-app-0.1.0./src/test/java/com/trading/service/strategy/SellStrategyServiceImplTest.java

@@ -1,0 +1,26 @@
+@baseUrl = http://localhost:8080
+@accessToken = replace-with-real-access-token
+@pricePeakId = 55555555-5555-5555-5555-555555555555
+
+### List price peaks
+GET {{baseUrl}}/api/price-peaks
+Authorization: Bearer {{accessToken}}
+
+### Search price peaks
+GET {{baseUrl}}/api/price-peaks?search=matic
+Authorization: Bearer {{accessToken}}
+
+### Update price peak
+PUT {{baseUrl}}/api/price-peaks/{{pricePeakId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "peakPrice": 0.8123,
+  "peakTimestamp": "2026-02-25T10:15:00Z",
+  "active": false
+}
+
+### Delete price peak
+DELETE {{baseUrl}}/api/price-peaks/{{pricePeakId}}
+Authorization: Bearer {{accessToken}}

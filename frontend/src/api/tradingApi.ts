@@ -5,6 +5,7 @@ import type {
   AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
+  PricePeakItem,
   PaginatedResponse,
   PortfolioAssetPerformance,
   PortfolioSummary,
@@ -12,7 +13,8 @@ import type {
   TransactionItem,
   TransactionView,
   UpdateTransactionNetAmountPayload,
-  UpdateTransactionPayload
+  UpdateTransactionPayload,
+  UpdatePricePeakPayload
 } from '../types/trading';
 
 function extractLookupContent<T>(response: T[] | PaginatedResponse<T>): T[] {
@@ -88,6 +90,24 @@ export const tradingApi = {
 
   deleteExchange(id: string): Promise<void> {
     return request<void>(`/api/exchanges/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  listPricePeaks(search?: string): Promise<PricePeakItem[]> {
+    const normalizedSearch = search?.trim() ?? '';
+    return request<PricePeakItem[]>(`/api/price-peaks?search=${encodeURIComponent(normalizedSearch)}`);
+  },
+
+  updatePricePeak(id: string, payload: UpdatePricePeakPayload): Promise<PricePeakItem> {
+    return request<PricePeakItem>(`/api/price-peaks/${id}`, {
+      method: 'PUT',
+      body: payload
+    });
+  },
+
+  deletePricePeak(id: string): Promise<void> {
+    return request<void>(`/api/price-peaks/${id}`, {
       method: 'DELETE'
     });
   },
