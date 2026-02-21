@@ -13,6 +13,7 @@ export interface ExchangeOption {
 export type TransactionType = 'BUY' | 'SELL';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
 export type AccumulationTradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
+export type TransactionAccumulationRole = 'NONE' | 'ACCUMULATION_EXIT' | 'ACCUMULATION_REENTRY';
 
 export interface TransactionItem {
   id: string;
@@ -31,6 +32,8 @@ export interface TransactionItem {
   transactionDate: string;
   matched: boolean;
   matchedTransactionId: string | null;
+  accumulationLinked: boolean;
+  accumulationRole: TransactionAccumulationRole;
 }
 
 export interface AccumulationTradeItem {

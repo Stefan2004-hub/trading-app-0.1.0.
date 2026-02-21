@@ -1,6 +1,7 @@
 package com.trading.controller;
 
 import com.trading.domain.enums.TransactionType;
+import com.trading.domain.enums.TransactionAccumulationRole;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
@@ -288,7 +289,9 @@ class TransactionControllerIntegrationTest {
             transactionType == TransactionType.SELL ? new BigDecimal("500") : null,
             OffsetDateTime.parse("2026-02-13T10:00:00Z"),
             false,
-            null
+            null,
+            false,
+            TransactionAccumulationRole.NONE
         );
     }
 

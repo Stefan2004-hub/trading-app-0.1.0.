@@ -9,7 +9,6 @@ import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.transaction.AccumulationTradeResponse;
 import com.trading.dto.transaction.CloseAccumulationTradeRequest;
 import com.trading.dto.transaction.OpenAccumulationTradeRequest;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -19,7 +18,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-@ConditionalOnBean({AccumulationTradeRepository.class, TransactionRepository.class})
 public class AccumulationTradeServiceImpl implements AccumulationTradeService {
 
     private final AccumulationTradeRepository accumulationTradeRepository;
