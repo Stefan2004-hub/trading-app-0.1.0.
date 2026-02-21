@@ -1,12 +1,15 @@
 package com.trading.service.transaction;
 
 import com.trading.domain.entity.Asset;
+import com.trading.domain.entity.AccumulationTrade;
 import com.trading.domain.entity.Exchange;
 import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
 import com.trading.domain.enums.TransactionType;
+import com.trading.domain.enums.TransactionAccumulationRole;
+import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.ExchangeRepository;
 import com.trading.domain.repository.PricePeakRepository;
@@ -22,6 +25,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -48,6 +52,7 @@ public class TransactionServiceImpl implements TransactionService {
     private static final int COST_SCALE = 18;
 
     private final TransactionRepository transactionRepository;
+    private final AccumulationTradeRepository accumulationTradeRepository;
     private final UserRepository userRepository;
     private final AssetRepository assetRepository;
     private final ExchangeRepository exchangeRepository;
@@ -55,12 +60,14 @@ public class TransactionServiceImpl implements TransactionService {
 
     public TransactionServiceImpl(
         TransactionRepository transactionRepository,
+        AccumulationTradeRepository accumulationTradeRepository,
         UserRepository userRepository,
         AssetRepository assetRepository,
         ExchangeRepository exchangeRepository,
         PricePeakRepository pricePeakRepository
     ) {
         this.transactionRepository = transactionRepository;
+        this.accumulationTradeRepository = accumulationTradeRepository;
         this.userRepository = userRepository;
         this.assetRepository = assetRepository;
         this.exchangeRepository = exchangeRepository;
@@ -78,9 +85,15 @@ public class TransactionServiceImpl implements TransactionService {
         );
         PageRequest pageRequest = PageRequest.of(page, size, sort);
         Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, searchPattern, pageRequest);
-        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(transactionPage.getContent());
+        List<Transaction> allUserTransactions = transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId);
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(allUserTransactions);
+        Map<UUID, TransactionAccumulationRole> accumulationRoles = buildAccumulationRolesByTransactionId(userId);
         List<TransactionResponse> content = transactionPage.getContent().stream()
-            .map((transaction) -> toResponse(transaction, matchedPairs.get(transaction.getId())))
+            .map((transaction) -> toResponse(
+                transaction,
+                matchedPairs.get(transaction.getId()),
+                accumulationRoles.getOrDefault(transaction.getId(), TransactionAccumulationRole.NONE)
+            ))
             .toList();
         return new PageImpl<>(content, pageRequest, transactionPage.getTotalElements());
     }
@@ -131,7 +144,8 @@ public class TransactionServiceImpl implements TransactionService {
         return toResponse(
             transactionRepository.findByIdAndUser_Id(saved.getId(), userId)
                 .orElse(saved),
-            null
+            null,
+            TransactionAccumulationRole.NONE
         );
     }
 
@@ -180,7 +194,8 @@ public class TransactionServiceImpl implements TransactionService {
         return toResponse(
             transactionRepository.findByIdAndUser_Id(saved.getId(), userId)
                 .orElse(saved),
-            null
+            null,
+            TransactionAccumulationRole.NONE
         );
     }
 
@@ -205,7 +220,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction refreshed = transactionRepository.findByIdAndUser_Id(transactionId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
-        return toResponse(refreshed, null);
+        return toResponse(refreshed, null, TransactionAccumulationRole.NONE);
     }
 
     @Override
@@ -227,10 +242,11 @@ public class TransactionServiceImpl implements TransactionService {
 
         tx.setNetAmount(request.netAmount());
         Transaction saved = transactionRepository.save(tx);
-        return toResponse(saved, null);
+        return toResponse(saved, null, TransactionAccumulationRole.NONE);
     }
 
     @Override
+    @Transactional
     public void deleteTransaction(UUID userId, UUID transactionId) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(transactionId, "transactionId is required");
@@ -239,9 +255,24 @@ public class TransactionServiceImpl implements TransactionService {
             .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
         UUID assetId = tx.getAsset().getId();
 
+        removeAccumulationTradesReferencingTransaction(userId, transactionId);
         clearDeletedBuyReferenceFromPricePeak(userId, assetId, tx);
         transactionRepository.delete(tx);
         recalculateAssetTransactions(userId, assetId);
+    }
+
+    private void removeAccumulationTradesReferencingTransaction(UUID userId, UUID transactionId) {
+        List<AccumulationTrade> linkedAsReentry =
+            accumulationTradeRepository.findAllByUser_IdAndReentryTransaction_Id(userId, transactionId);
+        List<AccumulationTrade> linkedAsExit =
+            accumulationTradeRepository.findAllByUser_IdAndExitTransaction_Id(userId, transactionId);
+
+        if (!linkedAsReentry.isEmpty()) {
+            accumulationTradeRepository.deleteAll(linkedAsReentry);
+        }
+        if (!linkedAsExit.isEmpty()) {
+            accumulationTradeRepository.deleteAll(linkedAsExit);
+        }
     }
 
     private void clearDeletedBuyReferenceFromPricePeak(UUID userId, UUID assetId, Transaction deletedTransaction) {
@@ -570,7 +601,25 @@ public class TransactionServiceImpl implements TransactionService {
         return value.stripTrailingZeros().toPlainString();
     }
 
-    private static TransactionResponse toResponse(Transaction transaction, UUID matchedTransactionId) {
+    private Map<UUID, TransactionAccumulationRole> buildAccumulationRolesByTransactionId(UUID userId) {
+        List<AccumulationTrade> accumulationTrades = accumulationTradeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId);
+        Map<UUID, TransactionAccumulationRole> roles = new HashMap<>();
+        for (AccumulationTrade trade : accumulationTrades) {
+            if (trade.getExitTransaction() != null && trade.getExitTransaction().getId() != null) {
+                roles.put(trade.getExitTransaction().getId(), TransactionAccumulationRole.ACCUMULATION_EXIT);
+            }
+            if (trade.getReentryTransaction() != null && trade.getReentryTransaction().getId() != null) {
+                roles.put(trade.getReentryTransaction().getId(), TransactionAccumulationRole.ACCUMULATION_REENTRY);
+            }
+        }
+        return roles;
+    }
+
+    private static TransactionResponse toResponse(
+        Transaction transaction,
+        UUID matchedTransactionId,
+        TransactionAccumulationRole accumulationRole
+    ) {
         return new TransactionResponse(
             transaction.getId(),
             transaction.getUser().getId(),
@@ -587,7 +636,9 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.getRealizedPnl(),
             transaction.getTransactionDate(),
             matchedTransactionId != null,
-            matchedTransactionId
+            matchedTransactionId,
+            accumulationRole != TransactionAccumulationRole.NONE,
+            accumulationRole
         );
     }
 

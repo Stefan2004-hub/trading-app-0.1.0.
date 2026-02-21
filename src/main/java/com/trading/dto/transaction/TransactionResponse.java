@@ -1,6 +1,7 @@
 package com.trading.dto.transaction;
 
 import com.trading.domain.enums.TransactionType;
+import com.trading.domain.enums.TransactionAccumulationRole;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -22,6 +23,8 @@ public record TransactionResponse(
     BigDecimal realizedPnl,
     OffsetDateTime transactionDate,
     boolean matched,
-    UUID matchedTransactionId
+    UUID matchedTransactionId,
+    boolean accumulationLinked,
+    TransactionAccumulationRole accumulationRole
 ) {
 }

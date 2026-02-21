@@ -263,10 +263,16 @@ export function TransactionHistoryTable({
                     getRowComputedValues(tx);
                   const openAccumulationTrade =
                     tx.transactionType === 'SELL' ? openAccumulationByExitTransactionId.get(tx.id) : undefined;
-                  const accumulationClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
+                  const accumulationOpenClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
+                  const accumulationRoleClassName =
+                    tx.accumulationRole === 'ACCUMULATION_REENTRY'
+                      ? 'accumulation-reentry-row'
+                      : tx.accumulationRole === 'ACCUMULATION_EXIT'
+                        ? 'accumulation-exit-row'
+                        : '';
 
                   return (
-                    <tr key={tx.id} className={`${groupClassName} ${accumulationClassName}`.trim()}>
+                    <tr key={tx.id} className={`${groupClassName} ${accumulationOpenClassName} ${accumulationRoleClassName}`.trim()}>
                       <td>{tx.transactionType}</td>
                       <td>{labelAsset(tx.assetId, assets)}</td>
                       <td>{labelExchange(tx.exchangeId, exchanges)}</td>
@@ -411,10 +417,19 @@ export function TransactionHistoryTable({
                 const { symbol, priceState, unrealizedPnlValue, remainingDollarsValue } = getRowComputedValues(tx);
                 const openAccumulationTrade =
                   tx.transactionType === 'SELL' ? openAccumulationByExitTransactionId.get(tx.id) : undefined;
-                const accumulationClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
+                const accumulationOpenClassName = openAccumulationTrade ? 'accumulation-open-row' : '';
+                const accumulationRoleClassName =
+                  tx.accumulationRole === 'ACCUMULATION_REENTRY'
+                    ? 'accumulation-reentry-row'
+                    : tx.accumulationRole === 'ACCUMULATION_EXIT'
+                      ? 'accumulation-exit-row'
+                      : '';
 
                 return (
-                  <article key={tx.id} className={`transaction-mobile-card ${groupClassName} ${accumulationClassName}`.trim()}>
+                  <article
+                    key={tx.id}
+                    className={`transaction-mobile-card ${groupClassName} ${accumulationOpenClassName} ${accumulationRoleClassName}`.trim()}
+                  >
                   <div className="transaction-mobile-card-top">
                     <div>
                       <p className="transaction-mobile-asset">{labelAsset(tx.assetId, assets)}</p>
