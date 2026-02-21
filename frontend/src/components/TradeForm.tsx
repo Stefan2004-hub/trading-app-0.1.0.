@@ -19,8 +19,10 @@ interface TradeFormProps {
   hideSubmitButton?: boolean;
   submitLabel?: string;
   defaultBuyInputMode?: BuyInputMode;
+  forcedBuyInputMode?: BuyInputMode;
   initialAssetId?: string;
   initialExchangeId?: string;
+  initialUsdAmount?: string;
   onBuyInputModeChange?: (mode: BuyInputMode) => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
 }
@@ -60,8 +62,10 @@ export function TradeForm({
   hideSubmitButton = false,
   submitLabel,
   defaultBuyInputMode,
+  forcedBuyInputMode,
   initialAssetId,
   initialExchangeId,
+  initialUsdAmount,
   onBuyInputModeChange,
   onSubmit
 }: TradeFormProps): JSX.Element {
@@ -76,6 +80,16 @@ export function TradeForm({
       setForm((current) => ({ ...current, inputMode: defaultBuyInputMode }));
     }
   }, [defaultBuyInputMode, form.inputMode, tradeType]);
+
+  useEffect(() => {
+    if (tradeType !== 'BUY' || !forcedBuyInputMode) {
+      return;
+    }
+    if (form.inputMode === forcedBuyInputMode) {
+      return;
+    }
+    setForm((current) => ({ ...current, inputMode: forcedBuyInputMode }));
+  }, [forcedBuyInputMode, form.inputMode, tradeType]);
 
   useEffect(() => {
     if (!initialAssetId) {
@@ -117,14 +131,23 @@ export function TradeForm({
     }
   }, [exchanges, form.exchangeId, selectedExchange]);
 
+  useEffect(() => {
+    if (tradeType !== 'BUY' || !initialUsdAmount?.trim()) {
+      return;
+    }
+    setForm((current) =>
+      current.usdAmount.trim() ? current : syncFeeByMode({ ...current, usdAmount: initialUsdAmount.trim() }, feeInputMode)
+    );
+  }, [feeInputMode, initialUsdAmount, tradeType]);
+
   const selectedAssetSymbol = useMemo(
     () => selectedAsset?.symbol ?? assets.find((asset) => asset.id === form.assetId)?.symbol ?? '',
     [assets, form.assetId, selectedAsset]
   );
-  const sellSymbol = tradeType === 'SELL' ? selectedAssetSymbol.trim().toUpperCase() : '';
-  const sellPriceStates = useAssetSpotPrices(sellSymbol ? [sellSymbol] : []);
-  const sellPriceState = sellSymbol ? sellPriceStates[sellSymbol] : undefined;
-  const isSellPriceLoading = tradeType === 'SELL' && Boolean(sellSymbol) && sellPriceState?.status === 'loading';
+  const selectedAssetSymbolNormalized = selectedAssetSymbol.trim().toUpperCase();
+  const priceStatesBySymbol = useAssetSpotPrices(selectedAssetSymbolNormalized ? [selectedAssetSymbolNormalized] : []);
+  const selectedAssetPriceState = selectedAssetSymbolNormalized ? priceStatesBySymbol[selectedAssetSymbolNormalized] : undefined;
+  const isUnitPriceLoading = Boolean(selectedAssetSymbolNormalized) && selectedAssetPriceState?.status === 'loading';
 
   const effectiveGrossAmount = useMemo(() => {
     if (tradeType === 'BUY' && form.inputMode === 'USD_AMOUNT') {
@@ -184,7 +207,7 @@ export function TradeForm({
   }
 
   useEffect(() => {
-    if (tradeType !== 'SELL') {
+    if (tradeType !== 'SELL' && tradeType !== 'BUY') {
       return;
     }
 
@@ -192,18 +215,24 @@ export function TradeForm({
   }, [form.assetId, tradeType]);
 
   useEffect(() => {
-    if (tradeType !== 'SELL') {
+    if (tradeType !== 'SELL' && tradeType !== 'BUY') {
       return;
     }
-    if (!sellSymbol || sellPriceState?.status !== 'success' || !sellPriceState.priceUsd) {
+    if (!selectedAssetSymbolNormalized || selectedAssetPriceState?.status !== 'success' || !selectedAssetPriceState.priceUsd) {
       return;
     }
     if (unitPriceManuallyEditedRef.current) {
       return;
     }
 
-    setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: sellPriceState.priceUsd ?? '' }, feeInputMode));
-  }, [feeInputMode, sellPriceState?.priceUsd, sellPriceState?.status, sellSymbol, tradeType]);
+    setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: selectedAssetPriceState.priceUsd ?? '' }, feeInputMode));
+  }, [
+    feeInputMode,
+    selectedAssetPriceState?.priceUsd,
+    selectedAssetPriceState?.status,
+    selectedAssetSymbolNormalized,
+    tradeType
+  ]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -298,11 +327,15 @@ export function TradeForm({
 
       {tradeType === 'BUY' ? (
         <>
-          <label htmlFor={`${title}-inputMode`}>Buy Input Mode</label>
+      <label htmlFor={`${title}-inputMode`}>Buy Input Mode</label>
           <select
             id={`${title}-inputMode`}
             value={form.inputMode}
+            disabled={Boolean(forcedBuyInputMode)}
             onChange={(event) => {
+              if (forcedBuyInputMode) {
+                return;
+              }
               const nextMode = event.target.value as BuyInputMode;
               setForm((current) => syncFeeByMode({ ...current, inputMode: nextMode }, feeInputMode));
               onBuyInputModeChange?.(nextMode);
@@ -356,7 +389,7 @@ export function TradeForm({
 
       <label htmlFor={`${title}-unitPrice`}>
         Unit Price (USD)
-        {isSellPriceLoading ? ' (Loading market price...)' : ''}
+        {isUnitPriceLoading ? ' (Loading market price...)' : ''}
       </label>
       <input
         id={`${title}-unitPrice`}
@@ -364,8 +397,8 @@ export function TradeForm({
         min="0.000000000000000001"
         step="any"
         value={form.unitPriceUsd}
-        placeholder={isSellPriceLoading ? 'Fetching current market price...' : undefined}
-        aria-busy={isSellPriceLoading}
+        placeholder={isUnitPriceLoading ? 'Fetching current market price...' : undefined}
+        aria-busy={isUnitPriceLoading}
         onChange={(event) => {
           unitPriceManuallyEditedRef.current = true;
           setForm((current) => syncFeeByMode({ ...current, unitPriceUsd: event.target.value }, feeInputMode));

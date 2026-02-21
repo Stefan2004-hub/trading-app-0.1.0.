@@ -12,8 +12,10 @@ interface BuyTransactionModalProps {
   exchanges: ExchangeOption[];
   submitting: boolean;
   defaultBuyInputMode?: BuyInputMode;
+  forcedBuyInputMode?: BuyInputMode;
   initialAssetId?: string;
   initialExchangeId?: string;
+  initialUsdAmount?: string;
   onClose: () => void;
   onBuyInputModeChange: (mode: BuyInputMode) => void;
   onSubmit: (payload: TradeFormPayload) => Promise<boolean>;
@@ -27,8 +29,10 @@ export function BuyTransactionModal({
   exchanges,
   submitting,
   defaultBuyInputMode,
+  forcedBuyInputMode,
   initialAssetId,
   initialExchangeId,
+  initialUsdAmount,
   onClose,
   onBuyInputModeChange,
   onSubmit
@@ -56,8 +60,10 @@ export function BuyTransactionModal({
           exchanges={exchanges}
           submitting={submitting}
           defaultBuyInputMode={defaultBuyInputMode}
+          forcedBuyInputMode={forcedBuyInputMode}
           initialAssetId={initialAssetId}
           initialExchangeId={initialExchangeId}
+          initialUsdAmount={initialUsdAmount}
           onBuyInputModeChange={onBuyInputModeChange}
           onSubmit={async (payload) => {
             const ok = await onSubmit(payload);
