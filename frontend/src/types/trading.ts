@@ -12,6 +12,7 @@ export interface ExchangeOption {
 
 export type TransactionType = 'BUY' | 'SELL';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
+export type AccumulationTradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
 
 export interface TransactionItem {
   id: string;
@@ -30,6 +31,23 @@ export interface TransactionItem {
   transactionDate: string;
   matched: boolean;
   matchedTransactionId: string | null;
+}
+
+export interface AccumulationTradeItem {
+  id: string;
+  userId: string;
+  assetId: string;
+  exitTransactionId: string;
+  reentryTransactionId: string | null;
+  oldCoinAmount: string;
+  newCoinAmount: string | null;
+  accumulationDelta: string | null;
+  status: AccumulationTradeStatus;
+  exitPriceUsd: string;
+  reentryPriceUsd: string | null;
+  createdAt: string;
+  closedAt: string | null;
+  predictionNotes: string | null;
 }
 
 export interface PortfolioAssetPerformance {

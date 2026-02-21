@@ -652,6 +652,10 @@ button:disabled {
   color: #15803d;
 }
 
+.transaction-actions-menu-item-warning {
+  color: #c2410c;
+}
+
 .table-price-loading {
   display: inline-block;
   width: 0.9rem;
@@ -680,6 +684,19 @@ button:disabled {
 
 .matched-group-start td {
   border-bottom-color: #dbe5f0;
+}
+
+.accumulation-open-row td {
+  background: #fff7ed;
+}
+
+.transaction-mobile-card.accumulation-open-row {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.accumulation-strategy-panel {
+  margin-top: 1rem;
 }
 
 .transaction-mobile-list {

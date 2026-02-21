@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -30,6 +31,17 @@ public class AccumulationTradeServiceImpl implements AccumulationTradeService {
     ) {
         this.accumulationTradeRepository = accumulationTradeRepository;
         this.transactionRepository = transactionRepository;
+    }
+
+    @Override
+    public List<AccumulationTradeResponse> list(UUID userId, AccumulationTradeStatus status) {
+        Objects.requireNonNull(userId, "userId is required");
+
+        List<AccumulationTrade> trades = status == null
+            ? accumulationTradeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
+            : accumulationTradeRepository.findAllByUser_IdAndStatusOrderByCreatedAtDesc(userId, status);
+
+        return trades.stream().map(AccumulationTradeServiceImpl::toResponse).toList();
     }
 
     @Override

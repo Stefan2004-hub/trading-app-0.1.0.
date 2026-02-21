@@ -1,6 +1,8 @@
 import { request } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
+  AccumulationTradeItem,
+  AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
   PaginatedResponse,
@@ -152,6 +154,53 @@ export const tradingApi = {
   deleteTransaction(id: string): Promise<void> {
     return request<void>(`/api/transactions/${id}`, {
       method: 'DELETE'
+    });
+  },
+
+  listAccumulationTrades(params?: {
+    status?: AccumulationTradeStatus;
+    userId?: string;
+  }): Promise<AccumulationTradeItem[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.status) {
+      queryParams.set('status', params.status);
+    }
+    if (params?.userId) {
+      queryParams.set('userId', params.userId);
+    }
+    const query = queryParams.toString();
+    return request<AccumulationTradeItem[]>(`/api/accumulation-trades${query ? `?${query}` : ''}`);
+  },
+
+  openAccumulationTrade(payload: {
+    exitTransactionId: string;
+    predictionNotes?: string;
+    userId?: string;
+  }): Promise<AccumulationTradeItem> {
+    const query = payload.userId ? `?userId=${encodeURIComponent(payload.userId)}` : '';
+    return request<AccumulationTradeItem>(`/api/accumulation-trades/open${query}`, {
+      method: 'POST',
+      body: {
+        exitTransactionId: payload.exitTransactionId,
+        predictionNotes: payload.predictionNotes ?? null
+      }
+    });
+  },
+
+  closeAccumulationTrade(payload: {
+    accumulationTradeId: string;
+    reentryTransactionId: string;
+    predictionNotes?: string;
+    userId?: string;
+  }): Promise<AccumulationTradeItem> {
+    const query = payload.userId ? `?userId=${encodeURIComponent(payload.userId)}` : '';
+    return request<AccumulationTradeItem>(`/api/accumulation-trades/close${query}`, {
+      method: 'POST',
+      body: {
+        accumulationTradeId: payload.accumulationTradeId,
+        reentryTransactionId: payload.reentryTransactionId,
+        predictionNotes: payload.predictionNotes ?? null
+      }
     });
   }
 };
