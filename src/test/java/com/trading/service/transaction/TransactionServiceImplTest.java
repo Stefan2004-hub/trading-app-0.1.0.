@@ -7,6 +7,7 @@ import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
+import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AccumulationTradeRepository;
@@ -442,7 +443,7 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(sellId, response.matchedTransactionId());
@@ -471,7 +472,7 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyId, response.matchedTransactionId());
@@ -499,7 +500,7 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(false, response.matched());
         assertNull(response.matchedTransactionId());
@@ -535,7 +536,7 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buyCloser, buyFarther));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyCloserId, response.matchedTransactionId());
@@ -571,7 +572,7 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buyNewer, buyOlder));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyOlderId, response.matchedTransactionId());
@@ -600,10 +601,87 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
 
         assertEquals(false, response.matched());
         assertNull(response.matchedTransactionId());
+    }
+
+    @Test
+    void matchedViewPaginatesByPairGroupsWithoutSplittingPairs() {
+        UUID buyAId = UUID.randomUUID();
+        UUID sellAId = UUID.randomUUID();
+        UUID buyBId = UUID.randomUUID();
+        UUID sellBId = UUID.randomUUID();
+
+        Transaction buyA = existingBuy("1.0", "50000", "2026-02-10T10:00:00Z");
+        buyA.setId(buyAId);
+        buyA.setUser(user(userId));
+        buyA.setAsset(asset(assetId, "BTC"));
+        buyA.setExchange(exchange(exchangeId));
+
+        Transaction sellA = existingSell("1.0", "60000", "2026-02-11T10:00:00Z");
+        sellA.setId(sellAId);
+        sellA.setUser(user(userId));
+        sellA.setAsset(asset(assetId, "BTC"));
+        sellA.setExchange(exchange(exchangeId));
+
+        Transaction buyB = existingBuy("2.0", "50000", "2026-02-12T10:00:00Z");
+        buyB.setId(buyBId);
+        buyB.setUser(user(userId));
+        buyB.setAsset(asset(assetId, "BTC"));
+        buyB.setExchange(exchange(exchangeId));
+
+        Transaction sellB = existingSell("2.0", "60000", "2026-02-13T10:00:00Z");
+        sellB.setId(sellBId);
+        sellB.setUser(user(userId));
+        sellB.setAsset(asset(assetId, "BTC"));
+        sellB.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sellB, buyB, sellA, buyA));
+
+        var page0 = transactionService.list(userId, 0, 20, null, TransactionListView.MATCHED, 1);
+        var page1 = transactionService.list(userId, 1, 20, null, TransactionListView.MATCHED, 1);
+
+        assertEquals(4, page0.getTotalElements());
+        assertEquals(2, page0.getContent().size());
+        assertEquals(TransactionType.BUY, page0.getContent().get(0).transactionType());
+        assertEquals(TransactionType.SELL, page0.getContent().get(1).transactionType());
+        assertEquals(page0.getContent().get(1).id(), page0.getContent().get(0).matchedTransactionId());
+
+        assertEquals(2, page1.getContent().size());
+        assertEquals(TransactionType.BUY, page1.getContent().get(0).transactionType());
+        assertEquals(TransactionType.SELL, page1.getContent().get(1).transactionType());
+        assertEquals(page1.getContent().get(1).id(), page1.getContent().get(0).matchedTransactionId());
+    }
+
+    @Test
+    void matchedViewSearchMatchesEitherSideOfPair() {
+        UUID buyId = UUID.randomUUID();
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buy = existingBuy("1.0", "50000", "2026-02-12T10:00:00Z");
+        buy.setId(buyId);
+        buy.setUser(user(userId));
+        buy.setAsset(asset(assetId, "BTC"));
+        buy.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buy));
+
+        var page = transactionService.list(userId, 0, 20, "BTC", TransactionListView.MATCHED, 10);
+
+        assertEquals(2, page.getTotalElements());
+        assertEquals(2, page.getContent().size());
+        assertEquals(true, page.getContent().get(0).matched());
+        assertEquals(true, page.getContent().get(1).matched());
     }
 
     private BuyTransactionRequest buyRequest(

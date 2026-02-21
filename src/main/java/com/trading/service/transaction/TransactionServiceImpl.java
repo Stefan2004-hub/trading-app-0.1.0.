@@ -7,6 +7,7 @@ import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
+import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.enums.TransactionAccumulationRole;
 import com.trading.domain.repository.AccumulationTradeRepository;
@@ -40,6 +41,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -51,6 +53,27 @@ public class TransactionServiceImpl implements TransactionService {
     private static final int FEE_PERCENTAGE_SCALE = 6;
     private static final int COST_SCALE = 18;
     private static final BigDecimal MATCH_EPSILON = new BigDecimal("0.000000000001");
+    private static final Comparator<MatchedPairGroup> MATCHED_PAIR_GROUP_COMPARATOR = (left, right) -> {
+        OffsetDateTime leftDate = left.latestDate();
+        OffsetDateTime rightDate = right.latestDate();
+        if (leftDate == null && rightDate != null) {
+            return 1;
+        }
+        if (leftDate != null && rightDate == null) {
+            return -1;
+        }
+        if (leftDate != null) {
+            int byDateDesc = rightDate.compareTo(leftDate);
+            if (byDateDesc != 0) {
+                return byDateDesc;
+            }
+        }
+        int byBuyId = left.buy().getId().compareTo(right.buy().getId());
+        if (byBuyId != 0) {
+            return byBuyId;
+        }
+        return left.sell().getId().compareTo(right.sell().getId());
+    };
 
     private final TransactionRepository transactionRepository;
     private final AccumulationTradeRepository accumulationTradeRepository;
@@ -76,8 +99,27 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public Page<TransactionResponse> list(UUID userId, int page, int size, String search) {
+    public Page<TransactionResponse> list(
+        UUID userId,
+        int page,
+        int size,
+        String search,
+        TransactionListView view,
+        int groupSize
+    ) {
         Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(view, "view is required");
+        if (groupSize <= 0) {
+            throw new IllegalArgumentException("groupSize must be positive");
+        }
+        if (view == TransactionListView.MATCHED) {
+            return listMatched(userId, page, groupSize, search);
+        }
+
+        return listOpen(userId, page, size, search);
+    }
+
+    private Page<TransactionResponse> listOpen(UUID userId, int page, int size, String search) {
         String searchPattern = toSearchPattern(search);
         Sort sort = Sort.by(
             Sort.Order.asc("exchange.name"),
@@ -97,6 +139,84 @@ public class TransactionServiceImpl implements TransactionService {
             ))
             .toList();
         return new PageImpl<>(content, pageRequest, transactionPage.getTotalElements());
+    }
+
+    private Page<TransactionResponse> listMatched(UUID userId, int page, int groupSize, String search) {
+        int matchedRowPageSize = groupSize * 2;
+        List<Transaction> allUserTransactions = transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId);
+        if (allUserTransactions.isEmpty()) {
+            return new PageImpl<>(List.of(), PageRequest.of(page, matchedRowPageSize), 0);
+        }
+
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(allUserTransactions);
+        Map<UUID, TransactionAccumulationRole> accumulationRoles = buildAccumulationRolesByTransactionId(userId);
+        Map<UUID, Transaction> transactionsById = new HashMap<>();
+        for (Transaction transaction : allUserTransactions) {
+            transactionsById.put(transaction.getId(), transaction);
+        }
+
+        String normalizedSearch = normalizeSearch(search);
+        Set<UUID> visited = new java.util.HashSet<>();
+        List<MatchedPairGroup> allGroups = new ArrayList<>();
+
+        for (Transaction transaction : allUserTransactions) {
+            UUID transactionId = transaction.getId();
+            UUID matchedId = matchedPairs.get(transactionId);
+            if (matchedId == null || visited.contains(transactionId)) {
+                continue;
+            }
+
+            Transaction matchedTransaction = transactionsById.get(matchedId);
+            if (matchedTransaction == null || visited.contains(matchedId)) {
+                continue;
+            }
+
+            Transaction buy = transaction.getTransactionType() == TransactionType.BUY ? transaction : matchedTransaction;
+            Transaction sell = transaction.getTransactionType() == TransactionType.SELL ? transaction : matchedTransaction;
+            if (buy.getTransactionType() != TransactionType.BUY || sell.getTransactionType() != TransactionType.SELL) {
+                continue;
+            }
+
+            if (normalizedSearch != null
+                && !matchesSearch(buy, normalizedSearch)
+                && !matchesSearch(sell, normalizedSearch)) {
+                continue;
+            }
+
+            visited.add(transactionId);
+            visited.add(matchedId);
+            allGroups.add(new MatchedPairGroup(buy, sell));
+        }
+
+        allGroups.sort(MATCHED_PAIR_GROUP_COMPARATOR);
+
+        int totalGroups = allGroups.size();
+        int fromIndex = page * groupSize;
+        if (fromIndex >= totalGroups) {
+            return new PageImpl<>(List.of(), PageRequest.of(page, matchedRowPageSize), totalGroups * 2L);
+        }
+
+        int toIndex = Math.min(fromIndex + groupSize, totalGroups);
+        List<MatchedPairGroup> pageGroups = allGroups.subList(fromIndex, toIndex);
+        List<TransactionResponse> content = new ArrayList<>(pageGroups.size() * 2);
+        for (MatchedPairGroup group : pageGroups) {
+            content.add(
+                toResponse(
+                    group.buy(),
+                    group.sell().getId(),
+                    accumulationRoles.getOrDefault(group.buy().getId(), TransactionAccumulationRole.NONE)
+                )
+            );
+            content.add(
+                toResponse(
+                    group.sell(),
+                    group.buy().getId(),
+                    accumulationRoles.getOrDefault(group.sell().getId(), TransactionAccumulationRole.NONE)
+                )
+            );
+        }
+
+        return new PageImpl<>(content, PageRequest.of(page, matchedRowPageSize), totalGroups * 2L);
     }
 
     @Override
@@ -390,6 +510,18 @@ public class TransactionServiceImpl implements TransactionService {
             return null;
         }
         return "%" + normalizedSearch + "%";
+    }
+
+    private static boolean matchesSearch(Transaction tx, String normalizedSearch) {
+        String lowerSearch = normalizedSearch.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(tx.getAsset().getSymbol(), lowerSearch)
+            || containsIgnoreCase(tx.getAsset().getName(), lowerSearch)
+            || containsIgnoreCase(tx.getExchange().getSymbol(), lowerSearch)
+            || containsIgnoreCase(tx.getExchange().getName(), lowerSearch);
+    }
+
+    private static boolean containsIgnoreCase(String value, String normalizedSearch) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedSearch);
     }
 
     private static FeeState resolveFeeState(
@@ -692,5 +824,19 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private record AmountState(BigDecimal netAmount, BigDecimal totalUsd) {
+    }
+
+    private record MatchedPairGroup(Transaction buy, Transaction sell) {
+        private OffsetDateTime latestDate() {
+            OffsetDateTime buyDate = buy.getTransactionDate();
+            OffsetDateTime sellDate = sell.getTransactionDate();
+            if (buyDate == null) {
+                return sellDate;
+            }
+            if (sellDate == null) {
+                return buyDate;
+            }
+            return buyDate.isAfter(sellDate) ? buyDate : sellDate;
+        }
     }
 }

@@ -10,6 +10,7 @@ import type {
   PortfolioSummary,
   TradeFormPayload,
   TransactionItem,
+  TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
@@ -82,14 +83,24 @@ export const tradingApi = {
     });
   },
 
-  listTransactions(params?: { page?: number; size?: number; search?: string }): Promise<PaginatedResponse<TransactionItem>> {
+  listTransactions(params?: {
+    page?: number;
+    size?: number;
+    search?: string;
+    view?: TransactionView;
+    groupSize?: number;
+  }): Promise<PaginatedResponse<TransactionItem>> {
     const queryParams = new URLSearchParams();
     queryParams.set('page', String(params?.page ?? 0));
     queryParams.set('size', String(params?.size ?? 20));
+    queryParams.set('view', params?.view ?? 'OPEN');
 
     const trimmedSearch = params?.search?.trim();
     if (trimmedSearch) {
       queryParams.set('search', trimmedSearch);
+    }
+    if (params?.groupSize && params.groupSize > 0) {
+      queryParams.set('groupSize', String(params.groupSize));
     }
 
     return request<PaginatedResponse<TransactionItem>>(`/api/transactions?${queryParams.toString()}`);

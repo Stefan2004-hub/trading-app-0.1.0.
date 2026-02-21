@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.enums.TransactionAccumulationRole;
 import com.trading.dto.transaction.TransactionResponse;
@@ -92,7 +93,7 @@ class TransactionControllerIntegrationTest {
         Authentication auth = authenticationFor(userId);
 
         TransactionResponse tx = txResponse(userId, TransactionType.BUY);
-        when(transactionService.list(userId, 0, 20, null))
+        when(transactionService.list(userId, 0, 20, null, TransactionListView.OPEN, 20))
             .thenReturn(pageOf(List.of(tx), 0, 20, 1));
 
         mockMvc.perform(get("/api/transactions").with(authentication(auth)))
@@ -104,7 +105,7 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.totalElements").value(1))
             .andExpect(jsonPath("$.totalPages").value(1));
 
-        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null));
+        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20));
     }
 
     @Test
@@ -112,7 +113,7 @@ class TransactionControllerIntegrationTest {
         UUID userId = UUID.randomUUID();
         Authentication auth = authenticationFor(userId);
 
-        when(transactionService.list(userId, 2, 50, "btc"))
+        when(transactionService.list(userId, 2, 50, "btc", TransactionListView.OPEN, 50))
             .thenReturn(pageOf(List.of(), 2, 50, 0));
 
         mockMvc.perform(
@@ -124,7 +125,29 @@ class TransactionControllerIntegrationTest {
             )
             .andExpect(status().isOk());
 
-        verify(transactionService).list(eq(userId), eq(2), eq(50), eq("btc"));
+        verify(transactionService).list(eq(userId), eq(2), eq(50), eq("btc"), eq(TransactionListView.OPEN), eq(50));
+    }
+
+    @Test
+    void listEndpointPassesMatchedViewAndGroupSize() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        when(transactionService.list(userId, 1, 20, "btc", TransactionListView.MATCHED, 7))
+            .thenReturn(pageOf(List.of(), 1, 7, 0));
+
+        mockMvc.perform(
+                get("/api/transactions")
+                    .queryParam("page", "1")
+                    .queryParam("size", "20")
+                    .queryParam("search", "btc")
+                    .queryParam("view", "MATCHED")
+                    .queryParam("groupSize", "7")
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isOk());
+
+        verify(transactionService).list(eq(userId), eq(1), eq(20), eq("btc"), eq(TransactionListView.MATCHED), eq(7));
     }
 
     @Test

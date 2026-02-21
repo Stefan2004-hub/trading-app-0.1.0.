@@ -1,5 +1,6 @@
 package com.trading.service.transaction;
 
+import com.trading.domain.enums.TransactionListView;
 import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
@@ -11,7 +12,7 @@ import java.util.UUID;
 
 public interface TransactionService {
 
-    Page<TransactionResponse> list(UUID userId, int page, int size, String search);
+    Page<TransactionResponse> list(UUID userId, int page, int size, String search, TransactionListView view, int groupSize);
 
     TransactionResponse buy(UUID userId, BuyTransactionRequest request);
 
