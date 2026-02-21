@@ -7,14 +7,6 @@ interface OpenPortfolioSectionProps {
   assetSummary: AssetSummary[];
 }
 
-interface OpenPositionRow {
-  assetName: string;
-  symbol: string;
-  netAmount: number;
-  usdInvested: number;
-  realizedProfit: number;
-}
-
 export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps): JSX.Element {
   const openRows = useMemo(() => {
     return assetSummary
