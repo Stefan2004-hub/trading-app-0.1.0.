@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { AUTH_EXPIRED_EVENT } from '../api/http';
+import { StrategyAlertAutoGenerator } from '../components/StrategyAlertAutoGenerator';
 import { fetchMe, logout } from '../store/authSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { router } from './router';
@@ -37,5 +38,10 @@ export function App(): JSX.Element {
     };
   }, [dispatch]);
 
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <StrategyAlertAutoGenerator />
+      <RouterProvider router={router} />
+    </>
+  );
 }
