@@ -690,9 +690,27 @@ button:disabled {
   background: #fff7ed;
 }
 
+.accumulation-exit-row td {
+  background: #dfae1b;
+}
+
+.accumulation-reentry-row td {
+  background: #14888e;
+}
+
 .transaction-mobile-card.accumulation-open-row {
   background: #fff7ed;
   border-color: #fed7aa;
+}
+
+.transaction-mobile-card.accumulation-exit-row {
+  background: #dfae1b;
+  border-color: #fecaca;
+}
+
+.transaction-mobile-card.accumulation-reentry-row {
+  background: #14888e;
+  border-color: #a5f3fc;
 }
 
 .accumulation-strategy-panel {

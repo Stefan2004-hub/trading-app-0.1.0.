@@ -7,7 +7,6 @@ import com.trading.dto.transaction.OpenAccumulationTradeRequest;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.transaction.AccumulationTradeService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -26,14 +25,14 @@ import java.util.UUID;
 @RequestMapping("/api/accumulation-trades")
 public class AccumulationTradeController {
 
-    private final ObjectProvider<AccumulationTradeService> accumulationTradeServiceProvider;
+    private final AccumulationTradeService accumulationTradeService;
     private final CurrentUserProvider currentUserProvider;
 
     public AccumulationTradeController(
-        ObjectProvider<AccumulationTradeService> accumulationTradeServiceProvider,
+        AccumulationTradeService accumulationTradeService,
         CurrentUserProvider currentUserProvider
     ) {
-        this.accumulationTradeServiceProvider = accumulationTradeServiceProvider;
+        this.accumulationTradeService = accumulationTradeService;
         this.currentUserProvider = currentUserProvider;
     }
 
@@ -43,7 +42,7 @@ public class AccumulationTradeController {
         @RequestParam(name = "userId", required = false) UUID userId
     ) {
         UUID resolvedUserId = resolveUserId(userId);
-        return ResponseEntity.ok(requireAccumulationTradeService().list(resolvedUserId, status));
+        return ResponseEntity.ok(accumulationTradeService.list(resolvedUserId, status));
     }
 
     @PostMapping("/open")
@@ -52,7 +51,7 @@ public class AccumulationTradeController {
         @RequestParam(name = "userId", required = false) UUID userId
     ) {
         UUID resolvedUserId = resolveUserId(userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(requireAccumulationTradeService().open(resolvedUserId, request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(accumulationTradeService.open(resolvedUserId, request));
     }
 
     @PostMapping("/close")
@@ -61,7 +60,7 @@ public class AccumulationTradeController {
         @RequestParam(name = "userId", required = false) UUID userId
     ) {
         UUID resolvedUserId = resolveUserId(userId);
-        return ResponseEntity.ok(requireAccumulationTradeService().close(resolvedUserId, request));
+        return ResponseEntity.ok(accumulationTradeService.close(resolvedUserId, request));
     }
 
     private UUID resolveUserId(UUID providedUserId) {
@@ -73,14 +72,6 @@ public class AccumulationTradeController {
             throw new IllegalArgumentException("Provided userId does not match authenticated user");
         }
         return authenticatedUserId;
-    }
-
-    private AccumulationTradeService requireAccumulationTradeService() {
-        AccumulationTradeService service = accumulationTradeServiceProvider.getIfAvailable();
-        if (service == null) {
-            throw new IllegalArgumentException("Accumulation trade feature is not available in this environment");
-        }
-        return service;
     }
 
 }

@@ -3,6 +3,7 @@ package com.trading.controller;
 import com.trading.domain.enums.StrategyAlertStatus;
 import com.trading.domain.enums.StrategyType;
 import com.trading.domain.enums.TransactionType;
+import com.trading.domain.enums.TransactionAccumulationRole;
 import com.trading.dto.strategy.StrategyAlertResponse;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
@@ -159,7 +160,9 @@ class MultiTenantIsolationIntegrationTest {
             null,
             OffsetDateTime.parse("2026-02-13T10:00:00Z"),
             false,
-            null
+            null,
+            false,
+            TransactionAccumulationRole.NONE
         );
     }
 

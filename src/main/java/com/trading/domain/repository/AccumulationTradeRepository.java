@@ -20,4 +20,12 @@ public interface AccumulationTradeRepository extends JpaRepository<AccumulationT
     Optional<AccumulationTrade> findByIdAndUser_Id(UUID accumulationTradeId, UUID userId);
 
     Optional<AccumulationTrade> findByUser_IdAndExitTransaction_Id(UUID userId, UUID exitTransactionId);
+
+    List<AccumulationTrade> findAllByUser_IdAndExitTransaction_Id(UUID userId, UUID exitTransactionId);
+
+    List<AccumulationTrade> findAllByUser_IdAndReentryTransaction_Id(UUID userId, UUID reentryTransactionId);
+
+    void deleteAllByUser_IdAndExitTransaction_Id(UUID userId, UUID exitTransactionId);
+
+    void deleteAllByUser_IdAndReentryTransaction_Id(UUID userId, UUID reentryTransactionId);
 }

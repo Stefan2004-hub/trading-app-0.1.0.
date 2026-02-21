@@ -1,6 +1,7 @@
 package com.trading.service.transaction;
 
 import com.trading.domain.entity.Asset;
+import com.trading.domain.entity.AccumulationTrade;
 import com.trading.domain.entity.Exchange;
 import com.trading.domain.entity.PricePeak;
 import com.trading.domain.entity.Transaction;
@@ -8,6 +9,7 @@ import com.trading.domain.entity.User;
 import com.trading.domain.enums.BuyInputMode;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AssetRepository;
+import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.ExchangeRepository;
 import com.trading.domain.repository.PricePeakRepository;
 import com.trading.domain.repository.TransactionRepository;
@@ -16,6 +18,8 @@ import com.trading.dto.transaction.BuyTransactionRequest;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +49,8 @@ class TransactionServiceImplTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+    @Mock
+    private AccumulationTradeRepository accumulationTradeRepository;
     @Mock
     private UserRepository userRepository;
     @Mock
@@ -80,6 +86,11 @@ class TransactionServiceImplTest {
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         lenient().when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
         lenient().when(exchangeRepository.findById(exchangeId)).thenReturn(Optional.of(exchange));
+        lenient().when(accumulationTradeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)).thenReturn(List.of());
+        lenient().when(accumulationTradeRepository.findAllByUser_IdAndReentryTransaction_Id(eq(userId), any(UUID.class)))
+            .thenReturn(List.of());
+        lenient().when(accumulationTradeRepository.findAllByUser_IdAndExitTransaction_Id(eq(userId), any(UUID.class)))
+            .thenReturn(List.of());
         lenient().when(transactionRepository.save(any(Transaction.class))).thenAnswer(invocation -> {
             Transaction tx = invocation.getArgument(0, Transaction.class);
             tx.setId(UUID.randomUUID());
@@ -330,11 +341,18 @@ class TransactionServiceImplTest {
         )).thenReturn(List.of(buyTx));
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of());
+        AccumulationTrade linkedTrade = new AccumulationTrade();
+        linkedTrade.setId(UUID.randomUUID());
+        when(accumulationTradeRepository.findAllByUser_IdAndReentryTransaction_Id(userId, buyTx.getId()))
+            .thenReturn(List.of(linkedTrade));
+        when(accumulationTradeRepository.findAllByUser_IdAndExitTransaction_Id(userId, buyTx.getId()))
+            .thenReturn(List.of());
 
         transactionService.deleteTransaction(userId, buyTx.getId());
 
         assertEquals(null, pricePeak.getLastBuyTransaction());
         assertEquals(false, pricePeak.getActive());
+        verify(accumulationTradeRepository).deleteAll(List.of(linkedTrade));
         verify(pricePeakRepository).save(pricePeak);
     }
 
@@ -350,9 +368,16 @@ class TransactionServiceImplTest {
         when(transactionRepository.findByIdAndUser_Id(sellTx.getId(), userId)).thenReturn(Optional.of(sellTx));
         when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
             .thenReturn(List.of());
+        AccumulationTrade linkedTrade = new AccumulationTrade();
+        linkedTrade.setId(UUID.randomUUID());
+        when(accumulationTradeRepository.findAllByUser_IdAndReentryTransaction_Id(userId, sellTx.getId()))
+            .thenReturn(List.of());
+        when(accumulationTradeRepository.findAllByUser_IdAndExitTransaction_Id(userId, sellTx.getId()))
+            .thenReturn(List.of(linkedTrade));
 
         transactionService.deleteTransaction(userId, sellTx.getId());
 
+        verify(accumulationTradeRepository).deleteAll(List.of(linkedTrade));
         verify(pricePeakRepository, never()).save(any(PricePeak.class));
     }
 
@@ -391,6 +416,35 @@ class TransactionServiceImplTest {
         assertEquals(0, tx.getGrossAmount().compareTo(new BigDecimal("1.0")));
         assertEquals(0, tx.getTotalSpentUsd().compareTo(new BigDecimal("50000")));
         verify(transactionRepository, never()).findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId);
+    }
+
+    @Test
+    void listMarksBuyAsMatchedEvenWhenSellIsOutsideCurrentPage() {
+        UUID buyId = UUID.randomUUID();
+        UUID sellId = UUID.randomUUID();
+
+        Transaction buy = existingBuy("1.0", "50000", "2026-02-12T10:00:00Z");
+        buy.setId(buyId);
+        buy.setUser(user(userId));
+        buy.setAsset(asset(assetId, "BTC"));
+        buy.setExchange(exchange(exchangeId));
+
+        Transaction sell = existingSell("1.0", "60000", "2026-02-13T10:00:00Z");
+        sell.setId(sellId);
+        sell.setUser(user(userId));
+        sell.setAsset(asset(assetId, "BTC"));
+        sell.setExchange(exchange(exchangeId));
+
+        PageRequest pageRequest = PageRequest.of(0, 1);
+        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(List.of(buy), pageRequest, 1));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sell, buy));
+
+        TransactionResponse response = transactionService.list(userId, 0, 1, null).getContent().get(0);
+
+        assertEquals(true, response.matched());
+        assertEquals(sellId, response.matchedTransactionId());
     }
 
     private BuyTransactionRequest buyRequest(
@@ -509,5 +563,24 @@ class TransactionServiceImplTest {
                 ? tx.getNetAmount()
                 : tx.getNetAmount().negate())
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private static User user(UUID id) {
+        User user = new User();
+        user.setId(id);
+        return user;
+    }
+
+    private static Asset asset(UUID id, String symbol) {
+        Asset asset = new Asset();
+        asset.setId(id);
+        asset.setSymbol(symbol);
+        return asset;
+    }
+
+    private static Exchange exchange(UUID id) {
+        Exchange exchange = new Exchange();
+        exchange.setId(id);
+        return exchange;
     }
 }
