@@ -6,6 +6,7 @@ import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
+import com.trading.service.lookup.PricePeakService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -53,6 +54,9 @@ class LookupControllerIntegrationTest {
 
     @MockBean
     private LookupService lookupService;
+
+    @MockBean
+    private PricePeakService pricePeakService;
 
     @MockBean
     private TransactionService transactionService;
