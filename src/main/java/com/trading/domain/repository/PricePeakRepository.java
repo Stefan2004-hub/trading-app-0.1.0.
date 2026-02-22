@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,4 +38,6 @@ public interface PricePeakRepository extends JpaRepository<PricePeak, UUID> {
     Optional<PricePeak> findByUser_IdAndAsset_IdAndActiveTrue(UUID userId, UUID assetId);
 
     Optional<PricePeak> findByIdAndUser_Id(UUID pricePeakId, UUID userId);
+
+    List<PricePeak> findAllByUser_IdAndLastBuyTransaction_IdIn(UUID userId, Collection<UUID> transactionIds);
 }

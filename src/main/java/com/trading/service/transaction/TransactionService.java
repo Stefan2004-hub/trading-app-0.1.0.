@@ -2,6 +2,7 @@ package com.trading.service.transaction;
 
 import com.trading.domain.enums.TransactionListView;
 import com.trading.dto.transaction.BuyTransactionRequest;
+import com.trading.dto.transaction.CleanHistoryBackup;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.TransactionResponse;
@@ -23,4 +24,6 @@ public interface TransactionService {
     TransactionResponse updateTransactionNetAmount(UUID userId, UUID transactionId, UpdateTransactionNetAmountRequest request);
 
     void deleteTransaction(UUID userId, UUID transactionId);
+
+    CleanHistoryBackup cleanHistory(UUID userId);
 }

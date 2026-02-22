@@ -36,13 +36,16 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -381,6 +384,87 @@ class TransactionServiceImplTest {
 
         verify(accumulationTradeRepository).deleteAll(List.of(linkedTrade));
         verify(pricePeakRepository, never()).save(any(PricePeak.class));
+    }
+
+    @Test
+    void cleanHistoryDeletesMatchedPairsAndPreservesOpenBuys() {
+        UUID matchedBuyId = UUID.randomUUID();
+        UUID matchedSellId = UUID.randomUUID();
+        UUID openBuyId = UUID.randomUUID();
+
+        Transaction matchedBuy = existingBuy("1.0", "50000", "2026-02-10T10:00:00Z");
+        matchedBuy.setId(matchedBuyId);
+        matchedBuy.setUser(user(userId));
+        matchedBuy.setAsset(asset(assetId, "BTC"));
+        matchedBuy.setExchange(exchange(exchangeId));
+
+        Transaction matchedSell = existingSell("1.0", "60000", "2026-02-11T10:00:00Z");
+        matchedSell.setId(matchedSellId);
+        matchedSell.setUser(user(userId));
+        matchedSell.setAsset(asset(assetId, "BTC"));
+        matchedSell.setExchange(exchange(exchangeId));
+        matchedSell.setRealizedPnl(new BigDecimal("10000"));
+
+        Transaction openBuy = existingBuy("2.0", "80000", "2026-02-12T10:00:00Z");
+        openBuy.setId(openBuyId);
+        openBuy.setUser(user(userId));
+        openBuy.setAsset(asset(assetId, "BTC"));
+        openBuy.setExchange(exchange(exchangeId));
+
+        AccumulationTrade linkedTrade = new AccumulationTrade();
+        linkedTrade.setId(UUID.randomUUID());
+        linkedTrade.setExitTransaction(matchedSell);
+        linkedTrade.setReentryTransaction(matchedBuy);
+        linkedTrade.setAsset(asset(assetId, "BTC"));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(openBuy, matchedSell, matchedBuy));
+        when(accumulationTradeRepository.findAllLinkedToTransactions(eq(userId), any()))
+            .thenReturn(List.of(linkedTrade));
+        when(transactionRepository.findAllByUser_IdAndIdIn(eq(userId), any()))
+            .thenReturn(List.of(matchedBuy, matchedSell));
+        when(transactionRepository.findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(userId, assetId))
+            .thenReturn(List.of(openBuy));
+        when(pricePeakRepository.findAllByUser_IdAndLastBuyTransaction_IdIn(eq(userId), any()))
+            .thenReturn(List.of());
+
+        byte[] backup = transactionService.cleanHistory(userId).fileContent();
+
+        assertNotNull(backup);
+        verify(accumulationTradeRepository).deleteAll(List.of(linkedTrade));
+        verify(transactionRepository).deleteAll(List.of(matchedBuy, matchedSell));
+        verify(transactionRepository, never()).deleteAll(List.of(openBuy));
+    }
+
+    @Test
+    void cleanHistoryRollsBackDeleteWhenWorkbookGenerationFails() {
+        TransactionServiceImpl failingService = spy(transactionService);
+        UUID matchedBuyId = UUID.randomUUID();
+        UUID matchedSellId = UUID.randomUUID();
+
+        Transaction matchedBuy = existingBuy("1.0", "50000", "2026-02-10T10:00:00Z");
+        matchedBuy.setId(matchedBuyId);
+        matchedBuy.setUser(user(userId));
+        matchedBuy.setAsset(asset(assetId, "BTC"));
+        matchedBuy.setExchange(exchange(exchangeId));
+
+        Transaction matchedSell = existingSell("1.0", "60000", "2026-02-11T10:00:00Z");
+        matchedSell.setId(matchedSellId);
+        matchedSell.setUser(user(userId));
+        matchedSell.setAsset(asset(assetId, "BTC"));
+        matchedSell.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(matchedSell, matchedBuy));
+        when(accumulationTradeRepository.findAllLinkedToTransactions(eq(userId), any()))
+            .thenReturn(List.of());
+        doThrow(new IllegalStateException("excel-failed"))
+            .when(failingService)
+            .createCleanHistoryWorkbook(anyList(), anyList());
+
+        assertThrows(IllegalStateException.class, () -> failingService.cleanHistory(userId));
+        verify(transactionRepository, never()).deleteAll(anyList());
+        verify(accumulationTradeRepository, never()).deleteAll(anyList());
     }
 
     @Test

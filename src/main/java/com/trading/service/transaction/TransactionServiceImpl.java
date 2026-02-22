@@ -17,10 +17,15 @@ import com.trading.domain.repository.PricePeakRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.transaction.BuyTransactionRequest;
+import com.trading.dto.transaction.CleanHistoryBackup;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import com.trading.dto.transaction.UpdateTransactionRequest;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -31,10 +36,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
-import java.util.Deque;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,6 +64,7 @@ public class TransactionServiceImpl implements TransactionService {
     private static final int FEE_PERCENTAGE_SCALE = 6;
     private static final int COST_SCALE = 18;
     private static final BigDecimal MATCH_EPSILON = new BigDecimal("0.000000000001");
+    private static final DateTimeFormatter FILE_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final Comparator<MatchedPairGroup> MATCHED_PAIR_GROUP_COMPARATOR = (left, right) -> {
         OffsetDateTime leftDate = left.latestDate();
         OffsetDateTime rightDate = right.latestDate();
@@ -151,45 +162,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(allUserTransactions);
         Map<UUID, TransactionAccumulationRole> accumulationRoles = buildAccumulationRolesByTransactionId(userId);
-        Map<UUID, Transaction> transactionsById = new HashMap<>();
-        for (Transaction transaction : allUserTransactions) {
-            transactionsById.put(transaction.getId(), transaction);
-        }
-
-        String normalizedSearch = normalizeSearch(search);
-        Set<UUID> visited = new java.util.HashSet<>();
-        List<MatchedPairGroup> allGroups = new ArrayList<>();
-
-        for (Transaction transaction : allUserTransactions) {
-            UUID transactionId = transaction.getId();
-            UUID matchedId = matchedPairs.get(transactionId);
-            if (matchedId == null || visited.contains(transactionId)) {
-                continue;
-            }
-
-            Transaction matchedTransaction = transactionsById.get(matchedId);
-            if (matchedTransaction == null || visited.contains(matchedId)) {
-                continue;
-            }
-
-            Transaction buy = transaction.getTransactionType() == TransactionType.BUY ? transaction : matchedTransaction;
-            Transaction sell = transaction.getTransactionType() == TransactionType.SELL ? transaction : matchedTransaction;
-            if (buy.getTransactionType() != TransactionType.BUY || sell.getTransactionType() != TransactionType.SELL) {
-                continue;
-            }
-
-            if (normalizedSearch != null
-                && !matchesSearch(buy, normalizedSearch)
-                && !matchesSearch(sell, normalizedSearch)) {
-                continue;
-            }
-
-            visited.add(transactionId);
-            visited.add(matchedId);
-            allGroups.add(new MatchedPairGroup(buy, sell));
-        }
-
-        allGroups.sort(MATCHED_PAIR_GROUP_COMPARATOR);
+        List<MatchedPairGroup> allGroups = buildMatchedPairGroups(allUserTransactions, search);
 
         int totalGroups = allGroups.size();
         int fromIndex = page * groupSize;
@@ -388,6 +361,54 @@ public class TransactionServiceImpl implements TransactionService {
         recalculateAssetTransactions(userId, assetId);
     }
 
+    @Override
+    @Transactional
+    @CacheEvict(cacheNames = "portfolioAssetSummary", key = "#userId")
+    public CleanHistoryBackup cleanHistory(UUID userId) {
+        Objects.requireNonNull(userId, "userId is required");
+
+        List<Transaction> allUserTransactions = transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId);
+        if (allUserTransactions.isEmpty()) {
+            byte[] fileContent = createCleanHistoryWorkbook(List.of(), List.of());
+            return new CleanHistoryBackup(fileContent, cleanHistoryFileName());
+        }
+
+        List<MatchedPairGroup> matchedGroups = buildMatchedPairGroups(allUserTransactions, null);
+        if (matchedGroups.isEmpty()) {
+            byte[] fileContent = createCleanHistoryWorkbook(List.of(), List.of());
+            return new CleanHistoryBackup(fileContent, cleanHistoryFileName());
+        }
+
+        Set<UUID> transactionIdsToDelete = new LinkedHashSet<>();
+        List<Transaction> matchedTransactions = new ArrayList<>(matchedGroups.size() * 2);
+        for (MatchedPairGroup group : matchedGroups) {
+            transactionIdsToDelete.add(group.buy().getId());
+            transactionIdsToDelete.add(group.sell().getId());
+            matchedTransactions.add(group.buy());
+            matchedTransactions.add(group.sell());
+        }
+
+        List<AccumulationTrade> linkedAccumulationTrades =
+            accumulationTradeRepository.findAllLinkedToTransactions(userId, transactionIdsToDelete);
+
+        byte[] fileContent = createCleanHistoryWorkbook(matchedTransactions, linkedAccumulationTrades);
+
+        clearDeletedBuyReferencesFromPricePeaks(userId, transactionIdsToDelete);
+
+        if (!linkedAccumulationTrades.isEmpty()) {
+            accumulationTradeRepository.deleteAll(linkedAccumulationTrades);
+        }
+
+        List<Transaction> persistedTransactions =
+            transactionRepository.findAllByUser_IdAndIdIn(userId, transactionIdsToDelete);
+        if (!persistedTransactions.isEmpty()) {
+            transactionRepository.deleteAll(persistedTransactions);
+        }
+
+        recalculateAssetsAfterBulkDelete(userId, matchedTransactions);
+        return new CleanHistoryBackup(fileContent, cleanHistoryFileName());
+    }
+
     private void removeAccumulationTradesReferencingTransaction(UUID userId, UUID transactionId) {
         List<AccumulationTrade> linkedAsReentry =
             accumulationTradeRepository.findAllByUser_IdAndReentryTransaction_Id(userId, transactionId);
@@ -400,6 +421,55 @@ public class TransactionServiceImpl implements TransactionService {
         if (!linkedAsExit.isEmpty()) {
             accumulationTradeRepository.deleteAll(linkedAsExit);
         }
+    }
+
+    private void recalculateAssetsAfterBulkDelete(UUID userId, Collection<Transaction> matchedTransactions) {
+        Set<UUID> affectedAssetIds = new LinkedHashSet<>();
+        for (Transaction tx : matchedTransactions) {
+            if (tx.getAsset() != null && tx.getAsset().getId() != null) {
+                affectedAssetIds.add(tx.getAsset().getId());
+            }
+        }
+        for (UUID assetId : affectedAssetIds) {
+            recalculateAssetTransactions(userId, assetId);
+        }
+    }
+
+    private void clearDeletedBuyReferencesFromPricePeaks(UUID userId, Collection<UUID> transactionIdsToDelete) {
+        if (transactionIdsToDelete.isEmpty()) {
+            return;
+        }
+        List<PricePeak> affectedPeaks = pricePeakRepository.findAllByUser_IdAndLastBuyTransaction_IdIn(
+            userId,
+            transactionIdsToDelete
+        );
+        if (affectedPeaks.isEmpty()) {
+            return;
+        }
+
+        for (PricePeak pricePeak : affectedPeaks) {
+            UUID assetId = pricePeak.getAsset() == null ? null : pricePeak.getAsset().getId();
+            if (assetId == null) {
+                continue;
+            }
+            Optional<Transaction> replacementBuy = transactionRepository
+                .findAllByUser_IdAndAsset_IdAndTransactionTypeOrderByTransactionDateDesc(userId, assetId, TransactionType.BUY)
+                .stream()
+                .filter(existingBuy -> !transactionIdsToDelete.contains(existingBuy.getId()))
+                .findFirst();
+
+            if (replacementBuy.isPresent()) {
+                Transaction replacement = replacementBuy.get();
+                pricePeak.setLastBuyTransaction(replacement);
+                pricePeak.setPeakPrice(replacement.getUnitPriceUsd());
+                pricePeak.setPeakTimestamp(replacement.getTransactionDate());
+                pricePeak.setActive(true);
+            } else {
+                pricePeak.setLastBuyTransaction(null);
+                pricePeak.setActive(false);
+            }
+        }
+        pricePeakRepository.saveAll(affectedPeaks);
     }
 
     private void clearDeletedBuyReferenceFromPricePeak(UUID userId, UUID assetId, Transaction deletedTransaction) {
@@ -692,6 +762,200 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         return new AmountState(netAmount, proceedsUsd);
+    }
+
+    private static List<MatchedPairGroup> buildMatchedPairGroups(List<Transaction> allUserTransactions, String search) {
+        Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(allUserTransactions);
+        Map<UUID, Transaction> transactionsById = new HashMap<>();
+        for (Transaction transaction : allUserTransactions) {
+            transactionsById.put(transaction.getId(), transaction);
+        }
+
+        String normalizedSearch = normalizeSearch(search);
+        Set<UUID> visited = new java.util.HashSet<>();
+        List<MatchedPairGroup> groups = new ArrayList<>();
+
+        for (Transaction transaction : allUserTransactions) {
+            UUID transactionId = transaction.getId();
+            UUID matchedId = matchedPairs.get(transactionId);
+            if (matchedId == null || visited.contains(transactionId)) {
+                continue;
+            }
+
+            Transaction matchedTransaction = transactionsById.get(matchedId);
+            if (matchedTransaction == null || visited.contains(matchedId)) {
+                continue;
+            }
+
+            Transaction buy = transaction.getTransactionType() == TransactionType.BUY ? transaction : matchedTransaction;
+            Transaction sell = transaction.getTransactionType() == TransactionType.SELL ? transaction : matchedTransaction;
+            if (buy.getTransactionType() != TransactionType.BUY || sell.getTransactionType() != TransactionType.SELL) {
+                continue;
+            }
+
+            if (normalizedSearch != null
+                && !matchesSearch(buy, normalizedSearch)
+                && !matchesSearch(sell, normalizedSearch)) {
+                continue;
+            }
+
+            visited.add(transactionId);
+            visited.add(matchedId);
+            groups.add(new MatchedPairGroup(buy, sell));
+        }
+
+        groups.sort(MATCHED_PAIR_GROUP_COMPARATOR);
+        return groups;
+    }
+
+    protected byte[] createCleanHistoryWorkbook(
+        List<Transaction> matchedTransactions,
+        List<AccumulationTrade> linkedAccumulationTrades
+    ) {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            createSummarySheet(workbook, matchedTransactions, linkedAccumulationTrades);
+            createMatchedTransactionsSheet(workbook, matchedTransactions);
+            createAccumulationTradesSheet(workbook, linkedAccumulationTrades);
+            workbook.write(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to generate clean history backup workbook", exception);
+        }
+    }
+
+    private static void createSummarySheet(
+        Workbook workbook,
+        List<Transaction> matchedTransactions,
+        List<AccumulationTrade> linkedAccumulationTrades
+    ) {
+        BigDecimal totalInvested = matchedTransactions.stream()
+            .filter(tx -> tx.getTransactionType() == TransactionType.BUY)
+            .map(Transaction::getTotalSpentUsd)
+            .filter(Objects::nonNull)
+            .reduce(ZERO, BigDecimal::add);
+        BigDecimal totalRealizedPnl = matchedTransactions.stream()
+            .filter(tx -> tx.getTransactionType() == TransactionType.SELL)
+            .map(Transaction::getRealizedPnl)
+            .map(value -> value == null ? ZERO : value)
+            .reduce(ZERO, BigDecimal::add);
+
+        Sheet sheet = workbook.createSheet("Summary Report");
+        int rowIndex = 0;
+        Row header = sheet.createRow(rowIndex++);
+        header.createCell(0).setCellValue("Metric");
+        header.createCell(1).setCellValue("Value");
+
+        Row investedRow = sheet.createRow(rowIndex++);
+        investedRow.createCell(0).setCellValue("Total Invested");
+        investedRow.createCell(1).setCellValue(totalInvested.toPlainString());
+
+        Row pnlRow = sheet.createRow(rowIndex++);
+        pnlRow.createCell(0).setCellValue("Total Realized PnL");
+        pnlRow.createCell(1).setCellValue(totalRealizedPnl.toPlainString());
+
+        Row matchedCountRow = sheet.createRow(rowIndex++);
+        matchedCountRow.createCell(0).setCellValue("Deleted Transactions");
+        matchedCountRow.createCell(1).setCellValue(matchedTransactions.size());
+
+        Row accumulationCountRow = sheet.createRow(rowIndex);
+        accumulationCountRow.createCell(0).setCellValue("Deleted Accumulation Trades");
+        accumulationCountRow.createCell(1).setCellValue(linkedAccumulationTrades.size());
+
+        sheet.autoSizeColumn(0);
+        sheet.autoSizeColumn(1);
+    }
+
+    private static void createMatchedTransactionsSheet(Workbook workbook, List<Transaction> matchedTransactions) {
+        Sheet sheet = workbook.createSheet("Matched Transactions");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Transaction ID");
+        header.createCell(1).setCellValue("Type");
+        header.createCell(2).setCellValue("Asset");
+        header.createCell(3).setCellValue("Exchange");
+        header.createCell(4).setCellValue("Gross Amount");
+        header.createCell(5).setCellValue("Net Amount");
+        header.createCell(6).setCellValue("Unit Price USD");
+        header.createCell(7).setCellValue("Total USD");
+        header.createCell(8).setCellValue("Realized PnL");
+        header.createCell(9).setCellValue("Date");
+
+        int rowIndex = 1;
+        for (Transaction tx : matchedTransactions) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(safe(tx.getId()));
+            row.createCell(1).setCellValue(tx.getTransactionType().name());
+            row.createCell(2).setCellValue(tx.getAsset() == null ? "" : safe(tx.getAsset().getSymbol()));
+            row.createCell(3).setCellValue(tx.getExchange() == null ? "" : safe(tx.getExchange().getName()));
+            row.createCell(4).setCellValue(toStringValue(tx.getGrossAmount()));
+            row.createCell(5).setCellValue(toStringValue(tx.getNetAmount()));
+            row.createCell(6).setCellValue(toStringValue(tx.getUnitPriceUsd()));
+            row.createCell(7).setCellValue(toStringValue(tx.getTotalSpentUsd()));
+            row.createCell(8).setCellValue(toStringValue(tx.getRealizedPnl()));
+            row.createCell(9).setCellValue(tx.getTransactionDate() == null ? "" : tx.getTransactionDate().toString());
+        }
+
+        for (int i = 0; i <= 9; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private static void createAccumulationTradesSheet(Workbook workbook, List<AccumulationTrade> linkedAccumulationTrades) {
+        Sheet sheet = workbook.createSheet("Accumulation Trades");
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Trade ID");
+        header.createCell(1).setCellValue("Status");
+        header.createCell(2).setCellValue("Asset");
+        header.createCell(3).setCellValue("Exit Transaction ID");
+        header.createCell(4).setCellValue("Reentry Transaction ID");
+        header.createCell(5).setCellValue("Old Coin Amount");
+        header.createCell(6).setCellValue("New Coin Amount");
+        header.createCell(7).setCellValue("Accumulation Delta");
+        header.createCell(8).setCellValue("Exit Price USD");
+        header.createCell(9).setCellValue("Reentry Price USD");
+        header.createCell(10).setCellValue("Created At");
+        header.createCell(11).setCellValue("Closed At");
+
+        int rowIndex = 1;
+        for (AccumulationTrade trade : linkedAccumulationTrades) {
+            Row row = sheet.createRow(rowIndex++);
+            row.createCell(0).setCellValue(safe(trade.getId()));
+            row.createCell(1).setCellValue(trade.getStatus() == null ? "" : trade.getStatus().name());
+            row.createCell(2).setCellValue(trade.getAsset() == null ? "" : safe(trade.getAsset().getSymbol()));
+            row.createCell(3).setCellValue(
+                trade.getExitTransaction() == null ? "" : safe(trade.getExitTransaction().getId())
+            );
+            row.createCell(4).setCellValue(
+                trade.getReentryTransaction() == null ? "" : safe(trade.getReentryTransaction().getId())
+            );
+            row.createCell(5).setCellValue(toStringValue(trade.getOldCoinAmount()));
+            row.createCell(6).setCellValue(toStringValue(trade.getNewCoinAmount()));
+            row.createCell(7).setCellValue(toStringValue(trade.getAccumulationDelta()));
+            row.createCell(8).setCellValue(toStringValue(trade.getExitPriceUsd()));
+            row.createCell(9).setCellValue(toStringValue(trade.getReentryPriceUsd()));
+            row.createCell(10).setCellValue(trade.getCreatedAt() == null ? "" : trade.getCreatedAt().toString());
+            row.createCell(11).setCellValue(trade.getClosedAt() == null ? "" : trade.getClosedAt().toString());
+        }
+
+        for (int i = 0; i <= 11; i++) {
+            sheet.autoSizeColumn(i);
+        }
+    }
+
+    private static String toStringValue(BigDecimal value) {
+        return value == null ? "" : value.toPlainString();
+    }
+
+    private static String safe(UUID value) {
+        return value == null ? "" : value.toString();
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String cleanHistoryFileName() {
+        String timestamp = FILE_TIMESTAMP_FORMATTER.format(OffsetDateTime.now(ZoneOffset.UTC));
+        return "trading-history-backup-" + timestamp + ".xlsx";
     }
 
     private static Map<UUID, UUID> buildMatchedPairsByTransactionId(List<Transaction> transactions) {

@@ -143,4 +143,38 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return (await response.json()) as T;
 }
 
+export async function requestBlob(
+  path: string,
+  options: RequestOptions = {}
+): Promise<{ blob: Blob; headers: Headers }> {
+  const { method = 'GET', body, auth = true, skipRefreshRetry = false } = options;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: buildHeaders(auth),
+    body: body === undefined ? undefined : JSON.stringify(body)
+  });
+
+  if (response.status === 401 && auth && !skipRefreshRetry) {
+    const refreshedAccessToken = await refreshAccessToken();
+    if (refreshedAccessToken) {
+      return requestBlob(path, {
+        method,
+        body,
+        auth,
+        skipRefreshRetry: true
+      });
+    }
+  }
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await parseError(response));
+  }
+
+  return {
+    blob: await response.blob(),
+    headers: response.headers
+  };
+}
+
 export { AUTH_EXPIRED_EVENT };

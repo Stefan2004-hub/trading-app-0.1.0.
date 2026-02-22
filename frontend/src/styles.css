@@ -282,12 +282,26 @@ p {
   margin: 0;
 }
 
+.transactions-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .open-buy-modal-button {
   width: auto;
   margin: 0;
   padding-inline: 1.2rem;
   background: #0f766e;
   border-color: #0f766e;
+}
+
+.clean-history-button {
+  width: auto;
+  margin: 0;
+  padding-inline: 1.2rem;
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 .search-controls {
