@@ -75,6 +75,7 @@ public class MarketAlertServiceImpl implements MarketAlertService {
         int dynamicAlertsCreated = 0;
 
         for (Asset asset : investedAssets) {
+            // Source of truth for RSI/Stochastic is persisted DB history, never frontend-calculated data.
             List<AssetHistoricData> rows = assetHistoricDataRepository.findAllByAsset_IdOrderByDayDateAsc(asset.getId());
             if (rows.size() < FIXED_WINDOW_DAYS) {
                 continue;
