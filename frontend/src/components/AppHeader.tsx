@@ -14,6 +14,7 @@ export function AppHeader(): JSX.Element {
     { label: 'Dashboard', to: '/dashboard' },
     { label: 'Transactions', to: '/transactions' },
     { label: 'Alerts', to: '/alerts' },
+    { label: 'Historical Data', to: '/historical-data' },
     { label: 'Price Peaks', to: '/price-peaks' },
     { label: 'Assets', to: '/assets' },
     { label: 'Exchanges', to: '/exchanges' },

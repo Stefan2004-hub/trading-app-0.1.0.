@@ -5,6 +5,7 @@ import java.util.UUID;
 public record AssetLookupResponse(
     UUID id,
     String symbol,
-    String name
+    String name,
+    String coinGeckoId
 ) {
 }

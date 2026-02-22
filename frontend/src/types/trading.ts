@@ -2,6 +2,7 @@ export interface AssetOption {
   id: string;
   symbol: string;
   name: string;
+  coinGeckoId: string | null;
 }
 
 export interface ExchangeOption {
@@ -104,6 +105,28 @@ export interface PortfolioSummary {
   totalRealizedPnlUsd: string;
   totalPnlUsd: string;
   assets: PortfolioAssetPerformance[];
+}
+
+export interface HistoricalDataRow {
+  id: string;
+  assetId: string;
+  assetSymbol: string;
+  assetName: string;
+  dayDate: string;
+  highPrice: string;
+  lowPrice: string;
+  closingPrice: string;
+}
+
+export interface HistoricalDataSyncResult {
+  assetsProcessed: number;
+  rowsInserted: number;
+  assetsSkipped: number;
+  skippedAssets: {
+    assetId: string;
+    assetSymbol: string;
+    reason: string;
+  }[];
 }
 
 export interface TradeFormPayload {
