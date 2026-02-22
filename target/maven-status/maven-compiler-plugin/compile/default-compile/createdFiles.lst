@@ -114,6 +114,5 @@ com/trading/dto/auth/LogoutRequest.class
 com/trading/service/lookup/LookupService.class
 com/trading/controller/LookupController.class
 com/trading/security/JwtAuthenticationFilter.class
-com/trading/domain/entity/BtcHistoricData.class
 com/trading/domain/projection/BuyOpportunityProjection.class
 com/trading/dto/strategy/StrategyAlertResponse.class

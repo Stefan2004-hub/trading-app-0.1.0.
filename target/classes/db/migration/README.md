@@ -29,3 +29,7 @@ This folder stores ordered Flyway SQL migrations.
 - `V7__fix_user_portfolio_performance_pnl.sql`
   - Fix `user_portfolio_performance` balance and cost basis math
   - Use net amount consistently and reduce invested basis on SELL rows
+
+- `V11__asset_historic_data_multi_asset.sql`
+  - Rename BTC-only historical table to multi-asset table
+  - Add `asset_id` FK and unique constraint on `(day_date, asset_id)`

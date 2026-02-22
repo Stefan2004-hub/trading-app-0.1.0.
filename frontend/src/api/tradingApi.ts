@@ -6,6 +6,8 @@ import type {
   AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
+  HistoricalDataRow,
+  HistoricalDataSyncResult,
   PricePeakItem,
   PaginatedResponse,
   PortfolioAssetPerformance,
@@ -146,6 +148,22 @@ export const tradingApi = {
 
   getAssetSummary(): Promise<AssetSummary[]> {
     return request<AssetSummary[]>('/api/portfolio/asset-summary');
+  },
+
+  listHistoricalData(): Promise<HistoricalDataRow[]> {
+    return request<HistoricalDataRow[]>('/api/historical-data');
+  },
+
+  refreshHistoricalData(): Promise<HistoricalDataSyncResult> {
+    return request<HistoricalDataSyncResult>('/api/historical-data/refresh', {
+      method: 'POST'
+    });
+  },
+
+  cleanAndResetHistoricalData(): Promise<HistoricalDataSyncResult> {
+    return request<HistoricalDataSyncResult>('/api/historical-data/clean-reset', {
+      method: 'POST'
+    });
   },
 
   buy(payload: TradeFormPayload): Promise<TransactionItem> {

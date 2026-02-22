@@ -106,6 +106,28 @@ export interface PortfolioSummary {
   assets: PortfolioAssetPerformance[];
 }
 
+export interface HistoricalDataRow {
+  id: string;
+  assetId: string;
+  assetSymbol: string;
+  assetName: string;
+  dayDate: string;
+  highPrice: string;
+  lowPrice: string;
+  closingPrice: string;
+}
+
+export interface HistoricalDataSyncResult {
+  assetsProcessed: number;
+  rowsInserted: number;
+  assetsSkipped: number;
+  skippedAssets: {
+    assetId: string;
+    assetSymbol: string;
+    reason: string;
+  }[];
+}
+
 export interface TradeFormPayload {
   assetId: string;
   exchangeId: string;
