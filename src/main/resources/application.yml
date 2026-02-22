@@ -40,3 +40,7 @@ app:
   coingecko:
     base-url: ${APP_COINGECKO_BASE_URL:https://api.coingecko.com/api/v3}
     api-key: ${APP_COINGECKO_API_KEY:}
+  historical:
+    sync:
+      batch-size: ${APP_HISTORICAL_SYNC_BATCH_SIZE:50}
+      sleep-ms-between-batches: ${APP_HISTORICAL_SYNC_SLEEP_MS_BETWEEN_BATCHES:1200}

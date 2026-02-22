@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.dto.lookup.AssetLookupResponse;
 import com.trading.dto.lookup.ExchangeLookupResponse;
 import com.trading.security.UserPrincipal;
@@ -128,6 +129,9 @@ class LookupControllerIntegrationTest {
         mockMvc.perform(get("/api/exchanges"))
             .andExpect(status().isUnauthorized());
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor() {
         UserPrincipal principal = new UserPrincipal(

@@ -102,6 +102,7 @@ class MarketAlertServiceImplTest {
         assertEquals(2, response.alertsCreated());
         assertEquals(1, response.fixedAlertsCreated());
         assertEquals(1, response.dynamicAlertsCreated());
+        verify(assetHistoricDataRepository).findAllByAsset_IdOrderByDayDateAsc(assetId);
         verify(marketAlertRepository, times(2)).save(any(MarketAlert.class));
     }
 

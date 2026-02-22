@@ -14,6 +14,7 @@ import { HistoricalDataPage } from '../pages/HistoricalDataPage';
 import { PricePeaksPage } from '../pages/PricePeaksPage';
 import { StrategiesPage } from '../pages/StrategiesPage';
 import { TransactionsPage } from '../pages/TransactionsPage';
+import { MaintenancePage } from '../pages/MaintenancePage';
 
 export const router = createBrowserRouter([
   {
@@ -105,6 +106,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <StrategiesPage />
+      </RequireAuth>
+    )
+  },
+  {
+    path: '/maintenance',
+    element: (
+      <RequireAuth>
+        <MaintenancePage />
       </RequireAuth>
     )
   },

@@ -2,8 +2,8 @@ package com.trading.service.historical;
 
 import com.trading.domain.entity.Asset;
 import com.trading.domain.entity.AssetHistoricData;
+import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AssetHistoricDataRepository;
-import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
 import com.trading.service.historical.coingecko.CoinGeckoClient;
@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -20,15 +19,19 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,13 +39,13 @@ import static org.mockito.Mockito.when;
 class HistoricalDataServiceImplTest {
 
     @Mock
-    private TransactionRepository transactionRepository;
+    private AssetRepository assetRepository;
     @Mock
     private AssetHistoricDataRepository assetHistoricDataRepository;
     @Mock
     private CoinGeckoClient coinGeckoClient;
+    private HistoricalSyncProperties historicalSyncProperties;
 
-    @InjectMocks
     private HistoricalDataServiceImpl historicalDataService;
 
     private UUID userId;
@@ -51,6 +54,13 @@ class HistoricalDataServiceImplTest {
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
+        historicalSyncProperties = new HistoricalSyncProperties(50, 0);
+        historicalDataService = new HistoricalDataServiceImpl(
+            assetRepository,
+            assetHistoricDataRepository,
+            coinGeckoClient,
+            historicalSyncProperties
+        );
         btcAsset = new Asset();
         btcAsset.setId(UUID.randomUUID());
         btcAsset.setSymbol("BTC");
@@ -60,14 +70,14 @@ class HistoricalDataServiceImplTest {
 
     @Test
     void syncIncrementalDeletesTodayRowsBeforeSync() {
-        when(transactionRepository.findDistinctInvestedAssetsByUserId(userId)).thenReturn(List.of());
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of());
 
-        historicalDataService.syncIncremental(userId);
+        historicalDataService.syncIncremental(userId, null);
 
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        var inOrder = inOrder(assetHistoricDataRepository, transactionRepository);
+        var inOrder = inOrder(assetHistoricDataRepository, assetRepository);
         inOrder.verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
-        inOrder.verify(transactionRepository).findDistinctInvestedAssetsByUserId(userId);
+        inOrder.verify(assetRepository).findAllByOrderBySymbolAsc();
     }
 
     @Test
@@ -76,7 +86,7 @@ class HistoricalDataServiceImplTest {
         LocalDate latestExisting = todayUtc.minusDays(2);
         LocalDate expectedStart = latestExisting.plusDays(1);
 
-        when(transactionRepository.findDistinctInvestedAssetsByUserId(userId)).thenReturn(List.of(btcAsset));
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(latestExisting);
         when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), expectedStart, todayUtc)).thenReturn(Set.of());
         when(coinGeckoClient.fetchDailyQuotes("bitcoin", expectedStart, todayUtc)).thenReturn(List.of(
@@ -88,7 +98,7 @@ class HistoricalDataServiceImplTest {
             )
         ));
 
-        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId);
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, null);
 
         assertEquals(1, response.assetsProcessed());
         assertEquals(1, response.rowsInserted());
@@ -107,13 +117,13 @@ class HistoricalDataServiceImplTest {
     void syncIncrementalRateLimitStillPropagates() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
 
-        when(transactionRepository.findDistinctInvestedAssetsByUserId(userId)).thenReturn(List.of(btcAsset));
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(todayUtc.minusDays(1));
         when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
         when(coinGeckoClient.fetchDailyQuotes("bitcoin", todayUtc, todayUtc))
             .thenThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "CoinGecko rate limit reached."));
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> historicalDataService.syncIncremental(userId));
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> historicalDataService.syncIncremental(userId, null));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), ex.getStatusCode().value());
         verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
@@ -124,13 +134,13 @@ class HistoricalDataServiceImplTest {
     void syncIncrementalNon429ErrorSkipsAssetAndKeepsFlow() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
 
-        when(transactionRepository.findDistinctInvestedAssetsByUserId(userId)).thenReturn(List.of(btcAsset));
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(todayUtc.minusDays(1));
         when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
         when(coinGeckoClient.fetchDailyQuotes(eq("bitcoin"), eq(todayUtc), eq(todayUtc)))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "upstream failed"));
 
-        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId);
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, null);
 
         assertEquals(1, response.assetsProcessed());
         assertEquals(0, response.rowsInserted());
@@ -141,5 +151,99 @@ class HistoricalDataServiceImplTest {
         assertEquals("BTC", skipped.assetSymbol());
         assertEquals("upstream failed", skipped.reason());
         verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+    }
+
+    @Test
+    void cleanAndResetDeletesAllThenFetchesAllAssetsFromThirtyDayLookback() {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate resetStartDate = todayUtc.minusDays(29);
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), resetStartDate, todayUtc)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", resetStartDate, todayUtc)).thenReturn(List.of());
+
+        HistoricalDataSyncResponse response = historicalDataService.cleanAndReset(userId);
+
+        assertEquals(1, response.assetsProcessed());
+        assertEquals(0, response.rowsInserted());
+        verify(assetHistoricDataRepository).deleteAllInBatch();
+        verify(coinGeckoClient).fetchDailyQuotes("bitcoin", resetStartDate, todayUtc);
+    }
+
+    @Test
+    void syncIncrementalSkipsExistingRowsAndStillInsertsNewRows() {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate startDate = todayUtc.minusDays(1);
+        LocalDate existingDate = startDate;
+        LocalDate newDate = todayUtc;
+
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(startDate.minusDays(1));
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), startDate, todayUtc)).thenReturn(Set.of(existingDate));
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", startDate, todayUtc)).thenReturn(List.of(
+            new CoinGeckoClient.CoinGeckoDailyQuote(existingDate, new java.math.BigDecimal("100"), new java.math.BigDecimal("90"), new java.math.BigDecimal("95")),
+            new CoinGeckoClient.CoinGeckoDailyQuote(newDate, new java.math.BigDecimal("110"), new java.math.BigDecimal("100"), new java.math.BigDecimal("105"))
+        ));
+
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, null);
+
+        assertEquals(1, response.rowsInserted());
+        verify(assetHistoricDataRepository).saveAll(any());
+    }
+
+    @Test
+    void syncIncrementalInvokesBatchSleepHookBetweenBatches() {
+        HistoricalDataServiceImpl serviceWithSpySleep = spy(new HistoricalDataServiceImpl(
+            assetRepository,
+            assetHistoricDataRepository,
+            coinGeckoClient,
+            new HistoricalSyncProperties(1, 1000)
+        ));
+        doNothing().when(serviceWithSpySleep).sleepAfterBatchIfNeeded(anyInt(), anyInt());
+        Asset secondAsset = new Asset();
+        secondAsset.setId(UUID.randomUUID());
+        secondAsset.setSymbol("ETH");
+        secondAsset.setName("Ethereum");
+        secondAsset.setCoinGeckoId("ethereum");
+
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset, secondAsset));
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(any())).thenReturn(todayUtc.minusDays(1));
+        when(assetHistoricDataRepository.findExistingDayDates(any(), eq(todayUtc), eq(todayUtc))).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes(any(), any(), any())).thenReturn(List.of());
+
+        serviceWithSpySleep.syncIncremental(userId, null);
+
+        verify(serviceWithSpySleep).sleepAfterBatchIfNeeded(1, 2);
+        verify(serviceWithSpySleep).sleepAfterBatchIfNeeded(2, 2);
+    }
+
+    @Test
+    void syncIncrementalWithSpecificAssetRefreshesOnlySelectedAsset() {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate latestExisting = todayUtc.minusDays(1);
+        when(assetRepository.findById(btcAsset.getId())).thenReturn(Optional.of(btcAsset));
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(latestExisting);
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", todayUtc, todayUtc)).thenReturn(List.of());
+
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, btcAsset.getId());
+
+        assertEquals(1, response.assetsProcessed());
+        verify(assetRepository).findById(btcAsset.getId());
+        verify(assetRepository, never()).findAllByOrderBySymbolAsc();
+    }
+
+    @Test
+    void syncIncrementalWithUnknownAssetThrows() {
+        UUID unknownAssetId = UUID.randomUUID();
+        when(assetRepository.findById(unknownAssetId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> historicalDataService.syncIncremental(userId, unknownAssetId)
+        );
+
+        assertEquals("Asset not found: " + unknownAssetId, ex.getMessage());
+        verify(assetHistoricDataRepository, never()).saveAll(any());
     }
 }

@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.domain.enums.StrategyAlertStatus;
 import com.trading.domain.enums.StrategyType;
 import com.trading.domain.enums.TransactionListView;
@@ -140,6 +141,9 @@ class MultiTenantIsolationIntegrationTest {
         verify(strategyAlertService).acknowledge(eq(userA), eq(alertId));
         verify(strategyAlertService).acknowledge(eq(userB), eq(alertId));
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(

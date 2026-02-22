@@ -2,6 +2,8 @@ package com.trading.domain.repository;
 
 import com.trading.domain.entity.AssetHistoricData;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,6 +32,21 @@ public interface AssetHistoricDataRepository extends JpaRepository<AssetHistoric
         @Param("startDate") LocalDate startDate,
         @Param("endDate") LocalDate endDate
     );
+
+    @Query(
+        """
+            select row
+            from AssetHistoricData row
+            where exists (
+                select 1
+                from Transaction tx
+                where tx.user.id = :userId
+                  and tx.asset.id = row.asset.id
+            )
+            order by row.dayDate desc, row.asset.symbol asc
+            """
+    )
+    Page<AssetHistoricData> findAllForUserInvestedAssets(@Param("userId") UUID userId, Pageable pageable);
 
     @Query(
         """
