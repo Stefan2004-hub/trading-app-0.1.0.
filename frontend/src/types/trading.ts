@@ -118,6 +118,13 @@ export interface HistoricalDataRow {
   closingPrice: string;
 }
 
+export interface HistoricalMissingAsset {
+  assetId: string;
+  assetSymbol: string;
+  assetName: string;
+  missingDate: string;
+}
+
 export interface HistoricalDataSyncResult {
   assetsProcessed: number;
   rowsInserted: number;

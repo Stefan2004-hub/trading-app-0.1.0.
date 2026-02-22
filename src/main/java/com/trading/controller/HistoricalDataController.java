@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.security.CurrentUserProvider;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.UUID;
+import java.util.List;
 
 @RestController
 @Validated
@@ -41,6 +43,12 @@ public class HistoricalDataController {
     ) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(historicalDataService.listForUser(userId, page, size));
+    }
+
+    @GetMapping("/missing-today")
+    public ResponseEntity<List<HistoricalAssetRefreshStatusResponse>> listMissingToday() {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        return ResponseEntity.ok(historicalDataService.listAssetsNeedingRefreshToday(userId));
     }
 
     @PostMapping("/refresh")
