@@ -85,7 +85,8 @@ class LookupControllerIntegrationTest {
         AssetLookupResponse row = new AssetLookupResponse(
             UUID.fromString("11111111-1111-1111-1111-111111111111"),
             "BTC",
-            "Bitcoin"
+            "Bitcoin",
+            null
         );
         when(assetService.list(null)).thenReturn(List.of(row));
 
