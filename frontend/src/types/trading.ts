@@ -10,6 +10,26 @@ export interface ExchangeOption {
   name: string;
 }
 
+export interface PricePeakItem {
+  id: string;
+  userId: string;
+  assetId: string;
+  assetSymbol: string;
+  assetName: string;
+  lastBuyTransactionId: string | null;
+  peakPrice: string;
+  peakTimestamp: string;
+  active: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface UpdatePricePeakPayload {
+  peakPrice: string;
+  peakTimestamp: string;
+  active: boolean;
+}
+
 export type TransactionType = 'BUY' | 'SELL';
 export type TransactionView = 'OPEN' | 'MATCHED';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
@@ -66,6 +86,14 @@ export interface PortfolioAssetPerformance {
   unrealizedPnlPercent: string;
   realizedPnlUsd: string;
   totalPnlUsd: string;
+}
+
+export interface AssetSummary {
+  assetName: string;
+  assetSymbol: string;
+  netQuantity: string;
+  totalInvested: string;
+  totalRealizedProfit: string;
 }
 
 export interface PortfolioSummary {

@@ -1,10 +1,12 @@
-import { request } from './http';
+import { request, requestBlob } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AccumulationTradeItem,
+  AssetSummary,
   AccumulationTradeStatus,
   AssetOption,
   ExchangeOption,
+  PricePeakItem,
   PaginatedResponse,
   PortfolioAssetPerformance,
   PortfolioSummary,
@@ -12,8 +14,16 @@ import type {
   TransactionItem,
   TransactionView,
   UpdateTransactionNetAmountPayload,
-  UpdateTransactionPayload
+  UpdateTransactionPayload,
+  UpdatePricePeakPayload
 } from '../types/trading';
+
+function extractLookupContent<T>(response: T[] | PaginatedResponse<T>): T[] {
+  if (Array.isArray(response)) {
+    return response;
+  }
+  return Array.isArray(response.content) ? response.content : [];
+}
 
 function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> {
   const feePercentage = payload.feePercentage ? decimalToFractionalPercent(payload.feePercentage) : null;
@@ -32,9 +42,10 @@ function toBaseTradeRequest(payload: TradeFormPayload): Record<string, unknown> 
 
 export const tradingApi = {
   listAssets(search?: string): Promise<AssetOption[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<AssetOption[]>(`/api/assets${query}`);
+    const normalizedSearch = search?.trim() ?? '';
+    return request<AssetOption[] | PaginatedResponse<AssetOption>>(
+      `/api/assets?search=${encodeURIComponent(normalizedSearch)}`
+    ).then(extractLookupContent);
   },
 
   createAsset(payload: { symbol: string; name: string }): Promise<AssetOption> {
@@ -58,9 +69,10 @@ export const tradingApi = {
   },
 
   listExchanges(search?: string): Promise<ExchangeOption[]> {
-    const trimmedSearch = search?.trim();
-    const query = trimmedSearch ? `?search=${encodeURIComponent(trimmedSearch)}` : '';
-    return request<ExchangeOption[]>(`/api/exchanges${query}`);
+    const normalizedSearch = search?.trim() ?? '';
+    return request<ExchangeOption[] | PaginatedResponse<ExchangeOption>>(
+      `/api/exchanges?search=${encodeURIComponent(normalizedSearch)}`
+    ).then(extractLookupContent);
   },
 
   createExchange(payload: { symbol: string; name: string }): Promise<ExchangeOption> {
@@ -79,6 +91,24 @@ export const tradingApi = {
 
   deleteExchange(id: string): Promise<void> {
     return request<void>(`/api/exchanges/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  listPricePeaks(search?: string): Promise<PricePeakItem[]> {
+    const normalizedSearch = search?.trim() ?? '';
+    return request<PricePeakItem[]>(`/api/price-peaks?search=${encodeURIComponent(normalizedSearch)}`);
+  },
+
+  updatePricePeak(id: string, payload: UpdatePricePeakPayload): Promise<PricePeakItem> {
+    return request<PricePeakItem>(`/api/price-peaks/${id}`, {
+      method: 'PUT',
+      body: payload
+    });
+  },
+
+  deletePricePeak(id: string): Promise<void> {
+    return request<void>(`/api/price-peaks/${id}`, {
       method: 'DELETE'
     });
   },
@@ -112,6 +142,10 @@ export const tradingApi = {
 
   getPortfolioPerformance(): Promise<PortfolioAssetPerformance[]> {
     return request<PortfolioAssetPerformance[]>('/api/portfolio/performance');
+  },
+
+  getAssetSummary(): Promise<AssetSummary[]> {
+    return request<AssetSummary[]>('/api/portfolio/asset-summary');
   },
 
   buy(payload: TradeFormPayload): Promise<TransactionItem> {
@@ -166,6 +200,16 @@ export const tradingApi = {
     return request<void>(`/api/transactions/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  async cleanHistory(): Promise<{ blob: Blob; fileName: string }> {
+    const response = await requestBlob('/api/transactions/clean-history', {
+      method: 'POST'
+    });
+    const contentDisposition = response.headers.get('content-disposition') ?? '';
+    const fileNameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+    const fileName = fileNameMatch?.[1] ?? 'trading-history-backup.xlsx';
+    return { blob: response.blob, fileName };
   },
 
   listAccumulationTrades(params?: {

@@ -2,6 +2,8 @@ package com.trading.service.portfolio;
 
 import com.trading.domain.projection.UserAssetLatestPriceProjection;
 import com.trading.domain.projection.UserAssetRealizedPnlProjection;
+import com.trading.domain.projection.UserAssetSummaryProjection;
+import com.trading.dto.portfolio.AssetSummaryDTO;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
@@ -96,6 +98,29 @@ class PortfolioServiceImplTest {
         assertEquals(2, summary.assets().size());
     }
 
+    @Test
+    void getAssetSummaryReturnsAggregatedRows() {
+        UUID userId = UUID.randomUUID();
+
+        when(transactionRepository.findAssetSummariesByUserId(userId)).thenReturn(
+            List.of(
+                new AssetSummaryRow("Bitcoin", "BTC", "1.2", "60000", "1500"),
+                new AssetSummaryRow("Ethereum", "ETH", "0", "0", "-200")
+            )
+        );
+
+        List<AssetSummaryDTO> response = portfolioService.getAssetSummary(userId);
+
+        assertEquals(2, response.size());
+        assertEquals("Bitcoin", response.get(0).assetName());
+        assertEquals("BTC", response.get(0).assetSymbol());
+        assertEquals(0, response.get(0).netQuantity().compareTo(new BigDecimal("1.2")));
+        assertEquals(0, response.get(0).totalInvested().compareTo(new BigDecimal("60000")));
+        assertEquals(0, response.get(0).totalRealizedProfit().compareTo(new BigDecimal("1500")));
+        assertEquals("ETH", response.get(1).assetSymbol());
+        assertEquals(0, response.get(1).totalRealizedProfit().compareTo(new BigDecimal("-200")));
+    }
+
     private record PortfolioProjectionRow(
         String symbol,
         String exchange,
@@ -185,6 +210,55 @@ class PortfolioServiceImplTest {
         @Override
         public BigDecimal getRealizedPnl() {
             return realizedPnl;
+        }
+    }
+
+    private record AssetSummaryRow(
+        String assetName,
+        String assetSymbol,
+        BigDecimal netQuantity,
+        BigDecimal totalInvested,
+        BigDecimal totalRealizedProfit
+    ) implements UserAssetSummaryProjection {
+        private AssetSummaryRow(
+            String assetName,
+            String assetSymbol,
+            String netQuantity,
+            String totalInvested,
+            String totalRealizedProfit
+        ) {
+            this(
+                assetName,
+                assetSymbol,
+                new BigDecimal(netQuantity),
+                new BigDecimal(totalInvested),
+                new BigDecimal(totalRealizedProfit)
+            );
+        }
+
+        @Override
+        public String getAssetName() {
+            return assetName;
+        }
+
+        @Override
+        public String getAssetSymbol() {
+            return assetSymbol;
+        }
+
+        @Override
+        public BigDecimal getNetQuantity() {
+            return netQuantity;
+        }
+
+        @Override
+        public BigDecimal getTotalInvested() {
+            return totalInvested;
+        }
+
+        @Override
+        public BigDecimal getTotalRealizedProfit() {
+            return totalRealizedProfit;
         }
     }
 }

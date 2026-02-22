@@ -96,6 +96,20 @@ async function resolveAssetPrice(symbol: string): Promise<PriceResult> {
   return nextInFlight;
 }
 
+export async function resolveAssetSpotPrice(symbol: string): Promise<AssetPriceState> {
+  const normalized = normalizeSymbol(symbol);
+  if (!normalized) {
+    throw new Error('symbol is required');
+  }
+
+  const result = await resolveAssetPrice(normalized);
+  return {
+    status: 'success',
+    priceUsd: result.priceUsd,
+    source: result.source
+  };
+}
+
 export function useAssetSpotPrices(symbols: string[]): Record<string, AssetPriceState> {
   const normalizedSymbols = useMemo(
     () => Array.from(new Set(symbols.map(normalizeSymbol).filter((symbol) => symbol.length > 0))),

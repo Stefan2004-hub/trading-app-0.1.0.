@@ -2,6 +2,7 @@ package com.trading.controller;
 
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
+import com.trading.dto.portfolio.AssetSummaryDTO;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.portfolio.PortfolioService;
 import org.springframework.http.ResponseEntity;
@@ -37,5 +38,11 @@ public class PortfolioController {
     public ResponseEntity<List<PortfolioAssetPerformanceResponse>> performance() {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(portfolioService.getPerformance(userId));
+    }
+
+    @GetMapping("/asset-summary")
+    public ResponseEntity<List<AssetSummaryDTO>> assetSummary() {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        return ResponseEntity.ok(portfolioService.getAssetSummary(userId));
     }
 }

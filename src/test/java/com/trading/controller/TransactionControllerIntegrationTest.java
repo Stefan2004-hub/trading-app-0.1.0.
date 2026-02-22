@@ -3,11 +3,13 @@ package com.trading.controller;
 import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.enums.TransactionAccumulationRole;
+import com.trading.dto.transaction.CleanHistoryBackup;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
+import com.trading.service.lookup.PricePeakService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -83,6 +85,9 @@ class TransactionControllerIntegrationTest {
 
     @MockBean
     private LookupService lookupService;
+
+    @MockBean
+    private PricePeakService pricePeakService;
 
     @MockBean
     private UserPreferenceService userPreferenceService;
@@ -217,6 +222,33 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.transactionType").value("SELL"));
 
         verify(transactionService).sell(eq(userId), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void cleanHistoryEndpointReturnsExcelAttachment() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+        CleanHistoryBackup backup = new CleanHistoryBackup(
+            "excel-content".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            "trading-history-backup-20260222-120000.xlsx"
+        );
+        when(transactionService.cleanHistory(userId)).thenReturn(backup);
+
+        mockMvc.perform(
+                post("/api/transactions/clean-history")
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string(
+                "Content-Disposition",
+                "attachment; filename=\"" + backup.fileName() + "\""
+            ));
+
+        verify(transactionService).cleanHistory(eq(userId));
     }
 
     @Test

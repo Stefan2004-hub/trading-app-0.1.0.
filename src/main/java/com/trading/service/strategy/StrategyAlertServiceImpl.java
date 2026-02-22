@@ -90,6 +90,16 @@ public class StrategyAlertServiceImpl implements StrategyAlertService {
         return toResponse(alert);
     }
 
+    @Override
+    public void delete(UUID userId, UUID alertId) {
+        Objects.requireNonNull(userId, "userId is required");
+        Objects.requireNonNull(alertId, "alertId is required");
+
+        StrategyAlert alert = strategyAlertRepository.findByIdAndUser_Id(alertId, userId)
+            .orElseThrow(() -> new IllegalArgumentException("Strategy alert not found: " + alertId));
+        strategyAlertRepository.delete(alert);
+    }
+
     private void maybeGenerateSellAlert(
         UUID userId,
         UUID assetId,

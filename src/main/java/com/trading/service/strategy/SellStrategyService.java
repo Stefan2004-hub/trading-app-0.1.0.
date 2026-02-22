@@ -11,4 +11,6 @@ public interface SellStrategyService {
     List<SellStrategyResponse> list(UUID userId);
 
     SellStrategyResponse upsert(UUID userId, UpsertSellStrategyRequest request);
+
+    void delete(UUID userId, UUID strategyId);
 }

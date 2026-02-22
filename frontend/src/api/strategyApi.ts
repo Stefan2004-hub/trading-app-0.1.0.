@@ -24,6 +24,12 @@ export const strategyApi = {
     });
   },
 
+  deleteSellStrategy(strategyId: string): Promise<void> {
+    return request<void>(`/api/strategies/sell/${strategyId}`, {
+      method: 'DELETE'
+    });
+  },
+
   listBuyStrategies(): Promise<BuyStrategyItem[]> {
     return request<BuyStrategyItem[]>('/api/strategies/buy');
   },
@@ -35,13 +41,32 @@ export const strategyApi = {
     });
   },
 
+  deleteBuyStrategy(strategyId: string): Promise<void> {
+    return request<void>(`/api/strategies/buy/${strategyId}`, {
+      method: 'DELETE'
+    });
+  },
+
   listAlerts(): Promise<StrategyAlertItem[]> {
     return request<StrategyAlertItem[]>('/api/strategies/alerts');
+  },
+
+  generateAlerts(payload: { assetId: string; currentPriceUsd: string }): Promise<StrategyAlertItem[]> {
+    return request<StrategyAlertItem[]>('/api/strategies/alerts/generate', {
+      method: 'POST',
+      body: payload
+    });
   },
 
   acknowledgeAlert(alertId: string): Promise<StrategyAlertItem> {
     return request<StrategyAlertItem>(`/api/strategies/alerts/${alertId}/acknowledge`, {
       method: 'POST'
+    });
+  },
+
+  deleteAlert(alertId: string): Promise<void> {
+    return request<void>(`/api/strategies/alerts/${alertId}`, {
+      method: 'DELETE'
     });
   }
 };

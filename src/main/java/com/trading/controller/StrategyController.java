@@ -13,6 +13,7 @@ import com.trading.service.strategy.StrategyAlertService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -56,6 +57,13 @@ public class StrategyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(sellStrategyService.upsert(userId, request));
     }
 
+    @DeleteMapping("/sell/{id}")
+    public ResponseEntity<Void> deleteSellStrategy(@PathVariable("id") UUID strategyId) {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        sellStrategyService.delete(userId, strategyId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/buy")
     public ResponseEntity<List<BuyStrategyResponse>> listBuyStrategies() {
         UUID userId = currentUserProvider.getCurrentUserId();
@@ -66,6 +74,13 @@ public class StrategyController {
     public ResponseEntity<BuyStrategyResponse> upsertBuyStrategy(@Valid @RequestBody UpsertBuyStrategyRequest request) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.status(HttpStatus.CREATED).body(buyStrategyService.upsert(userId, request));
+    }
+
+    @DeleteMapping("/buy/{id}")
+    public ResponseEntity<Void> deleteBuyStrategy(@PathVariable("id") UUID strategyId) {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        buyStrategyService.delete(userId, strategyId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/alerts")
@@ -84,5 +99,12 @@ public class StrategyController {
     public ResponseEntity<StrategyAlertResponse> acknowledgeAlert(@PathVariable("id") UUID alertId) {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(strategyAlertService.acknowledge(userId, alertId));
+    }
+
+    @DeleteMapping("/alerts/{id}")
+    public ResponseEntity<Void> deleteAlert(@PathVariable("id") UUID alertId) {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        strategyAlertService.delete(userId, alertId);
+        return ResponseEntity.noContent().build();
     }
 }

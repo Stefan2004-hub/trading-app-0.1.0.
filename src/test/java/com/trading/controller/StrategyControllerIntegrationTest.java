@@ -9,6 +9,7 @@ import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
+import com.trading.service.lookup.PricePeakService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
@@ -36,6 +37,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -76,6 +78,8 @@ class StrategyControllerIntegrationTest {
 
     @MockBean
     private LookupService lookupService;
+    @MockBean
+    private PricePeakService pricePeakService;
     @MockBean
     private UserPreferenceService userPreferenceService;
 
@@ -164,6 +168,11 @@ class StrategyControllerIntegrationTest {
             .andExpect(jsonPath("$.thresholdPercent").value(8.5));
         verify(sellStrategyService).upsert(eq(userId), any());
 
+        UUID sellStrategyId = sellResponse.id();
+        mockMvc.perform(delete("/api/strategies/sell/{id}", sellStrategyId).with(authentication(auth)))
+            .andExpect(status().isNoContent());
+        verify(sellStrategyService).delete(eq(userId), eq(sellStrategyId));
+
         mockMvc.perform(get("/api/strategies/buy").with(authentication(auth)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].userId").value(userId.toString()))
@@ -188,6 +197,11 @@ class StrategyControllerIntegrationTest {
             .andExpect(jsonPath("$.buyAmountUsd").value(250.0));
         verify(buyStrategyService).upsert(eq(userId), any());
 
+        UUID buyStrategyId = buyResponse.id();
+        mockMvc.perform(delete("/api/strategies/buy/{id}", buyStrategyId).with(authentication(auth)))
+            .andExpect(status().isNoContent());
+        verify(buyStrategyService).delete(eq(userId), eq(buyStrategyId));
+
         mockMvc.perform(get("/api/strategies/alerts").with(authentication(auth)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0].id").value(alertId.toString()))
@@ -199,6 +213,10 @@ class StrategyControllerIntegrationTest {
             .andExpect(jsonPath("$.status").value("ACKNOWLEDGED"))
             .andExpect(jsonPath("$.acknowledgedAt").value("2026-02-13T09:05:00Z"));
         verify(strategyAlertService).acknowledge(eq(userId), eq(alertId));
+
+        mockMvc.perform(delete("/api/strategies/alerts/{id}", alertId).with(authentication(auth)))
+            .andExpect(status().isNoContent());
+        verify(strategyAlertService).delete(eq(userId), eq(alertId));
     }
 
     @Test
@@ -214,6 +232,12 @@ class StrategyControllerIntegrationTest {
         mockMvc.perform(get("/api/strategies/alerts"))
             .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/strategies/alerts/{id}/acknowledge", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/strategies/sell/{id}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/strategies/buy/{id}", UUID.randomUUID()))
+            .andExpect(status().isUnauthorized());
+        mockMvc.perform(delete("/api/strategies/alerts/{id}", UUID.randomUUID()))
             .andExpect(status().isUnauthorized());
     }
 

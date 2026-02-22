@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -137,5 +138,32 @@ class BuyStrategyServiceImplTest {
         );
 
         assertEquals("buyAmountUsd must be positive", ex.getMessage());
+    }
+
+    @Test
+    void deleteRemovesExistingStrategy() {
+        BuyStrategy existing = new BuyStrategy();
+        existing.setId(UUID.randomUUID());
+        existing.setUser(user);
+        existing.setAsset(asset);
+
+        when(buyStrategyRepository.findByIdAndUser_Id(existing.getId(), userId)).thenReturn(Optional.of(existing));
+
+        buyStrategyService.delete(userId, existing.getId());
+
+        verify(buyStrategyRepository).delete(existing);
+    }
+
+    @Test
+    void deleteThrowsWhenStrategyMissing() {
+        UUID strategyId = UUID.randomUUID();
+        when(buyStrategyRepository.findByIdAndUser_Id(strategyId, userId)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(
+            IllegalArgumentException.class,
+            () -> buyStrategyService.delete(userId, strategyId)
+        );
+
+        assertEquals("Buy strategy not found: " + strategyId, ex.getMessage());
     }
 }

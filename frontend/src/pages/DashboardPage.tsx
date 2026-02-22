@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 export function DashboardPage(): JSX.Element {
   const dispatch = useAppDispatch();
   const authUserId = useAppSelector((state) => state.auth.user?.userId);
-  const { loading, bootstrapAttempted, error, transactions, assets } = useAppSelector((state) => state.trading);
+  const { loading, bootstrapAttempted, error, assetSummary } = useAppSelector((state) => state.trading);
 
   useEffect(() => {
     if (loading || bootstrapAttempted) {
@@ -22,7 +22,7 @@ export function DashboardPage(): JSX.Element {
       <section className="workspace-panel">
         <h1>Portfolio Overview</h1>
         {error ? <p className="auth-error">{error}</p> : null}
-        <OpenPortfolioSection transactions={transactions} assets={assets} />
+        <OpenPortfolioSection assetSummary={assetSummary} />
       </section>
     </main>
   );
