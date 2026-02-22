@@ -76,8 +76,9 @@ class HistoricalDataServiceImplTest {
 
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
         var inOrder = inOrder(assetHistoricDataRepository, assetRepository);
-        inOrder.verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
         inOrder.verify(assetRepository).findAllByOrderBySymbolAsc();
+        inOrder.verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+        verify(assetHistoricDataRepository, never()).deleteByDayDateAndAsset_Id(any(), any());
     }
 
     @Test
@@ -104,6 +105,7 @@ class HistoricalDataServiceImplTest {
         assertEquals(1, response.rowsInserted());
         assertEquals(0, response.assetsSkipped());
         verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+        verify(assetHistoricDataRepository, never()).deleteByDayDateAndAsset_Id(any(), any());
 
         ArgumentCaptor<List<AssetHistoricData>> rowsCaptor = ArgumentCaptor.forClass(List.class);
         verify(assetHistoricDataRepository).saveAll(rowsCaptor.capture());
@@ -127,6 +129,7 @@ class HistoricalDataServiceImplTest {
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS.value(), ex.getStatusCode().value());
         verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+        verify(assetHistoricDataRepository, never()).deleteByDayDateAndAsset_Id(any(), any());
         verify(assetHistoricDataRepository, never()).saveAll(any());
     }
 
@@ -151,6 +154,7 @@ class HistoricalDataServiceImplTest {
         assertEquals("BTC", skipped.assetSymbol());
         assertEquals("upstream failed", skipped.reason());
         verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+        verify(assetHistoricDataRepository, never()).deleteByDayDateAndAsset_Id(any(), any());
     }
 
     @Test
@@ -231,6 +235,8 @@ class HistoricalDataServiceImplTest {
         assertEquals(1, response.assetsProcessed());
         verify(assetRepository).findById(btcAsset.getId());
         verify(assetRepository, never()).findAllByOrderBySymbolAsc();
+        verify(assetHistoricDataRepository).deleteByDayDateAndAsset_Id(todayUtc, btcAsset.getId());
+        verify(assetHistoricDataRepository, never()).deleteByDayDate(todayUtc);
     }
 
     @Test
@@ -244,6 +250,8 @@ class HistoricalDataServiceImplTest {
         );
 
         assertEquals("Asset not found: " + unknownAssetId, ex.getMessage());
+        verify(assetHistoricDataRepository, never()).deleteByDayDate(any());
+        verify(assetHistoricDataRepository, never()).deleteByDayDateAndAsset_Id(any(), any());
         verify(assetHistoricDataRepository, never()).saveAll(any());
     }
 
