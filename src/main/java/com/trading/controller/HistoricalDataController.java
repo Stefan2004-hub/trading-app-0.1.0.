@@ -4,6 +4,7 @@ import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.historical.HistoricalDataService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@ConditionalOnProperty(name = "app.historical.enabled", havingValue = "true", matchIfMissing = true)
 @RequestMapping("/api/historical-data")
 public class HistoricalDataController {
 
