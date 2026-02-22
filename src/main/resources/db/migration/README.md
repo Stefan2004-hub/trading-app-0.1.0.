@@ -33,3 +33,7 @@ This folder stores ordered Flyway SQL migrations.
 - `V11__asset_historic_data_multi_asset.sql`
   - Rename BTC-only historical table to multi-asset table
   - Add `asset_id` FK and unique constraint on `(day_date, asset_id)`
+
+- `V12__add_coin_gecko_id_to_assets.sql`
+  - Add `assets.coin_gecko_id` for deterministic provider mapping
+  - Backfill known assets and enforce uniqueness when present

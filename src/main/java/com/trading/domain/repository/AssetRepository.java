@@ -11,6 +11,8 @@ public interface AssetRepository extends JpaRepository<Asset, UUID> {
 
     Optional<Asset> findBySymbolIgnoreCase(String symbol);
 
+    Optional<Asset> findByCoinGeckoIdIgnoreCase(String coinGeckoId);
+
     List<Asset> findAllByOrderBySymbolAsc();
 
     List<Asset> findBySymbolContainingIgnoreCaseOrNameContainingIgnoreCaseOrderBySymbolAsc(String symbol, String name);

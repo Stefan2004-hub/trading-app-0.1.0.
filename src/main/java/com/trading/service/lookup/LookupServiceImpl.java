@@ -35,7 +35,7 @@ public class LookupServiceImpl implements LookupService {
     }
 
     private static AssetLookupResponse toAssetResponse(Asset asset) {
-        return new AssetLookupResponse(asset.getId(), asset.getSymbol(), asset.getName());
+        return new AssetLookupResponse(asset.getId(), asset.getSymbol(), asset.getName(), asset.getCoinGeckoId());
     }
 
     private static ExchangeLookupResponse toExchangeResponse(Exchange exchange) {

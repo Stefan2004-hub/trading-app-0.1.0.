@@ -50,14 +50,14 @@ export const tradingApi = {
     ).then(extractLookupContent);
   },
 
-  createAsset(payload: { symbol: string; name: string }): Promise<AssetOption> {
+  createAsset(payload: { symbol: string; name: string; coinGeckoId?: string | null }): Promise<AssetOption> {
     return request<AssetOption>('/api/assets', {
       method: 'POST',
       body: payload
     });
   },
 
-  updateAsset(id: string, payload: { symbol: string; name: string }): Promise<AssetOption> {
+  updateAsset(id: string, payload: { symbol: string; name: string; coinGeckoId?: string | null }): Promise<AssetOption> {
     return request<AssetOption>(`/api/assets/${id}`, {
       method: 'PUT',
       body: payload

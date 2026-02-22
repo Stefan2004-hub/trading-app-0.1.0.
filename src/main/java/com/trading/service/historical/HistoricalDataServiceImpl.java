@@ -7,7 +7,6 @@ import com.trading.domain.repository.TransactionRepository;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
-import com.trading.service.historical.coingecko.CoinGeckoAssetResolver;
 import com.trading.service.historical.coingecko.CoinGeckoClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,18 +28,15 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
     private final TransactionRepository transactionRepository;
     private final AssetHistoricDataRepository assetHistoricDataRepository;
     private final CoinGeckoClient coinGeckoClient;
-    private final CoinGeckoAssetResolver coinGeckoAssetResolver;
 
     public HistoricalDataServiceImpl(
         TransactionRepository transactionRepository,
         AssetHistoricDataRepository assetHistoricDataRepository,
-        CoinGeckoClient coinGeckoClient,
-        CoinGeckoAssetResolver coinGeckoAssetResolver
+        CoinGeckoClient coinGeckoClient
     ) {
         this.transactionRepository = transactionRepository;
         this.assetHistoricDataRepository = assetHistoricDataRepository;
         this.coinGeckoClient = coinGeckoClient;
-        this.coinGeckoAssetResolver = coinGeckoAssetResolver;
     }
 
     @Override
@@ -91,11 +87,9 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         Asset asset,
         LocalDate forcedStartDate
     ) {
-        final String coinId;
-        try {
-            coinId = coinGeckoAssetResolver.resolveCoinId(asset.getSymbol(), asset.getName());
-        } catch (IllegalArgumentException ex) {
-            return new AssetSyncResult(0, ex.getMessage());
+        String coinId = normalizeCoinGeckoId(asset.getCoinGeckoId());
+        if (coinId == null) {
+            return new AssetSyncResult(0, "coin_gecko_id is not set");
         }
 
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
@@ -173,5 +167,12 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         int rowsInserted,
         String skippedReason
     ) {
+    }
+
+    private static String normalizeCoinGeckoId(String coinGeckoId) {
+        if (coinGeckoId == null || coinGeckoId.isBlank()) {
+            return null;
+        }
+        return coinGeckoId.trim().toLowerCase();
     }
 }

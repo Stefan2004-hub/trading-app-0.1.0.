@@ -23,6 +23,9 @@ public class Asset {
     @Column(name = "name", nullable = false, length = 50)
     private String name;
 
+    @Column(name = "coin_gecko_id", length = 120)
+    private String coinGeckoId;
+
     public UUID getId() {
         return id;
     }
@@ -45,5 +48,13 @@ public class Asset {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getCoinGeckoId() {
+        return coinGeckoId;
+    }
+
+    public void setCoinGeckoId(String coinGeckoId) {
+        this.coinGeckoId = coinGeckoId;
     }
 }

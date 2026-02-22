@@ -2,6 +2,7 @@ export interface AssetOption {
   id: string;
   symbol: string;
   name: string;
+  coinGeckoId: string | null;
 }
 
 export interface ExchangeOption {
