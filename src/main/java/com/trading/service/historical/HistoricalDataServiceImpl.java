@@ -8,6 +8,7 @@ import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
 import com.trading.service.historical.coingecko.CoinGeckoClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,6 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "app.historical.enabled", havingValue = "true", matchIfMissing = true)
 public class HistoricalDataServiceImpl implements HistoricalDataService {
 
     private static final int DEFAULT_LOOKBACK_DAYS = 30;
