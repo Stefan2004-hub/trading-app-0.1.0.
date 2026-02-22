@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { tradingApi } from '../api/tradingApi';
 import { AppHeader } from '../components/AppHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import type { HistoricalDataRow, HistoricalDataSyncResult } from '../types/trading';
+import type { AssetOption, HistoricalDataRow, HistoricalDataSyncResult } from '../types/trading';
 
 function formatUsd(value: string): string {
   const parsed = Number(value);
@@ -18,7 +18,14 @@ function formatUsd(value: string): string {
 }
 
 export function HistoricalDataPage(): JSX.Element {
+  const defaultPageSize = 20;
   const [rows, setRows] = useState<HistoricalDataRow[]>([]);
+  const [assetOptions, setAssetOptions] = useState<AssetOption[]>([]);
+  const [selectedRefreshAssetId, setSelectedRefreshAssetId] = useState('');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -28,18 +35,39 @@ export function HistoricalDataPage(): JSX.Element {
   const [skipped, setSkipped] = useState<HistoricalDataSyncResult['skippedAssets']>([]);
 
   useEffect(() => {
-    void loadRows();
+    void loadAssets();
   }, []);
 
-  async function loadRows(): Promise<void> {
+  useEffect(() => {
+    void loadRows(currentPage, pageSize);
+  }, [currentPage, pageSize]);
+
+  useEffect(() => {
+    if (totalPages > 0 && currentPage >= totalPages) {
+      setCurrentPage(totalPages - 1);
+    }
+  }, [currentPage, totalPages]);
+
+  async function loadRows(page: number, size: number): Promise<void> {
     setLoading(true);
     setError(null);
     try {
-      setRows(await tradingApi.listHistoricalData());
+      const response = await tradingApi.listHistoricalData({ page, size });
+      setRows(response.content ?? []);
+      setTotalPages(response.totalPages ?? 0);
+      setTotalElements(response.totalElements ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load historical data.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadAssets(): Promise<void> {
+    try {
+      setAssetOptions(await tradingApi.listAssets());
+    } catch {
+      setAssetOptions([]);
     }
   }
 
@@ -49,12 +77,16 @@ export function HistoricalDataPage(): JSX.Element {
     setInfo(null);
     setSkipped([]);
     try {
-      const response = await tradingApi.refreshHistoricalData();
+      const response = await tradingApi.refreshHistoricalData(selectedRefreshAssetId || undefined);
       setInfo(
         `Sync complete: ${response.rowsInserted} rows added across ${response.assetsProcessed} assets (${response.assetsSkipped} skipped).`
       );
       setSkipped(response.skippedAssets ?? []);
-      await loadRows();
+      if (currentPage === 0) {
+        await loadRows(0, pageSize);
+      } else {
+        setCurrentPage(0);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh historical data.');
     } finally {
@@ -74,7 +106,11 @@ export function HistoricalDataPage(): JSX.Element {
       );
       setSkipped(response.skippedAssets ?? []);
       setConfirmOpen(false);
-      await loadRows();
+      if (currentPage === 0) {
+        await loadRows(0, pageSize);
+      } else {
+        setCurrentPage(0);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clean and reset historical data.');
     } finally {
@@ -87,7 +123,7 @@ export function HistoricalDataPage(): JSX.Element {
       <AppHeader />
       <section className="workspace-panel">
         <h1>Historical Data</h1>
-        <p>Manage stored daily High, Low, and Close prices for assets in your portfolio.</p>
+        <p>Manage stored daily High, Low, and Close prices for tracked assets.</p>
 
         {error ? <p className="auth-error">{error}</p> : null}
         {info ? <p className="field-help">{info}</p> : null}
@@ -105,6 +141,22 @@ export function HistoricalDataPage(): JSX.Element {
         ) : null}
 
         <div className="transactions-title-actions historical-data-actions">
+          <label htmlFor="historical-refresh-scope" className="historical-refresh-scope">
+            <span>Refresh scope</span>
+            <select
+              id="historical-refresh-scope"
+              value={selectedRefreshAssetId}
+              onChange={(event) => setSelectedRefreshAssetId(event.target.value)}
+              disabled={loading || refreshing || resetting}
+            >
+              <option value="">All assets</option>
+              {assetOptions.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.symbol} ({asset.name})
+                </option>
+              ))}
+            </select>
+          </label>
           <button type="button" className="secondary" onClick={() => void handleRefresh()} disabled={loading || refreshing || resetting}>
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -147,13 +199,52 @@ export function HistoricalDataPage(): JSX.Element {
               </tbody>
             </table>
           </div>
+          <div className="transactions-pagination-footer">
+            <label htmlFor="historical-page-size">Rows per page</label>
+            <select
+              id="historical-page-size"
+              className="transactions-page-size-select"
+              value={pageSize}
+              disabled={loading || refreshing || resetting}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setCurrentPage(0);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="transactions-pagination-label">
+              Page {totalPages === 0 ? 0 : currentPage + 1} of {totalPages} ({totalElements} rows)
+            </span>
+            <div className="transactions-pagination-buttons">
+              <button
+                type="button"
+                className="secondary transactions-page-button"
+                onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
+                disabled={loading || refreshing || resetting || currentPage <= 0}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="secondary transactions-page-button"
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={loading || refreshing || resetting || totalPages === 0 || currentPage >= totalPages - 1}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </section>
       </section>
 
       <ConfirmDialog
         open={confirmOpen}
         title="Clean and Reset Historical Data?"
-        message="This will delete all stored historical data and re-sync only the last 30 days for your invested assets."
+        message="This will delete all stored historical data and re-sync only the last 30 days for all assets."
         confirmText="Clean & Reset"
         loadingText="Resetting..."
         loading={resetting}

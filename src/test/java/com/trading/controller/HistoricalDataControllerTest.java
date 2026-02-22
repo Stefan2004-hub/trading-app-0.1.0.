@@ -1,0 +1,81 @@
+package com.trading.controller;
+
+import com.trading.dto.historical.HistoricalDataRowResponse;
+import com.trading.dto.historical.HistoricalDataSyncResponse;
+import com.trading.security.CurrentUserProvider;
+import com.trading.service.historical.HistoricalDataService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class HistoricalDataControllerTest {
+
+    @Mock
+    private HistoricalDataService historicalDataService;
+    @Mock
+    private CurrentUserProvider currentUserProvider;
+
+    private HistoricalDataController historicalDataController;
+
+    @BeforeEach
+    void setUp() {
+        historicalDataController = new HistoricalDataController(historicalDataService, currentUserProvider);
+    }
+
+    @Test
+    void listDelegatesToPagedServiceWithExplicitParams() {
+        UUID userId = UUID.randomUUID();
+        Page<HistoricalDataRowResponse> page = new PageImpl<>(
+            List.of(),
+            PageRequest.of(1, 50),
+            0
+        );
+        when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
+        when(historicalDataService.listForUser(userId, 1, 50)).thenReturn(page);
+
+        Page<HistoricalDataRowResponse> response = historicalDataController.list(1, 50).getBody();
+
+        assertEquals(page, response);
+        verify(historicalDataService).listForUser(userId, 1, 50);
+    }
+
+    @Test
+    void refreshWithoutAssetIdDelegatesGlobalSync() {
+        UUID userId = UUID.randomUUID();
+        HistoricalDataSyncResponse syncResponse = new HistoricalDataSyncResponse(3, 10, 1, List.of());
+        when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
+        when(historicalDataService.syncIncremental(userId, null)).thenReturn(syncResponse);
+
+        HistoricalDataSyncResponse response = historicalDataController.refresh(null).getBody();
+
+        assertEquals(syncResponse, response);
+        verify(historicalDataService).syncIncremental(userId, null);
+    }
+
+    @Test
+    void refreshWithAssetIdDelegatesSingleAssetSync() {
+        UUID userId = UUID.randomUUID();
+        UUID assetId = UUID.randomUUID();
+        HistoricalDataSyncResponse syncResponse = new HistoricalDataSyncResponse(1, 2, 0, List.of());
+        when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
+        when(historicalDataService.syncIncremental(userId, assetId)).thenReturn(syncResponse);
+
+        HistoricalDataSyncResponse response = historicalDataController.refresh(assetId).getBody();
+
+        assertEquals(syncResponse, response);
+        verify(historicalDataService).syncIncremental(userId, assetId);
+    }
+}

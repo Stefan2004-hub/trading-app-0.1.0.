@@ -150,12 +150,20 @@ export const tradingApi = {
     return request<AssetSummary[]>('/api/portfolio/asset-summary');
   },
 
-  listHistoricalData(): Promise<HistoricalDataRow[]> {
-    return request<HistoricalDataRow[]>('/api/historical-data');
+  listHistoricalData(params?: { page?: number; size?: number }): Promise<PaginatedResponse<HistoricalDataRow>> {
+    const queryParams = new URLSearchParams();
+    queryParams.set('page', String(params?.page ?? 0));
+    queryParams.set('size', String(params?.size ?? 20));
+    return request<PaginatedResponse<HistoricalDataRow>>(`/api/historical-data?${queryParams.toString()}`);
   },
 
-  refreshHistoricalData(): Promise<HistoricalDataSyncResult> {
-    return request<HistoricalDataSyncResult>('/api/historical-data/refresh', {
+  refreshHistoricalData(assetId?: string): Promise<HistoricalDataSyncResult> {
+    const queryParams = new URLSearchParams();
+    if (assetId) {
+      queryParams.set('assetId', assetId);
+    }
+    const query = queryParams.toString();
+    return request<HistoricalDataSyncResult>(`/api/historical-data/refresh${query ? `?${query}` : ''}`, {
       method: 'POST'
     });
   },

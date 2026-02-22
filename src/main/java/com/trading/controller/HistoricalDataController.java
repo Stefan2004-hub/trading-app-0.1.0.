@@ -4,17 +4,21 @@ import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.historical.HistoricalDataService;
+import jakarta.validation.constraints.Min;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
+@Validated
 @ConditionalOnProperty(name = "app.historical.enabled", havingValue = "true", matchIfMissing = true)
 @RequestMapping("/api/historical-data")
 public class HistoricalDataController {
@@ -31,15 +35,20 @@ public class HistoricalDataController {
     }
 
     @GetMapping
-    public ResponseEntity<List<HistoricalDataRowResponse>> list() {
+    public ResponseEntity<Page<HistoricalDataRowResponse>> list(
+        @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+        @RequestParam(name = "size", defaultValue = "20") @Min(1) int size
+    ) {
         UUID userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(historicalDataService.listForUser(userId));
+        return ResponseEntity.ok(historicalDataService.listForUser(userId, page, size));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<HistoricalDataSyncResponse> refresh() {
+    public ResponseEntity<HistoricalDataSyncResponse> refresh(
+        @RequestParam(name = "assetId", required = false) UUID assetId
+    ) {
         UUID userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(historicalDataService.syncIncremental(userId));
+        return ResponseEntity.ok(historicalDataService.syncIncremental(userId, assetId));
     }
 
     @PostMapping("/clean-reset")
