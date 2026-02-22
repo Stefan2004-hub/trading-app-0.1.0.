@@ -246,4 +246,18 @@ class HistoricalDataServiceImplTest {
         assertEquals("Asset not found: " + unknownAssetId, ex.getMessage());
         verify(assetHistoricDataRepository, never()).saveAll(any());
     }
+
+    @Test
+    void listAssetsNeedingRefreshTodayReturnsMissingAssetsForTodayUtc() {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        when(assetRepository.findAssetsMissingHistoricalDataForDay(todayUtc)).thenReturn(List.of(btcAsset));
+
+        var response = historicalDataService.listAssetsNeedingRefreshToday(userId);
+
+        assertEquals(1, response.size());
+        assertEquals(btcAsset.getId(), response.get(0).assetId());
+        assertEquals("BTC", response.get(0).assetSymbol());
+        assertEquals("Bitcoin", response.get(0).assetName());
+        assertEquals(todayUtc, response.get(0).missingDate());
+    }
 }

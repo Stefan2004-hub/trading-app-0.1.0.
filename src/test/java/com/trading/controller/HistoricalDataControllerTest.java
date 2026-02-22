@@ -2,6 +2,7 @@ package com.trading.controller;
 
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
+import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.historical.HistoricalDataService;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,5 +78,25 @@ class HistoricalDataControllerTest {
 
         assertEquals(syncResponse, response);
         verify(historicalDataService).syncIncremental(userId, assetId);
+    }
+
+    @Test
+    void listMissingTodayDelegatesToService() {
+        UUID userId = UUID.randomUUID();
+        List<HistoricalAssetRefreshStatusResponse> items = List.of(
+            new HistoricalAssetRefreshStatusResponse(
+                UUID.randomUUID(),
+                "BTC",
+                "Bitcoin",
+                java.time.LocalDate.of(2026, 2, 22)
+            )
+        );
+        when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
+        when(historicalDataService.listAssetsNeedingRefreshToday(userId)).thenReturn(items);
+
+        List<HistoricalAssetRefreshStatusResponse> response = historicalDataController.listMissingToday().getBody();
+
+        assertEquals(items, response);
+        verify(historicalDataService).listAssetsNeedingRefreshToday(userId);
     }
 }

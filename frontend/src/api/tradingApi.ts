@@ -7,6 +7,7 @@ import type {
   AssetOption,
   ExchangeOption,
   HistoricalDataRow,
+  HistoricalMissingAsset,
   HistoricalDataSyncResult,
   PricePeakItem,
   PaginatedResponse,
@@ -155,6 +156,10 @@ export const tradingApi = {
     queryParams.set('page', String(params?.page ?? 0));
     queryParams.set('size', String(params?.size ?? 20));
     return request<PaginatedResponse<HistoricalDataRow>>(`/api/historical-data?${queryParams.toString()}`);
+  },
+
+  listHistoricalAssetsMissingToday(): Promise<HistoricalMissingAsset[]> {
+    return request<HistoricalMissingAsset[]>('/api/historical-data/missing-today');
   },
 
   refreshHistoricalData(assetId?: string): Promise<HistoricalDataSyncResult> {

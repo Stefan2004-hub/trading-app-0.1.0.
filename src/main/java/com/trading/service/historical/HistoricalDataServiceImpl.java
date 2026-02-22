@@ -4,6 +4,7 @@ import com.trading.domain.entity.Asset;
 import com.trading.domain.entity.AssetHistoricData;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AssetHistoricDataRepository;
+import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
@@ -54,6 +55,20 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
     public Page<HistoricalDataRowResponse> listForUser(UUID userId, int page, int size) {
         return assetHistoricDataRepository.findAllForUserInvestedAssets(userId, PageRequest.of(page, size))
             .map(this::toResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<HistoricalAssetRefreshStatusResponse> listAssetsNeedingRefreshToday(UUID userId) {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        return assetRepository.findAssetsMissingHistoricalDataForDay(todayUtc).stream()
+            .map((asset) -> new HistoricalAssetRefreshStatusResponse(
+                asset.getId(),
+                asset.getSymbol(),
+                asset.getName(),
+                todayUtc
+            ))
+            .toList();
     }
 
     @Override
