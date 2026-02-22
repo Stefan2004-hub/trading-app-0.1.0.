@@ -15,6 +15,7 @@ import java.util.UUID;
 public interface AssetHistoricDataRepository extends JpaRepository<AssetHistoricData, UUID> {
 
     void deleteByDayDate(LocalDate dayDate);
+    void deleteByDayDateAndAsset_Id(LocalDate dayDate, UUID assetId);
 
     @Query("select max(row.dayDate) from AssetHistoricData row where row.asset.id = :assetId")
     LocalDate findLatestDayDateByAssetId(@Param("assetId") UUID assetId);
