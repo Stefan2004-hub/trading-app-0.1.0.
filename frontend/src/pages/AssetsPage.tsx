@@ -6,9 +6,10 @@ import type { AssetOption } from '../types/trading';
 interface AssetFormState {
   symbol: string;
   name: string;
+  coinGeckoId: string;
 }
 
-const EMPTY_FORM: AssetFormState = { symbol: '', name: '' };
+const EMPTY_FORM: AssetFormState = { symbol: '', name: '', coinGeckoId: '' };
 
 export function AssetsPage(): JSX.Element {
   const [assets, setAssets] = useState<AssetOption[]>([]);
@@ -44,7 +45,12 @@ export function AssetsPage(): JSX.Element {
     event.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = { symbol: form.symbol.trim().toUpperCase(), name: form.name.trim() };
+    const coinGeckoId = form.coinGeckoId.trim().toLowerCase();
+    const payload = {
+      symbol: form.symbol.trim().toUpperCase(),
+      name: form.name.trim(),
+      coinGeckoId: coinGeckoId.length > 0 ? coinGeckoId : null
+    };
 
     try {
       if (editingId) {
@@ -78,7 +84,7 @@ export function AssetsPage(): JSX.Element {
 
   function startEdit(asset: AssetOption): void {
     setEditingId(asset.id);
-    setForm({ symbol: asset.symbol, name: asset.name });
+    setForm({ symbol: asset.symbol, name: asset.name, coinGeckoId: asset.coinGeckoId ?? '' });
   }
 
   return (
@@ -119,6 +125,15 @@ export function AssetsPage(): JSX.Element {
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
           />
 
+          <label htmlFor="asset-coingecko-id">CoinGecko ID (optional)</label>
+          <input
+            id="asset-coingecko-id"
+            value={form.coinGeckoId}
+            maxLength={120}
+            placeholder="e.g. bitcoin, polygon-ecosystem-token"
+            onChange={(event) => setForm((current) => ({ ...current, coinGeckoId: event.target.value }))}
+          />
+
           <div className="transaction-actions">
             <button type="submit" disabled={saving}>
               {saving ? 'Saving...' : editingId ? 'Update Asset' : 'Create Asset'}
@@ -147,6 +162,7 @@ export function AssetsPage(): JSX.Element {
                 <tr>
                   <th>Symbol</th>
                   <th>Name</th>
+                  <th>CoinGecko ID</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -155,6 +171,7 @@ export function AssetsPage(): JSX.Element {
                   <tr key={asset.id}>
                     <td>{asset.symbol}</td>
                     <td>{asset.name}</td>
+                    <td>{asset.coinGeckoId ?? '-'}</td>
                     <td>
                       <div className="transaction-actions">
                         <button type="button" className="row-action-button row-action-edit" onClick={() => startEdit(asset)}>
@@ -169,7 +186,7 @@ export function AssetsPage(): JSX.Element {
                 ))}
                 {!loading && assets.length === 0 ? (
                   <tr>
-                    <td colSpan={3}>No assets found.</td>
+                    <td colSpan={4}>No assets found.</td>
                   </tr>
                 ) : null}
               </tbody>

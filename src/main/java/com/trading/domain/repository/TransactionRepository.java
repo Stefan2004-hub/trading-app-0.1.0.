@@ -1,6 +1,7 @@
 package com.trading.domain.repository;
 
 import com.trading.domain.entity.Transaction;
+import com.trading.domain.entity.Asset;
 import com.trading.domain.projection.UserAssetLatestPriceProjection;
 import com.trading.domain.projection.UserAssetRealizedPnlProjection;
 import com.trading.domain.projection.UserAssetSummaryProjection;
@@ -16,6 +17,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
@@ -55,6 +57,30 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> findAllByUser_IdAndIdIn(UUID userId, Collection<UUID> ids);
 
     Optional<Transaction> findByIdAndUser_Id(UUID transactionId, UUID userId);
+
+    @Query(
+        """
+            select distinct tx.asset
+            from Transaction tx
+            where tx.user.id = :userId
+              and tx.transactionType = com.trading.domain.enums.TransactionType.BUY
+            """
+    )
+    List<Asset> findDistinctInvestedAssetsByUserId(@Param("userId") UUID userId);
+
+    @Query(
+        """
+            select min(tx.transactionDate)
+            from Transaction tx
+            where tx.user.id = :userId
+              and tx.asset.id = :assetId
+              and tx.transactionType = com.trading.domain.enums.TransactionType.BUY
+            """
+    )
+    OffsetDateTime findEarliestBuyTransactionDate(
+        @Param("userId") UUID userId,
+        @Param("assetId") UUID assetId
+    );
 
     @Query(
         value = """

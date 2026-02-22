@@ -45,12 +45,15 @@ public class AssetServiceImpl implements AssetService {
         Objects.requireNonNull(request, "request is required");
         String symbol = normalizeSymbol(request.symbol());
         String name = normalizeName(request.name());
+        String coinGeckoId = normalizeCoinGeckoId(request.coinGeckoId());
 
         assertUniqueSymbol(symbol, null);
+        assertUniqueCoinGeckoId(coinGeckoId, null);
 
         Asset asset = new Asset();
         asset.setSymbol(symbol);
         asset.setName(name);
+        asset.setCoinGeckoId(coinGeckoId);
         return toResponse(assetRepository.save(asset));
     }
 
@@ -60,12 +63,15 @@ public class AssetServiceImpl implements AssetService {
         Objects.requireNonNull(request, "request is required");
         String symbol = normalizeSymbol(request.symbol());
         String name = normalizeName(request.name());
+        String coinGeckoId = normalizeCoinGeckoId(request.coinGeckoId());
 
         Asset existing = requireAsset(id);
         assertUniqueSymbol(symbol, id);
+        assertUniqueCoinGeckoId(coinGeckoId, id);
 
         existing.setSymbol(symbol);
         existing.setName(name);
+        existing.setCoinGeckoId(coinGeckoId);
         return toResponse(assetRepository.save(existing));
     }
 
@@ -89,12 +95,31 @@ public class AssetServiceImpl implements AssetService {
             });
     }
 
+    private void assertUniqueCoinGeckoId(String coinGeckoId, UUID currentId) {
+        if (coinGeckoId == null) {
+            return;
+        }
+        assetRepository.findByCoinGeckoIdIgnoreCase(coinGeckoId)
+            .filter((row) -> !row.getId().equals(currentId))
+            .ifPresent((row) -> {
+                throw new IllegalArgumentException("Asset CoinGecko ID already exists: " + coinGeckoId);
+            });
+    }
+
     private static String normalizeSymbol(String symbol) {
         return symbol == null ? null : symbol.trim().toUpperCase(Locale.ROOT);
     }
 
     private static String normalizeName(String name) {
         return name == null ? null : name.trim();
+    }
+
+    private static String normalizeCoinGeckoId(String coinGeckoId) {
+        if (coinGeckoId == null) {
+            return null;
+        }
+        String normalized = coinGeckoId.trim().toLowerCase(Locale.ROOT);
+        return normalized.isBlank() ? null : normalized;
     }
 
     private static String normalizeSearch(String search) {
@@ -105,6 +130,6 @@ public class AssetServiceImpl implements AssetService {
     }
 
     private static AssetLookupResponse toResponse(Asset asset) {
-        return new AssetLookupResponse(asset.getId(), asset.getSymbol(), asset.getName());
+        return new AssetLookupResponse(asset.getId(), asset.getSymbol(), asset.getName(), asset.getCoinGeckoId());
     }
 }

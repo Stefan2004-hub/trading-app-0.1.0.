@@ -17,6 +17,8 @@
 | `GOOGLE_CLIENT_SECRET` | Yes (Google login) | sample value in `application.yml` | Google OAuth client secret |
 | `CORS_ALLOWED_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin |
 | `APP_FRONTEND_BASE_URL` | No | `http://localhost:5173` | Frontend base URL for OAuth2 success/failure redirects |
+| `APP_COINGECKO_BASE_URL` | No | `https://api.coingecko.com/api/v3` | CoinGecko API base URL |
+| `APP_COINGECKO_API_KEY` | No | empty | Optional CoinGecko API key (`x-cg-demo-api-key`) for higher limits |
 
 ## Frontend (frontend/.env.example, local values in frontend/.env.local)
 | Variable | Required | Default | Purpose |

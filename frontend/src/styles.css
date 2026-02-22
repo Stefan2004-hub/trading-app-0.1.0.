@@ -288,6 +288,10 @@ p {
   gap: 0.6rem;
 }
 
+.historical-data-actions {
+  margin-top: 1rem;
+}
+
 .open-buy-modal-button {
   width: auto;
   margin: 0;
