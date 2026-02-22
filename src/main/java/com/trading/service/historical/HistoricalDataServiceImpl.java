@@ -52,6 +52,9 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
     @Override
     @Transactional
     public HistoricalDataSyncResponse syncIncremental(UUID userId) {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        assetHistoricDataRepository.deleteByDayDate(today);
+
         List<Asset> investedAssets = transactionRepository.findDistinctInvestedAssetsByUserId(userId);
         int rowsInserted = 0;
         List<SkippedAssetSyncItem> skippedAssets = new ArrayList<>();
