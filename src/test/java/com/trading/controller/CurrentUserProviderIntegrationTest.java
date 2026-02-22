@@ -9,6 +9,7 @@ import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
+import com.trading.service.marketalert.MarketAlertService;
 import com.trading.service.transaction.AccumulationTradeService;
 import com.trading.service.transaction.TransactionService;
 import com.trading.service.user.UserPreferenceService;
@@ -60,6 +61,8 @@ class CurrentUserProviderIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+    @MockBean
+    private MarketAlertService marketAlertService;
 
     @MockBean
     private AssetService assetService;
