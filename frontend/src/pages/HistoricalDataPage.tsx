@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { tradingApi } from '../api/tradingApi';
 import { AppHeader } from '../components/AppHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import type { AssetOption, HistoricalDataRow, HistoricalDataSyncResult } from '../types/trading';
+import type { AssetOption, HistoricalDataRow, HistoricalDataSyncResult, HistoricalMissingAsset } from '../types/trading';
 
 function formatUsd(value: string): string {
   const parsed = Number(value);
@@ -21,6 +21,7 @@ export function HistoricalDataPage(): JSX.Element {
   const defaultPageSize = 20;
   const [rows, setRows] = useState<HistoricalDataRow[]>([]);
   const [assetOptions, setAssetOptions] = useState<AssetOption[]>([]);
+  const [missingAssets, setMissingAssets] = useState<HistoricalMissingAsset[]>([]);
   const [selectedRefreshAssetId, setSelectedRefreshAssetId] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
@@ -36,6 +37,7 @@ export function HistoricalDataPage(): JSX.Element {
 
   useEffect(() => {
     void loadAssets();
+    void loadMissingAssets();
   }, []);
 
   useEffect(() => {
@@ -71,13 +73,22 @@ export function HistoricalDataPage(): JSX.Element {
     }
   }
 
-  async function handleRefresh(): Promise<void> {
+  async function loadMissingAssets(): Promise<void> {
+    try {
+      setMissingAssets(await tradingApi.listHistoricalAssetsMissingToday());
+    } catch {
+      setMissingAssets([]);
+    }
+  }
+
+  async function handleRefresh(assetIdOverride?: string): Promise<void> {
     setRefreshing(true);
     setError(null);
     setInfo(null);
     setSkipped([]);
     try {
-      const response = await tradingApi.refreshHistoricalData(selectedRefreshAssetId || undefined);
+      const resolvedAssetId = assetIdOverride ?? selectedRefreshAssetId;
+      const response = await tradingApi.refreshHistoricalData(resolvedAssetId || undefined);
       setInfo(
         `Sync complete: ${response.rowsInserted} rows added across ${response.assetsProcessed} assets (${response.assetsSkipped} skipped).`
       );
@@ -87,6 +98,7 @@ export function HistoricalDataPage(): JSX.Element {
       } else {
         setCurrentPage(0);
       }
+      await loadMissingAssets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh historical data.');
     } finally {
@@ -111,6 +123,7 @@ export function HistoricalDataPage(): JSX.Element {
       } else {
         setCurrentPage(0);
       }
+      await loadMissingAssets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clean and reset historical data.');
     } finally {
@@ -164,6 +177,47 @@ export function HistoricalDataPage(): JSX.Element {
             Clean &amp; Reset
           </button>
         </div>
+
+        <section className="history-panel history-panel-prominent">
+          <h2>Assets Missing Today&apos;s History (UTC)</h2>
+          {missingAssets.length === 0 ? <p>All assets have historical data for today.</p> : null}
+          {missingAssets.length > 0 ? (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Asset</th>
+                    <th>Missing Date</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {missingAssets.map((asset) => (
+                    <tr key={asset.assetId}>
+                      <td>
+                        {asset.assetSymbol} ({asset.assetName})
+                      </td>
+                      <td>{asset.missingDate}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="row-action-button row-action-edit"
+                          disabled={loading || refreshing || resetting}
+                          onClick={() => {
+                            setSelectedRefreshAssetId(asset.assetId);
+                            void handleRefresh(asset.assetId);
+                          }}
+                        >
+                          Refresh Asset
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+        </section>
 
         <section className="history-panel history-panel-prominent">
           <h2>Stored Prices</h2>
