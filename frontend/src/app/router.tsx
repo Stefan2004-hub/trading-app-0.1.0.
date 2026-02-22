@@ -9,6 +9,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { AssetsPage } from '../pages/AssetsPage';
 import { AlertsPage } from '../pages/AlertsPage';
+import { MarketAlertsPage } from '../pages/MarketAlertsPage';
 import { HistoricalDataPage } from '../pages/HistoricalDataPage';
 import { PricePeaksPage } from '../pages/PricePeaksPage';
 import { StrategiesPage } from '../pages/StrategiesPage';
@@ -72,6 +73,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <AlertsPage />
+      </RequireAuth>
+    )
+  },
+  {
+    path: '/market-alerts',
+    element: (
+      <RequireAuth>
+        <MarketAlertsPage />
       </RequireAuth>
     )
   },
