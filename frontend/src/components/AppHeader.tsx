@@ -20,6 +20,7 @@ export function AppHeader(): JSX.Element {
     { label: 'Assets', to: '/assets' },
     { label: 'Exchanges', to: '/exchanges' },
     { label: 'Strategies', to: '/strategies' },
+    { label: 'Maintenance', to: '/maintenance' },
   ];
 
   useEffect(() => {

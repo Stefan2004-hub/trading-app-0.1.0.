@@ -230,6 +230,16 @@ export const tradingApi = {
     return { blob: response.blob, fileName };
   },
 
+  async downloadSqlBackup(): Promise<{ blob: Blob; fileName: string }> {
+    const response = await requestBlob('/api/system/sql-backup', {
+      method: 'GET'
+    });
+    const contentDisposition = response.headers.get('content-disposition') ?? '';
+    const fileNameMatch = contentDisposition.match(/filename=\"([^\"]+)\"/i);
+    const fileName = fileNameMatch?.[1] ?? 'trading-sql-backup.sql';
+    return { blob: response.blob, fileName };
+  },
+
   listAccumulationTrades(params?: {
     status?: AccumulationTradeStatus;
     userId?: string;

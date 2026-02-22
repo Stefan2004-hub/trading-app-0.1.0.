@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
@@ -78,6 +79,9 @@ class CurrentUserProviderIntegrationTest {
 
     @MockBean
     private UserPreferenceService userPreferenceService;
+
+    @MockBean
+    private BackupService backupService;
 
     @Test
     void protectedEndpointExposesCurrentUserIdFromSecurityContext() throws Exception {

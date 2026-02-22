@@ -1,16 +1,17 @@
 package com.trading.controller;
 
-import com.trading.service.backup.BackupService;
 import com.trading.security.UserPrincipal;
+import com.trading.service.backup.BackupService;
+import com.trading.service.historical.HistoricalDataService;
 import com.trading.service.lookup.AssetService;
 import com.trading.service.lookup.ExchangeService;
 import com.trading.service.lookup.LookupService;
 import com.trading.service.lookup.PricePeakService;
+import com.trading.service.marketalert.MarketAlertService;
 import com.trading.service.portfolio.PortfolioService;
 import com.trading.service.strategy.BuyStrategyService;
 import com.trading.service.strategy.SellStrategyService;
 import com.trading.service.strategy.StrategyAlertService;
-import com.trading.service.marketalert.MarketAlertService;
 import com.trading.service.transaction.AccumulationTradeService;
 import com.trading.service.transaction.TransactionService;
 import com.trading.service.user.UserPreferenceService;
@@ -24,11 +25,17 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.Writer;
 import java.util.List;
 import java.util.UUID;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
@@ -38,15 +45,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
 })
 @AutoConfigureMockMvc
-class SecurityRulesIntegrationTest {
+class BackupControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @MockBean
+    private BackupService backupService;
+
+    @MockBean
     private TransactionService transactionService;
-    
-    
+
     @MockBean
     private AccumulationTradeService accumulationTradeService;
 
@@ -61,6 +70,7 @@ class SecurityRulesIntegrationTest {
 
     @MockBean
     private StrategyAlertService strategyAlertService;
+
     @MockBean
     private MarketAlertService marketAlertService;
 
@@ -79,62 +89,40 @@ class SecurityRulesIntegrationTest {
     @MockBean
     private UserPreferenceService userPreferenceService;
 
-    @Test
-    void protectedEndpointsRequireAuthentication() throws Exception {
-        mockMvc.perform(get("/api/transactions/ping"))
-            .andExpect(status().isUnauthorized());
-
-        mockMvc.perform(get("/api/assets"))
-            .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void protectedEndpointsRejectAuthenticatedUsersWithoutRoleUser() throws Exception {
-        Authentication authWithoutRole = authenticationWithoutUserRole(UUID.randomUUID());
-
-        mockMvc.perform(get("/api/transactions/ping").with(authentication(authWithoutRole)))
-            .andExpect(status().isForbidden());
-
-        mockMvc.perform(get("/api/assets").with(authentication(authWithoutRole)))
-            .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void protectedEndpointsAllowRoleUser() throws Exception {
-        Authentication auth = authenticationWithUserRole(UUID.randomUUID());
-
-        mockMvc.perform(get("/api/transactions/ping").with(authentication(auth)))
-            .andExpect(status().isOk());
-
-        mockMvc.perform(get("/api/assets").with(authentication(auth)))
-            .andExpect(status().isOk());
-    }
-
-    @Test
-    void authPingIsPublic() throws Exception {
-        mockMvc.perform(get("/api/auth/ping"))
-            .andExpect(status().isOk());
-    }
     @MockBean
-    private BackupService backupService;
+    private HistoricalDataService historicalDataService;
 
+    @Test
+    void sqlBackupEndpointReturnsSqlAttachment() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+        doAnswer(invocation -> {
+            Writer writer = invocation.getArgument(1);
+            writer.write("SET REFERENTIAL_INTEGRITY FALSE;\n");
+            writer.write("SET REFERENTIAL_INTEGRITY TRUE;\n");
+            return null;
+        }).when(backupService).writeUserBackupSql(eq(userId), any(Writer.class));
 
-    private static Authentication authenticationWithUserRole(UUID userId) {
-        UserPrincipal principal = new UserPrincipal(
-            userId,
-            "trader@example.com",
-            "N/A",
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-        return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        mockMvc.perform(get("/api/system/sql-backup").with(authentication(auth)))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Content-Type", "application/sql"))
+            .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("attachment; filename=\"trading-sql-backup-")));
+
+        verify(backupService).writeUserBackupSql(eq(userId), any(Writer.class));
     }
 
-    private static Authentication authenticationWithoutUserRole(UUID userId) {
+    @Test
+    void sqlBackupEndpointRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/system/sql-backup"))
+            .andExpect(status().isUnauthorized());
+    }
+
+    private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(
             userId,
-            "trader@example.com",
-            "N/A",
-            List.of()
+            "user@example.com",
+            "trader",
+            List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
         return new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
     }

@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.enums.TransactionAccumulationRole;
@@ -319,6 +320,9 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.violations[*].field", hasItem("inputMode")))
             .andExpect(jsonPath("$.violations[*].field", hasItem("unitPriceUsd")));
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(

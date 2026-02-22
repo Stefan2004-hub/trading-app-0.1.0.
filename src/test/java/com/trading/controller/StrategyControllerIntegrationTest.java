@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.domain.enums.StrategyAlertStatus;
 import com.trading.domain.enums.StrategyType;
 import com.trading.dto.strategy.BuyStrategyResponse;
@@ -243,6 +244,9 @@ class StrategyControllerIntegrationTest {
         mockMvc.perform(delete("/api/strategies/alerts/{id}", UUID.randomUUID()))
             .andExpect(status().isUnauthorized());
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(
