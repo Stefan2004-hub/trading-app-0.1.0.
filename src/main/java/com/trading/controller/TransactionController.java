@@ -2,6 +2,7 @@ package com.trading.controller;
 
 import com.trading.domain.enums.TransactionListView;
 import com.trading.dto.transaction.BuyTransactionRequest;
+import com.trading.dto.transaction.CleanHistoryBackup;
 import com.trading.dto.transaction.SellTransactionRequest;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
@@ -12,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -91,5 +93,17 @@ public class TransactionController {
         UUID userId = currentUserProvider.getCurrentUserId();
         transactionService.deleteTransaction(userId, transactionId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping(value = "/clean-history", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public ResponseEntity<byte[]> cleanHistory() {
+        UUID userId = currentUserProvider.getCurrentUserId();
+        CleanHistoryBackup backup = transactionService.cleanHistory(userId);
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ))
+            .header("Content-Disposition", "attachment; filename=\"" + backup.fileName() + "\"")
+            .body(backup.fileContent());
     }
 }

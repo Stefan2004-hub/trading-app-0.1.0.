@@ -1,4 +1,4 @@
-import { request } from './http';
+import { request, requestBlob } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AccumulationTradeItem,
@@ -200,6 +200,16 @@ export const tradingApi = {
     return request<void>(`/api/transactions/${id}`, {
       method: 'DELETE'
     });
+  },
+
+  async cleanHistory(): Promise<{ blob: Blob; fileName: string }> {
+    const response = await requestBlob('/api/transactions/clean-history', {
+      method: 'POST'
+    });
+    const contentDisposition = response.headers.get('content-disposition') ?? '';
+    const fileNameMatch = contentDisposition.match(/filename="([^"]+)"/i);
+    const fileName = fileNameMatch?.[1] ?? 'trading-history-backup.xlsx';
+    return { blob: response.blob, fileName };
   },
 
   listAccumulationTrades(params?: {

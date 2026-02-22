@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { AccumulationStrategySection } from '../components/AccumulationStrategySection';
 import { AppHeader } from '../components/AppHeader';
 import { BuyTransactionModal } from '../components/BuyTransactionModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { OpenTransactionSummaryCards } from '../components/OpenTransactionSummaryCards';
 import { TransactionHistoryTable } from '../components/TransactionHistoryTable';
 import { ToastContainer, type ToastItem, type ToastVariant } from '../components/ui/toast';
+import { tradingApi } from '../api/tradingApi';
 import { multiplyDecimal } from '../utils/decimal';
 import {
   clearTradingError,
@@ -45,6 +47,8 @@ export function TransactionsPage(): JSX.Element {
   const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [transactionView, setTransactionView] = useState<TransactionView>('OPEN');
+  const [isCleanHistoryConfirmOpen, setIsCleanHistoryConfirmOpen] = useState(false);
+  const [cleaningHistory, setCleaningHistory] = useState(false);
   const {
     assets,
     exchanges,
@@ -193,6 +197,31 @@ export function TransactionsPage(): JSX.Element {
     [authUserId, dispatch, refreshTransactionsForSearch, showToast]
   );
 
+  const submitCleanHistory = useCallback(async (): Promise<void> => {
+    setCleaningHistory(true);
+    dispatch(clearTradingError());
+    try {
+      const { blob, fileName } = await tradingApi.cleanHistory();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+
+      await dispatch(loadTradingBootstrap(authUserId)).unwrap();
+      await refreshTransactionsForSearch();
+      showToast('History purged. Check your device for the backup file.', 'success');
+      setIsCleanHistoryConfirmOpen(false);
+    } catch {
+      showToast('Failed to clean history. Please try again.', 'error');
+    } finally {
+      setCleaningHistory(false);
+    }
+  }, [authUserId, dispatch, refreshTransactionsForSearch, showToast]);
+
   return (
     <main className="workspace-shell">
       <AppHeader />
@@ -204,16 +233,26 @@ export function TransactionsPage(): JSX.Element {
 
         <section className="transactions-title-row">
           <h2>Transaction List</h2>
-          <button
-            type="button"
-            className="open-buy-modal-button"
-            onClick={() => {
-              setBuyModalContext({ accumulationTradeId: null });
-              setIsBuyModalOpen(true);
-            }}
-          >
-            Buy
-          </button>
+          <div className="transactions-title-actions">
+            <button
+              type="button"
+              className="clean-history-button"
+              onClick={() => setIsCleanHistoryConfirmOpen(true)}
+              disabled={cleaningHistory}
+            >
+              Clean History
+            </button>
+            <button
+              type="button"
+              className="open-buy-modal-button"
+              onClick={() => {
+                setBuyModalContext({ accumulationTradeId: null });
+                setIsBuyModalOpen(true);
+              }}
+            >
+              Buy
+            </button>
+          </div>
         </section>
 
         <div className="search-controls">
@@ -361,6 +400,22 @@ export function TransactionsPage(): JSX.Element {
             showToast('Failed to complete accumulation trade. Please try again.', 'error');
             await refreshTransactionsForSearch();
             return false;
+          }}
+        />
+        <ConfirmDialog
+          open={isCleanHistoryConfirmOpen}
+          title="Clean History"
+          message="This will export your matched BUY/SELL history to Excel and permanently remove those closed transactions and linked accumulation trades. Open BUY positions are kept."
+          confirmText="Clean History"
+          loadingText="Generating Report & Cleaning..."
+          loading={cleaningHistory}
+          onCancel={() => {
+            if (!cleaningHistory) {
+              setIsCleanHistoryConfirmOpen(false);
+            }
+          }}
+          onConfirm={() => {
+            void submitCleanHistory();
           }}
         />
       </section>
