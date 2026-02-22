@@ -45,4 +45,6 @@ public interface AssetHistoricDataRepository extends JpaRepository<AssetHistoric
             """
     )
     List<AssetHistoricData> findAllForUserInvestedAssets(@Param("userId") UUID userId);
+
+    List<AssetHistoricData> findAllByAsset_IdOrderByDayDateAsc(UUID assetId);
 }

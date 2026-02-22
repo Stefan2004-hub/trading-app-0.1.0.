@@ -37,3 +37,7 @@ This folder stores ordered Flyway SQL migrations.
 - `V12__add_coin_gecko_id_to_assets.sql`
   - Add `assets.coin_gecko_id` for deterministic provider mapping
   - Backfill known assets and enforce uniqueness when present
+
+- `V13__create_market_alerts.sql`
+  - Add persistent market alert history table for RSI/Stochastic scanner
+  - Enforce duplicate prevention per `(user, asset, alert type, strategy, trigger date)`
