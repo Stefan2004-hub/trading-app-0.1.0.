@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.dto.lookup.PricePeakResponse;
 import com.trading.security.UserPrincipal;
 import com.trading.service.lookup.AssetService;
@@ -162,6 +163,9 @@ class PricePeakControllerIntegrationTest {
         mockMvc.perform(delete("/api/price-peaks/{id}", pricePeakId))
             .andExpect(status().isUnauthorized());
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(

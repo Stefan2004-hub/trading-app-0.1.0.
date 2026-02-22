@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.trading.dto.portfolio.PortfolioAssetPerformanceResponse;
 import com.trading.dto.portfolio.PortfolioSummaryResponse;
 import com.trading.dto.portfolio.AssetSummaryDTO;
@@ -155,6 +156,9 @@ class PortfolioControllerIntegrationTest {
         mockMvc.perform(get("/api/portfolio/asset-summary"))
             .andExpect(status().isUnauthorized());
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(

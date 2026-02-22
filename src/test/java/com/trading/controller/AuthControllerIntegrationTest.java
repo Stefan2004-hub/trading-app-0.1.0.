@@ -1,5 +1,6 @@
 package com.trading.controller;
 
+import com.trading.service.backup.BackupService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.trading.security.UserPrincipal;
@@ -196,6 +197,9 @@ class AuthControllerIntegrationTest {
             .andExpect(jsonPath("$.violations[*].field", hasItem("username")))
             .andExpect(jsonPath("$.violations[*].field", hasItem("password")));
     }
+    @MockBean
+    private BackupService backupService;
+
 
     private static Authentication authenticationFor(UUID userId) {
         UserPrincipal principal = new UserPrincipal(

@@ -292,6 +292,13 @@ p {
   margin-top: 1rem;
 }
 
+.maintenance-actions {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .open-buy-modal-button {
   width: auto;
   margin: 0;
