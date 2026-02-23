@@ -1,9 +1,13 @@
 import { request } from './http';
-import type { MarketAlertItem, MarketScanResult } from '../types/marketAlert';
+import type { MarketAlertItem, MarketScanResult, MarketSnapshotItem } from '../types/marketAlert';
 
 export const marketAlertApi = {
   list(): Promise<MarketAlertItem[]> {
     return request<MarketAlertItem[]>('/api/market-alerts');
+  },
+
+  listSummary(): Promise<MarketSnapshotItem[]> {
+    return request<MarketSnapshotItem[]>('/api/market-alerts/summary');
   },
 
   scan(): Promise<MarketScanResult> {

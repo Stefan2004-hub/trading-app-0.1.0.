@@ -3,6 +3,7 @@ package com.trading.controller;
 import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
+import com.trading.dto.historical.HistoricalSyncStartResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.historical.HistoricalDataService;
 import jakarta.validation.constraints.Min;
@@ -52,11 +53,16 @@ public class HistoricalDataController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<HistoricalDataSyncResponse> refresh(
+    public ResponseEntity<?> refresh(
         @RequestParam(name = "assetId", required = false) UUID assetId
     ) {
         UUID userId = currentUserProvider.getCurrentUserId();
-        return ResponseEntity.ok(historicalDataService.syncIncremental(userId, assetId));
+        if (assetId == null) {
+            HistoricalSyncStartResponse response = historicalDataService.startExtremeSync(userId);
+            return ResponseEntity.accepted().body(response);
+        }
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, assetId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/clean-reset")

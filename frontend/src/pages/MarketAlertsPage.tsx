@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { marketAlertApi } from '../api/marketAlertApi';
 import { AppHeader } from '../components/AppHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import type { MarketAlertItem } from '../types/marketAlert';
+import type { MarketAlertItem, MarketSnapshotItem } from '../types/marketAlert';
 import { formatDateTime, formatNumber } from '../utils/format';
 
 interface GroupedAlerts {
@@ -17,7 +17,9 @@ function strategyLabel(strategyType: MarketAlertItem['strategyType']): string {
 
 export function MarketAlertsPage(): JSX.Element {
   const [alerts, setAlerts] = useState<MarketAlertItem[]>([]);
+  const [summary, setSummary] = useState<MarketSnapshotItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
@@ -26,6 +28,7 @@ export function MarketAlertsPage(): JSX.Element {
 
   useEffect(() => {
     void loadAlerts();
+    void loadSummary();
   }, []);
 
   async function loadAlerts(): Promise<void> {
@@ -40,6 +43,18 @@ export function MarketAlertsPage(): JSX.Element {
     }
   }
 
+  async function loadSummary(): Promise<void> {
+    setSummaryLoading(true);
+    try {
+      const result = await marketAlertApi.listSummary();
+      setSummary(result);
+    } catch {
+      setSummary([]);
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
   async function handleScan(): Promise<void> {
     setScanning(true);
     setError(null);
@@ -47,9 +62,9 @@ export function MarketAlertsPage(): JSX.Element {
     try {
       const response = await marketAlertApi.scan();
       setInfo(
-        `Scan complete: ${response.alertsCreated} alerts created (${response.fixedAlertsCreated} fixed, ${response.dynamicAlertsCreated} dynamic) across ${response.assetsProcessed} assets.`
+        `Scan complete: ${response.alertsCreated} alerts created (${response.fixedAlertsCreated} fixed, ${response.dynamicAlertsCreated} dynamic) across ${response.assetsProcessed} assets. ${response.snapshotsUpdated} snapshots updated.`
       );
-      await loadAlerts();
+      await Promise.all([loadAlerts(), loadSummary()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to run market scan.');
     } finally {
@@ -138,6 +153,41 @@ export function MarketAlertsPage(): JSX.Element {
 
         {loading ? <p>Loading...</p> : null}
 
+        <section className="history-panel history-panel-prominent">
+          <h2>Technical Summary</h2>
+          {summaryLoading ? <p>Loading technical summary...</p> : null}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Asset</th>
+                  <th>RSI</th>
+                  <th>Stoch</th>
+                  <th>Momentum</th>
+                  <th>Last Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {summary.map((item) => (
+                  <tr key={item.symbol}>
+                    <td>{`${item.symbol} - ${item.assetName}`}</td>
+                    <td className={indicatorClass(Number(item.currentRsi), 30, 70)}>{formatNumber(item.currentRsi)}</td>
+                    <td className={indicatorClass(Number(item.currentStoch), 20, 80)}>{formatNumber(item.currentStoch)}</td>
+                    <td>{momentumSymbol(item.momentum)}</td>
+                    <td>{item.lastUpdatedDate}</td>
+                  </tr>
+                ))}
+                {!summaryLoading && summary.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>No technical summary yet. Run Refresh Scan to compute snapshots.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <h2>Active Alerts</h2>
         {groupedAlerts.map((group) => (
           <section className="history-panel history-panel-prominent" key={group.assetId}>
             <h2>{group.assetLabel}</h2>
@@ -208,4 +258,27 @@ export function MarketAlertsPage(): JSX.Element {
       />
     </main>
   );
+}
+
+function indicatorClass(value: number, lowThreshold: number, highThreshold: number): string {
+  if (!Number.isFinite(value)) {
+    return 'tech-neutral';
+  }
+  if (value <= lowThreshold) {
+    return 'tech-good';
+  }
+  if (value >= highThreshold) {
+    return 'tech-bad';
+  }
+  return 'tech-neutral';
+}
+
+function momentumSymbol(momentum: MarketSnapshotItem['momentum']): string {
+  if (momentum === 'UP') {
+    return '⬆️';
+  }
+  if (momentum === 'DOWN') {
+    return '⬇️';
+  }
+  return '-';
 }

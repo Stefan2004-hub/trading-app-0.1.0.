@@ -6,12 +6,16 @@ import com.trading.domain.entity.MarketAlert;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.MarketAlertStrategyType;
 import com.trading.domain.enums.MarketAlertType;
+import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AssetHistoricDataRepository;
 import com.trading.domain.repository.MarketAlertRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.marketalert.MarketAlertResponse;
 import com.trading.dto.marketalert.MarketScanResponse;
+import com.trading.dto.marketalert.MarketSnapshotDTO;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -29,6 +34,8 @@ public class MarketAlertServiceImpl implements MarketAlertService {
 
     private static final int FIXED_WINDOW_DAYS = 14;
     private static final int MIN_DYNAMIC_INTERVAL_DAYS = 10;
+    private static final String SUMMARY_CACHE_NAME = "marketTechnicalSummary";
+    private static final String SUMMARY_CACHE_KEY = "GLOBAL";
 
     private static final BigDecimal ZERO = BigDecimal.ZERO;
     private static final BigDecimal ONE = BigDecimal.ONE;
@@ -37,19 +44,25 @@ public class MarketAlertServiceImpl implements MarketAlertService {
 
     private final MarketAlertRepository marketAlertRepository;
     private final TransactionRepository transactionRepository;
+    private final AssetRepository assetRepository;
     private final AssetHistoricDataRepository assetHistoricDataRepository;
     private final UserRepository userRepository;
+    private final CacheManager cacheManager;
 
     public MarketAlertServiceImpl(
         MarketAlertRepository marketAlertRepository,
         TransactionRepository transactionRepository,
+        AssetRepository assetRepository,
         AssetHistoricDataRepository assetHistoricDataRepository,
-        UserRepository userRepository
+        UserRepository userRepository,
+        CacheManager cacheManager
     ) {
         this.marketAlertRepository = marketAlertRepository;
         this.transactionRepository = transactionRepository;
+        this.assetRepository = assetRepository;
         this.assetHistoricDataRepository = assetHistoricDataRepository;
         this.userRepository = userRepository;
+        this.cacheManager = cacheManager;
     }
 
     @Override
@@ -62,6 +75,22 @@ public class MarketAlertServiceImpl implements MarketAlertService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<MarketSnapshotDTO> listTechnicalSummary() {
+        Cache cache = cacheManager.getCache(SUMMARY_CACHE_NAME);
+        if (cache == null) {
+            return List.of();
+        }
+        Cache.ValueWrapper cached = cache.get(SUMMARY_CACHE_KEY);
+        if (cached == null || cached.get() == null) {
+            return List.of();
+        }
+        @SuppressWarnings("unchecked")
+        List<MarketSnapshotDTO> snapshots = (List<MarketSnapshotDTO>) cached.get();
+        return snapshots;
+    }
+
+    @Override
     @Transactional
     public MarketScanResponse scan(UUID userId) {
         Objects.requireNonNull(userId, "userId is required");
@@ -69,12 +98,18 @@ public class MarketAlertServiceImpl implements MarketAlertService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        List<Asset> investedAssets = transactionRepository.findDistinctInvestedAssetsByUserId(userId);
+        List<Asset> allAssets = assetRepository.findAllByOrderBySymbolAsc();
+        Set<UUID> investedAssetIds = transactionRepository.findDistinctInvestedAssetsByUserId(userId)
+            .stream()
+            .map(Asset::getId)
+            .collect(java.util.stream.Collectors.toSet());
+
         int alertsCreated = 0;
         int fixedAlertsCreated = 0;
         int dynamicAlertsCreated = 0;
+        List<MarketSnapshotDTO> snapshots = new java.util.ArrayList<>();
 
-        for (Asset asset : investedAssets) {
+        for (Asset asset : allAssets) {
             // Source of truth for RSI/Stochastic is persisted DB history, never frontend-calculated data.
             List<AssetHistoricData> rows = assetHistoricDataRepository.findAllByAsset_IdOrderByDayDateAsc(asset.getId());
             if (rows.size() < FIXED_WINDOW_DAYS) {
@@ -85,6 +120,21 @@ public class MarketAlertServiceImpl implements MarketAlertService {
             BigDecimal rsi = calculateRSI(FIXED_WINDOW_DAYS, lastWindow);
             BigDecimal stochastic = calculateStochastic(FIXED_WINDOW_DAYS, lastWindow);
             LocalDate triggerDate = rows.get(rows.size() - 1).getDayDate();
+            BigDecimal previousRsi = rows.size() > FIXED_WINDOW_DAYS
+                ? calculateRSI(FIXED_WINDOW_DAYS, rows.subList(rows.size() - FIXED_WINDOW_DAYS - 1, rows.size() - 1))
+                : rsi;
+            snapshots.add(new MarketSnapshotDTO(
+                asset.getName(),
+                asset.getSymbol(),
+                scale4(rsi),
+                scale4(stochastic),
+                triggerDate,
+                resolveMomentum(rsi, previousRsi)
+            ));
+
+            if (!investedAssetIds.contains(asset.getId())) {
+                continue;
+            }
 
             MarketAlertType alertType = resolveSignalType(rsi, stochastic);
             if (alertType == null) {
@@ -125,7 +175,8 @@ public class MarketAlertServiceImpl implements MarketAlertService {
             }
         }
 
-        return new MarketScanResponse(investedAssets.size(), alertsCreated, fixedAlertsCreated, dynamicAlertsCreated);
+        storeSummaryInCache(snapshots);
+        return new MarketScanResponse(allAssets.size(), alertsCreated, fixedAlertsCreated, dynamicAlertsCreated, snapshots.size());
     }
 
     @Override
@@ -195,6 +246,17 @@ public class MarketAlertServiceImpl implements MarketAlertService {
             return MarketAlertType.SELL;
         }
         return null;
+    }
+
+    private static String resolveMomentum(BigDecimal currentRsi, BigDecimal previousRsi) {
+        int comparison = currentRsi.compareTo(previousRsi);
+        if (comparison > 0) {
+            return "UP";
+        }
+        if (comparison < 0) {
+            return "DOWN";
+        }
+        return "FLAT";
     }
 
     static BigDecimal calculateStochastic(int days, List<AssetHistoricData> rows) {
@@ -275,6 +337,13 @@ public class MarketAlertServiceImpl implements MarketAlertService {
 
     private static BigDecimal scale4(BigDecimal value) {
         return value.setScale(4, RoundingMode.HALF_UP);
+    }
+
+    private void storeSummaryInCache(List<MarketSnapshotDTO> snapshots) {
+        Cache cache = cacheManager.getCache(SUMMARY_CACHE_NAME);
+        if (cache != null) {
+            cache.put(SUMMARY_CACHE_KEY, List.copyOf(snapshots));
+        }
     }
 
     private static MarketAlertResponse toResponse(MarketAlert alert) {

@@ -6,14 +6,19 @@ import com.trading.domain.entity.MarketAlert;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.MarketAlertStrategyType;
 import com.trading.domain.enums.MarketAlertType;
+import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AssetHistoricDataRepository;
 import com.trading.domain.repository.MarketAlertRepository;
 import com.trading.domain.repository.TransactionRepository;
 import com.trading.domain.repository.UserRepository;
 import com.trading.dto.marketalert.MarketScanResponse;
+import com.trading.dto.marketalert.MarketSnapshotDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -43,9 +48,15 @@ class MarketAlertServiceImplTest {
     @Mock
     private TransactionRepository transactionRepository;
     @Mock
+    private AssetRepository assetRepository;
+    @Mock
     private AssetHistoricDataRepository assetHistoricDataRepository;
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private CacheManager cacheManager;
+    @Mock
+    private Cache cache;
 
     @InjectMocks
     private MarketAlertServiceImpl marketAlertService;
@@ -70,6 +81,8 @@ class MarketAlertServiceImplTest {
 
         lenient().when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         lenient().when(transactionRepository.findDistinctInvestedAssetsByUserId(userId)).thenReturn(List.of(asset));
+        lenient().when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(asset));
+        lenient().when(cacheManager.getCache("marketTechnicalSummary")).thenReturn(cache);
         lenient().when(marketAlertRepository.save(any(MarketAlert.class))).thenAnswer(invocation -> {
             MarketAlert alert = invocation.getArgument(0, MarketAlert.class);
             alert.setId(UUID.randomUUID());
@@ -102,7 +115,9 @@ class MarketAlertServiceImplTest {
         assertEquals(2, response.alertsCreated());
         assertEquals(1, response.fixedAlertsCreated());
         assertEquals(1, response.dynamicAlertsCreated());
+        assertEquals(1, response.snapshotsUpdated());
         verify(assetHistoricDataRepository).findAllByAsset_IdOrderByDayDateAsc(assetId);
+        verify(cache).put(any(), any());
         verify(marketAlertRepository, times(2)).save(any(MarketAlert.class));
     }
 
@@ -132,7 +147,73 @@ class MarketAlertServiceImplTest {
         assertEquals(0, response.alertsCreated());
         assertEquals(0, response.fixedAlertsCreated());
         assertEquals(0, response.dynamicAlertsCreated());
+        assertEquals(1, response.snapshotsUpdated());
         verify(marketAlertRepository, never()).save(any(MarketAlert.class));
+    }
+
+    @Test
+    void listTechnicalSummaryReturnsEmptyWhenCacheIsMissing() {
+        when(cacheManager.getCache("marketTechnicalSummary")).thenReturn(null);
+
+        List<MarketSnapshotDTO> summary = marketAlertService.listTechnicalSummary();
+
+        assertTrue(summary.isEmpty());
+    }
+
+    @Test
+    void listTechnicalSummaryReturnsCachedSnapshots() {
+        List<MarketSnapshotDTO> cached = List.of(
+            new MarketSnapshotDTO("Bitcoin", "BTC", new BigDecimal("30.0000"), new BigDecimal("20.0000"), LocalDate.of(2026, 2, 22), "UP")
+        );
+        Cache.ValueWrapper wrapper = () -> cached;
+        when(cache.get("GLOBAL")).thenReturn(wrapper);
+
+        List<MarketSnapshotDTO> summary = marketAlertService.listTechnicalSummary();
+
+        assertEquals(1, summary.size());
+        assertEquals("BTC", summary.get(0).symbol());
+    }
+
+    @Test
+    void scanStoresMomentumAsUpWhenCurrentRsiIsHigherThanYesterday() {
+        when(assetHistoricDataRepository.findAllByAsset_IdOrderByDayDateAsc(assetId))
+            .thenReturn(buildRowsWithCloses(List.of(
+                100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 120
+            )));
+
+        marketAlertService.scan(userId);
+
+        ArgumentCaptor<List<MarketSnapshotDTO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(cache).put(any(), captor.capture());
+        assertEquals("UP", captor.getValue().get(0).momentum());
+    }
+
+    @Test
+    void scanStoresMomentumAsDownWhenCurrentRsiIsLowerThanYesterday() {
+        when(assetHistoricDataRepository.findAllByAsset_IdOrderByDayDateAsc(assetId))
+            .thenReturn(buildRowsWithCloses(List.of(
+                100, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 90
+            )));
+
+        marketAlertService.scan(userId);
+
+        ArgumentCaptor<List<MarketSnapshotDTO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(cache).put(any(), captor.capture());
+        assertEquals("DOWN", captor.getValue().get(0).momentum());
+    }
+
+    @Test
+    void scanStoresMomentumAsFlatWhenCurrentRsiMatchesYesterday() {
+        when(assetHistoricDataRepository.findAllByAsset_IdOrderByDayDateAsc(assetId))
+            .thenReturn(buildRowsWithCloses(List.of(
+                100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100
+            )));
+
+        marketAlertService.scan(userId);
+
+        ArgumentCaptor<List<MarketSnapshotDTO>> captor = ArgumentCaptor.forClass(List.class);
+        verify(cache).put(any(), captor.capture());
+        assertEquals("FLAT", captor.getValue().get(0).momentum());
     }
 
     @Test
@@ -185,5 +266,15 @@ class MarketAlertServiceImplTest {
         row.setClosingPrice(close);
         row.setCreatedAt(OffsetDateTime.now());
         return row;
+    }
+
+    private static List<AssetHistoricData> buildRowsWithCloses(List<Integer> closes) {
+        List<AssetHistoricData> rows = new ArrayList<>();
+        LocalDate startDate = LocalDate.of(2026, 1, 1);
+        for (int i = 0; i < closes.size(); i++) {
+            BigDecimal close = new BigDecimal(closes.get(i));
+            rows.add(row(startDate.plusDays(i), close.add(BigDecimal.ONE), close.subtract(BigDecimal.ONE), close));
+        }
+        return rows;
     }
 }

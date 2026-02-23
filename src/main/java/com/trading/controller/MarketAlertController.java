@@ -2,6 +2,7 @@ package com.trading.controller;
 
 import com.trading.dto.marketalert.MarketAlertResponse;
 import com.trading.dto.marketalert.MarketScanResponse;
+import com.trading.dto.marketalert.MarketSnapshotDTO;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.marketalert.MarketAlertService;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,11 @@ public class MarketAlertController {
     public ResponseEntity<List<MarketAlertResponse>> list() {
         UUID userId = currentUserProvider.getCurrentUserId();
         return ResponseEntity.ok(marketAlertService.list(userId));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<MarketSnapshotDTO>> listSummary() {
+        return ResponseEntity.ok(marketAlertService.listTechnicalSummary());
     }
 
     @PostMapping("/scan")
