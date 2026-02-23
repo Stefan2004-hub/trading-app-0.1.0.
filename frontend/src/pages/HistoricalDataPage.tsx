@@ -175,10 +175,20 @@ export function HistoricalDataPage(): JSX.Element {
               ))}
             </select>
           </label>
-          <button type="button" className="secondary" onClick={() => void handleRefresh()} disabled={loading || refreshing || resetting}>
+          <button
+            type="button"
+            className="secondary historical-data-action-button historical-refresh-button"
+            onClick={() => void handleRefresh()}
+            disabled={loading || refreshing || resetting}
+          >
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
-          <button type="button" className="clean-history-button" onClick={() => setConfirmOpen(true)} disabled={loading || refreshing || resetting}>
+          <button
+            type="button"
+            className="clean-history-button historical-data-action-button historical-clean-reset-button"
+            onClick={() => setConfirmOpen(true)}
+            disabled={loading || refreshing || resetting}
+          >
             Clean &amp; Reset
           </button>
         </div>
