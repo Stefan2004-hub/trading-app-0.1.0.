@@ -891,21 +891,28 @@ button:disabled {
 .buy-transaction-modal {
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  max-height: min(90vh, 90dvh);
+  overflow: hidden;
 }
 
 .buy-modal-scroll {
   flex: 1;
-  overflow: visible;
-  padding-bottom: 2rem;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: visible;
+  padding-bottom: 1.25rem;
 }
 
 .buy-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: 0.8rem;
   padding-top: 0.75rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
   border-top: 1px solid #e2e8f0;
   background: #fff;
 }
@@ -1331,7 +1338,7 @@ a {
   }
 
   .buy-transaction-modal {
-    max-height: 90vh;
+    max-height: min(90vh, 90dvh);
   }
 
   .buy-modal-footer .ui-button {
