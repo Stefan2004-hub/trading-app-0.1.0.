@@ -35,7 +35,9 @@ interface AssetViewRow {
 
 interface ExchangeViewRow {
   exchangeName: string;
+  usdInvested: number;
   totalValueUsd: number | null;
+  unrealizedPnlPercent: number | null;
   realizedProfitUsd: number;
   portfolioPercent: number | null;
 }
@@ -158,7 +160,14 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
   const exchangeRows = useMemo<ExchangeViewRow[]>(() => {
     const grouped = new Map<
       string,
-      { exchangeName: string; totalValueSum: number; realizedProfitUsd: number; hasUnknownOpenValue: boolean; hasOpen: boolean }
+      {
+        exchangeName: string;
+        usdInvested: number;
+        totalValueSum: number;
+        realizedProfitUsd: number;
+        hasUnknownOpenValue: boolean;
+        hasOpen: boolean;
+      }
     >();
 
     for (const row of rowValuations) {
@@ -166,12 +175,14 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
       const next =
         existing ?? {
           exchangeName: row.exchange,
+          usdInvested: 0,
           totalValueSum: 0,
           realizedProfitUsd: 0,
           hasUnknownOpenValue: false,
           hasOpen: false
         };
 
+      next.usdInvested += row.totalInvestedUsd;
       next.realizedProfitUsd += row.realizedPnlUsd;
       if (row.currentBalance > 0) {
         next.hasOpen = true;
@@ -193,10 +204,14 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
         const totalValueUsd = row.hasUnknownOpenValue ? null : row.totalValueSum;
         const portfolioPercent =
           totalValueUsd === null || globalValue === null || globalValue <= 0 ? null : (totalValueUsd / globalValue) * 100;
+        const unrealizedPnlPercent =
+          totalValueUsd === null || row.usdInvested <= 0 ? null : ((totalValueUsd - row.usdInvested) / row.usdInvested) * 100;
 
         return {
           exchangeName: row.exchangeName,
+          usdInvested: row.usdInvested,
           totalValueUsd,
+          unrealizedPnlPercent,
           realizedProfitUsd: row.realizedProfitUsd,
           portfolioPercent
         };
@@ -227,10 +242,16 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
     }
     return exchangeRows.reduce((sum, row) => sum + (row.totalValueUsd ?? 0), 0);
   }, [exchangeRows]);
+  const totalExchangeInvestedForDebug = useMemo(
+    () => exchangeRows.reduce((sum, row) => sum + row.usdInvested, 0),
+    [exchangeRows]
+  );
   const hasCalculationDrift =
     totalAssetValueForDebug !== null &&
     totalExchangeValueForDebug !== null &&
     Math.abs(totalAssetValueForDebug - totalExchangeValueForDebug) > 0.01;
+  const hasInvestedDrift = Math.abs(totalInvested - totalExchangeInvestedForDebug) > 0.01;
+  const hasAnyDrift = hasCalculationDrift || hasInvestedDrift;
 
   const summaryClassName =
     globalMarketValue === null
@@ -321,19 +342,33 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
             <thead>
               <tr>
                 <th>Exchange Name</th>
-                <th>Total Value (USD)</th>
+                <th>USD Invested</th>
+                <th>Current Market Value</th>
+                <th>Unrealized P/L %</th>
                 <th>Percentage of Portfolio</th>
                 <th>Realized Profit</th>
               </tr>
             </thead>
             <tbody>
               {exchangeRows.map((row) => {
+                const unrealizedClassName =
+                  row.unrealizedPnlPercent === null
+                    ? ''
+                    : row.unrealizedPnlPercent > 0
+                      ? 'pnl-positive'
+                      : row.unrealizedPnlPercent < 0
+                        ? 'pnl-negative'
+                        : '';
                 const realizedClassName =
                   row.realizedProfitUsd > 0 ? 'pnl-positive' : row.realizedProfitUsd < 0 ? 'pnl-negative' : '';
                 return (
                   <tr key={row.exchangeName}>
                     <td>{row.exchangeName}</td>
+                    <td>{formatUsd(String(row.usdInvested))}</td>
                     <td>{row.totalValueUsd === null ? '---' : formatUsd(String(row.totalValueUsd))}</td>
+                    <td className={unrealizedClassName}>
+                      {row.unrealizedPnlPercent === null ? '---' : formatPercent(row.unrealizedPnlPercent)}
+                    </td>
                     <td>{row.portfolioPercent === null ? '---' : formatPercent(row.portfolioPercent)}</td>
                     <td className={realizedClassName}>{formatUsd(String(row.realizedProfitUsd))}</td>
                   </tr>
@@ -344,9 +379,11 @@ export function OpenPortfolioSection({ assetSummary, performance, groupingMode }
         </div>
       ) : null}
 
-      <div className={`dashboard-debug-footer${hasCalculationDrift ? ' mismatch' : ''}`}>
+      <div className={`dashboard-debug-footer${hasAnyDrift ? ' mismatch' : ''}`}>
         <span>Total Asset Value: {totalAssetValueForDebug === null ? '---' : formatUsd(String(totalAssetValueForDebug))}</span>
         <span>Total Exchange Value: {totalExchangeValueForDebug === null ? '---' : formatUsd(String(totalExchangeValueForDebug))}</span>
+        <span>Total Invested (Card): {formatUsd(String(totalInvested))}</span>
+        <span>Total Exchange Invested: {formatUsd(String(totalExchangeInvestedForDebug))}</span>
       </div>
     </section>
   );
