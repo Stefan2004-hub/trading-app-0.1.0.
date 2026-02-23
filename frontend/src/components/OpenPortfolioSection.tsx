@@ -1,14 +1,20 @@
 import { useMemo } from 'react';
 import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
-import type { AssetSummary } from '../types/trading';
+import type { AssetSummary, DashboardGroupingMode, PortfolioAssetPerformance } from '../types/trading';
 import { formatNumber, formatUsd } from '../utils/format';
 
 interface OpenPortfolioSectionProps {
   assetSummary: AssetSummary[];
+  performance: PortfolioAssetPerformance[];
+  groupingMode: DashboardGroupingMode;
 }
 
-export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps): JSX.Element {
-  const openRows = useMemo(() => {
+function formatPercent(value: number): string {
+  return `${formatNumber(value.toFixed(2))}%`;
+}
+
+export function OpenPortfolioSection({ assetSummary, performance, groupingMode }: OpenPortfolioSectionProps): JSX.Element {
+  const assetRows = useMemo(() => {
     return assetSummary
       .map((row) => ({
         assetName: row.assetName,
@@ -20,12 +26,12 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
       .sort((a, b) => a.symbol.localeCompare(b.symbol));
   }, [assetSummary]);
 
-  const symbols = useMemo(() => openRows.map((row) => row.symbol), [openRows]);
+  const symbols = useMemo(() => assetRows.map((row) => row.symbol), [assetRows]);
   const pricesBySymbol = useAssetSpotPrices(symbols);
 
-  const valuationRows = useMemo(
+  const assetValuationRows = useMemo(
     () =>
-      openRows.map((row) => {
+      assetRows.map((row) => {
         const priceState = pricesBySymbol[row.symbol];
         const currentPrice =
           priceState?.status === 'success' && priceState.priceUsd && Number.isFinite(Number(priceState.priceUsd))
@@ -39,23 +45,63 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
           currentValue
         };
       }),
-    [openRows, pricesBySymbol]
+    [assetRows, pricesBySymbol]
   );
 
-  const summary = useMemo(() => {
-    const totalInvested = valuationRows.reduce((sum, row) => sum + row.usdInvested, 0);
-    const allValuesKnown = valuationRows.every((row) => row.currentValue !== null);
+  const assetSummaryTotals = useMemo(() => {
+    const totalInvested = assetValuationRows.reduce((sum, row) => sum + row.usdInvested, 0);
+    const allValuesKnown = assetValuationRows.every((row) => row.currentValue !== null);
     const totalMarketValue = allValuesKnown
-      ? valuationRows.reduce((sum, row) => sum + (row.currentValue ?? 0), 0)
+      ? assetValuationRows.reduce((sum, row) => sum + (row.currentValue ?? 0), 0)
       : null;
 
     return { totalInvested, totalMarketValue };
-  }, [valuationRows]);
+  }, [assetValuationRows]);
+
+  const exchangeData = useMemo(() => {
+    const openRows = performance
+      .map((row) => {
+        const currentBalance = Number(row.currentBalance);
+        const currentValueUsd = Number(row.currentValueUsd);
+
+        return {
+          exchangeName: row.exchange?.trim() || 'Unknown Exchange',
+          currentBalance: Number.isFinite(currentBalance) ? currentBalance : 0,
+          currentValueUsd: Number.isFinite(currentValueUsd) ? currentValueUsd : 0
+        };
+      })
+      .filter((row) => row.currentBalance > 0);
+
+    const groupedByExchange = new Map<string, number>();
+    for (const row of openRows) {
+      groupedByExchange.set(row.exchangeName, (groupedByExchange.get(row.exchangeName) ?? 0) + row.currentValueUsd);
+    }
+
+    const globalTotalValue = Array.from(groupedByExchange.values()).reduce((sum, value) => sum + value, 0);
+    const exchangeRows = Array.from(groupedByExchange.entries())
+      .map(([exchangeName, totalValueUsd]) => ({
+        exchangeName,
+        totalValueUsd,
+        portfolioPercent: globalTotalValue <= 0 ? 0 : (totalValueUsd / globalTotalValue) * 100
+      }))
+      .sort((left, right) => right.totalValueUsd - left.totalValueUsd);
+
+    return { exchangeRows, globalTotalValue };
+  }, [performance]);
+
+  const activeAssetCount = useMemo(
+    () => assetValuationRows.filter((row) => Number.isFinite(row.netAmount) && row.netAmount > 0).length,
+    [assetValuationRows]
+  );
+  const activeExchangeCount = exchangeData.exchangeRows.length;
+
+  const displayedMarketValue =
+    groupingMode === 'EXCHANGE' ? exchangeData.globalTotalValue : assetSummaryTotals.totalMarketValue;
 
   const summaryClassName =
-    summary.totalMarketValue === null
+    displayedMarketValue === null
       ? ''
-      : summary.totalMarketValue >= summary.totalInvested
+      : displayedMarketValue >= assetSummaryTotals.totalInvested
         ? 'pnl-positive'
         : 'pnl-negative';
 
@@ -65,19 +111,24 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
       <div className="portfolio-summary-inline">
         <div className="metric-card">
           <h3>Total Invested</h3>
-          <p>{formatUsd(String(summary.totalInvested))}</p>
+          <p>{formatUsd(String(assetSummaryTotals.totalInvested))}</p>
         </div>
         <div className="metric-card">
           <h3>Current Market Value</h3>
           <p className={summaryClassName}>
-            {summary.totalMarketValue === null ? '---' : formatUsd(String(summary.totalMarketValue))}
+            {displayedMarketValue === null ? '---' : formatUsd(String(displayedMarketValue))}
           </p>
+        </div>
+        <div className="metric-card">
+          <h3>{groupingMode === 'EXCHANGE' ? 'Active Exchanges' : 'Active Assets'}</h3>
+          <p>{groupingMode === 'EXCHANGE' ? activeExchangeCount : activeAssetCount}</p>
         </div>
       </div>
 
-      {valuationRows.length === 0 ? (
-        <p>No portfolio history yet.</p>
-      ) : (
+      {groupingMode === 'ASSET' && assetValuationRows.length === 0 ? <p>No portfolio history yet.</p> : null}
+      {groupingMode === 'EXCHANGE' && exchangeData.exchangeRows.length === 0 ? <p>No open positions by exchange yet.</p> : null}
+
+      {groupingMode === 'ASSET' && assetValuationRows.length > 0 ? (
         <div className="table-wrap">
           <table>
             <thead>
@@ -91,7 +142,7 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
               </tr>
             </thead>
             <tbody>
-              {valuationRows.map((row) => {
+              {assetValuationRows.map((row) => {
                 const diff =
                   row.currentValue === null || !Number.isFinite(row.currentValue)
                     ? null
@@ -124,7 +175,30 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
+
+      {groupingMode === 'EXCHANGE' && exchangeData.exchangeRows.length > 0 ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Exchange Name</th>
+                <th>Total Value (USD)</th>
+                <th>Percentage of Portfolio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {exchangeData.exchangeRows.map((row) => (
+                <tr key={row.exchangeName}>
+                  <td>{row.exchangeName}</td>
+                  <td>{formatUsd(String(row.totalValueUsd))}</td>
+                  <td>{formatPercent(row.portfolioPercent)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </section>
   );
 }

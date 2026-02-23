@@ -590,6 +590,14 @@ p {
   gap: 0.6rem;
 }
 
+.dashboard-grouping-controls {
+  margin-top: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
 .historical-data-actions {
   margin-top: 1rem;
   display: flex;
@@ -1261,6 +1269,11 @@ a {
 
   .configured-strategies-filter-group {
     flex-wrap: wrap;
+  }
+
+  .dashboard-grouping-controls {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
