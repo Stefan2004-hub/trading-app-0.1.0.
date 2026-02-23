@@ -1,5 +1,6 @@
 export type StrategyType = 'BUY' | 'SELL';
 export type StrategyAlertStatus = 'PENDING' | 'ACKNOWLEDGED' | 'EXECUTED' | 'DISMISSED';
+export type ConfiguredStrategyFilter = 'ALL' | StrategyType;
 
 export interface SellStrategyItem {
   id: string;
@@ -19,6 +20,17 @@ export interface BuyStrategyItem {
   buyAmountUsd: string;
   active: boolean;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfiguredStrategyItem {
+  id: string;
+  strategyType: StrategyType;
+  assetId: string;
+  assetSymbol: string;
+  thresholdPercent: string;
+  buyAmountUsd: string | null;
+  active: boolean;
   updatedAt: string;
 }
 
