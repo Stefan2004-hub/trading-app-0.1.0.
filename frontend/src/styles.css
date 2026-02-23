@@ -380,6 +380,125 @@ p {
   margin-top: 1rem;
 }
 
+.strategies-workspace-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.strategies-focus-enter-row {
+  margin-top: 0.65rem;
+}
+
+.strategies-focus-button {
+  width: auto;
+}
+
+.strategies-focus-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.strategies-top-sections {
+  overflow: hidden;
+  max-height: 96rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 500ms ease;
+}
+
+.strategies-top-sections.collapsed {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-1rem);
+  pointer-events: none;
+}
+
+.configured-strategies-panel {
+  margin-top: 1rem;
+  transition: all 500ms ease;
+}
+
+.configured-strategies-panel.focused {
+  min-height: calc(100vh - 6.5rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.configured-strategies-controls {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.configured-strategies-search {
+  display: grid;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.configured-strategies-search span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.configured-strategies-search input {
+  margin: 0;
+}
+
+.configured-strategies-filter-group {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.configured-strategies-filter-button {
+  width: auto;
+  margin: 0;
+  border-radius: 999px;
+  padding: 0.5rem 0.95rem;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transition: all 500ms ease;
+}
+
+.configured-strategies-filter-button:hover {
+  background: #e2e8f0;
+}
+
+.configured-strategies-filter-button.active {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.configured-strategies-table {
+  transition: all 500ms ease;
+}
+
+.configured-strategies-table.focused {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.configured-strategies-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-right: 0.2rem;
+}
+
+.strategies-focus-exit-row {
+  margin-top: 0.8rem;
+  display: flex;
+  justify-content: center;
+}
+
 .section-header-inline {
   display: flex;
   align-items: center;
@@ -1108,6 +1227,15 @@ a {
 
   .portfolio-summary-inline {
     grid-template-columns: 1fr;
+  }
+
+  .configured-strategies-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .configured-strategies-filter-group {
+    flex-wrap: wrap;
   }
 }
 
