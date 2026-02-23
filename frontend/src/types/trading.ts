@@ -136,6 +136,12 @@ export interface HistoricalDataSyncResult {
   }[];
 }
 
+export interface HistoricalSyncStartResult {
+  status: string;
+  message: string;
+  startedAt: string;
+}
+
 export interface TradeFormPayload {
   assetId: string;
   exchangeId: string;
