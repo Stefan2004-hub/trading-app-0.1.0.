@@ -258,6 +258,20 @@ body {
   background: rgba(51, 65, 85, 0.85);
 }
 
+.tech-good {
+  color: #166534;
+  font-weight: 700;
+}
+
+.tech-bad {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.tech-neutral {
+  color: #334155;
+}
+
 .sidebar-menu-icon {
   width: 1.15rem;
   height: 1.15rem;
