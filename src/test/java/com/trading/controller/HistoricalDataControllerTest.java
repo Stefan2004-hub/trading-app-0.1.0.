@@ -3,8 +3,10 @@ package com.trading.controller;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
 import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
+import com.trading.dto.historical.HistoricalSyncStartResponse;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.historical.HistoricalDataService;
+import org.springframework.http.HttpStatusCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +17,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,16 +57,17 @@ class HistoricalDataControllerTest {
     }
 
     @Test
-    void refreshWithoutAssetIdDelegatesGlobalSync() {
+    void refreshWithoutAssetIdStartsAsyncGlobalSync() {
         UUID userId = UUID.randomUUID();
-        HistoricalDataSyncResponse syncResponse = new HistoricalDataSyncResponse(3, 10, 1, List.of());
+        HistoricalSyncStartResponse startResponse = new HistoricalSyncStartResponse("STARTED", "Sync Started", OffsetDateTime.now());
         when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
-        when(historicalDataService.syncIncremental(userId, null)).thenReturn(syncResponse);
+        when(historicalDataService.startExtremeSync(userId)).thenReturn(startResponse);
 
-        HistoricalDataSyncResponse response = historicalDataController.refresh(null).getBody();
+        var response = historicalDataController.refresh(null);
 
-        assertEquals(syncResponse, response);
-        verify(historicalDataService).syncIncremental(userId, null);
+        assertEquals(HttpStatusCode.valueOf(202), response.getStatusCode());
+        assertEquals(startResponse, response.getBody());
+        verify(historicalDataService).startExtremeSync(userId);
     }
 
     @Test
@@ -74,7 +78,7 @@ class HistoricalDataControllerTest {
         when(currentUserProvider.getCurrentUserId()).thenReturn(userId);
         when(historicalDataService.syncIncremental(userId, assetId)).thenReturn(syncResponse);
 
-        HistoricalDataSyncResponse response = historicalDataController.refresh(assetId).getBody();
+        Object response = historicalDataController.refresh(assetId).getBody();
 
         assertEquals(syncResponse, response);
         verify(historicalDataService).syncIncremental(userId, assetId);

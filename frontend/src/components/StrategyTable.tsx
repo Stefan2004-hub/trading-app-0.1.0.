@@ -1,32 +1,27 @@
-import type { AssetOption } from '../types/trading';
-import type { BuyStrategyItem, SellStrategyItem } from '../types/strategy';
+import type { ConfiguredStrategyItem } from '../types/strategy';
 import { formatDateTime, formatNumber, formatUsd } from '../utils/format';
 
 interface StrategyTableProps {
-  assets: AssetOption[];
-  sellStrategies: SellStrategyItem[];
-  buyStrategies: BuyStrategyItem[];
+  strategies: ConfiguredStrategyItem[];
   submitting: boolean;
   onDeleteSell: (strategyId: string) => Promise<boolean>;
   onDeleteBuy: (strategyId: string) => Promise<boolean>;
-}
-
-function assetLabel(assetId: string, assets: AssetOption[]): string {
-  return assets.find((asset) => asset.id === assetId)?.symbol ?? assetId;
+  className?: string;
+  tableWrapClassName?: string;
 }
 
 export function StrategyTable({
-  assets,
-  sellStrategies,
-  buyStrategies,
+  strategies,
   submitting,
   onDeleteSell,
-  onDeleteBuy
+  onDeleteBuy,
+  className,
+  tableWrapClassName
 }: StrategyTableProps): JSX.Element {
   return (
-    <section className="history-panel">
+    <section className={`history-panel${className ? ` ${className}` : ''}`}>
       <h3>Configured Strategies</h3>
-      <div className="table-wrap">
+      <div className={`table-wrap${tableWrapClassName ? ` ${tableWrapClassName}` : ''}`}>
         <table>
           <thead>
             <tr>
@@ -40,34 +35,17 @@ export function StrategyTable({
             </tr>
           </thead>
           <tbody>
-            {sellStrategies.map((item) => (
-              <tr key={`sell-${item.id}`}>
-                <td>SELL</td>
-                <td>{assetLabel(item.assetId, assets)}</td>
-                <td>{formatNumber(item.thresholdPercent)}</td>
-                <td>-</td>
-                <td>{item.active ? 'Yes' : 'No'}</td>
-                <td>{formatDateTime(item.updatedAt)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="row-action-button row-action-delete"
-                    disabled={submitting}
-                    onClick={() => {
-                      void onDeleteSell(item.id);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </td>
+            {strategies.length === 0 ? (
+              <tr>
+                <td colSpan={7}>No configured strategies match the current filters.</td>
               </tr>
-            ))}
-            {buyStrategies.map((item) => (
-              <tr key={`buy-${item.id}`}>
-                <td>BUY</td>
-                <td>{assetLabel(item.assetId, assets)}</td>
-                <td>{formatNumber(item.dipThresholdPercent)}</td>
-                <td>{formatUsd(item.buyAmountUsd)}</td>
+            ) : null}
+            {strategies.map((item) => (
+              <tr key={`${item.strategyType.toLowerCase()}-${item.id}`}>
+                <td>{item.strategyType}</td>
+                <td>{item.assetSymbol}</td>
+                <td>{formatNumber(item.thresholdPercent)}</td>
+                <td>{item.buyAmountUsd ? formatUsd(item.buyAmountUsd) : '-'}</td>
                 <td>{item.active ? 'Yes' : 'No'}</td>
                 <td>{formatDateTime(item.updatedAt)}</td>
                 <td>
@@ -76,6 +54,10 @@ export function StrategyTable({
                     className="row-action-button row-action-delete"
                     disabled={submitting}
                     onClick={() => {
+                      if (item.strategyType === 'SELL') {
+                        void onDeleteSell(item.id);
+                        return;
+                      }
                       void onDeleteBuy(item.id);
                     }}
                   >

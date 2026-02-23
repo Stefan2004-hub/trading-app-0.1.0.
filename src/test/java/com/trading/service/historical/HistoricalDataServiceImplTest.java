@@ -5,6 +5,7 @@ import com.trading.domain.entity.AssetHistoricData;
 import com.trading.domain.repository.AssetRepository;
 import com.trading.domain.repository.AssetHistoricDataRepository;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
+import com.trading.dto.historical.HistoricalSyncStartResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
 import com.trading.service.historical.coingecko.CoinGeckoClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class HistoricalDataServiceImplTest {
@@ -44,6 +46,8 @@ class HistoricalDataServiceImplTest {
     private AssetHistoricDataRepository assetHistoricDataRepository;
     @Mock
     private CoinGeckoClient coinGeckoClient;
+    @Mock
+    private HistoricalSyncAsyncRunner historicalSyncAsyncRunner;
     private HistoricalSyncProperties historicalSyncProperties;
 
     private HistoricalDataServiceImpl historicalDataService;
@@ -59,7 +63,8 @@ class HistoricalDataServiceImplTest {
             assetRepository,
             assetHistoricDataRepository,
             coinGeckoClient,
-            historicalSyncProperties
+            historicalSyncProperties,
+            historicalSyncAsyncRunner
         );
         btcAsset = new Asset();
         btcAsset.setId(UUID.randomUUID());
@@ -200,7 +205,8 @@ class HistoricalDataServiceImplTest {
             assetRepository,
             assetHistoricDataRepository,
             coinGeckoClient,
-            new HistoricalSyncProperties(1, 1000)
+            new HistoricalSyncProperties(1, 1000),
+            historicalSyncAsyncRunner
         ));
         doNothing().when(serviceWithSpySleep).sleepAfterBatchIfNeeded(anyInt(), anyInt());
         Asset secondAsset = new Asset();
@@ -267,5 +273,14 @@ class HistoricalDataServiceImplTest {
         assertEquals("BTC", response.get(0).assetSymbol());
         assertEquals("Bitcoin", response.get(0).assetName());
         assertEquals(todayUtc, response.get(0).missingDate());
+    }
+
+    @Test
+    void startExtremeSyncReturnsStartedResponseAndSchedulesBackgroundJob() {
+        HistoricalSyncStartResponse response = historicalDataService.startExtremeSync(userId);
+
+        assertEquals("STARTED", response.status());
+        assertEquals("Sync Started", response.message());
+        verify(historicalSyncAsyncRunner, times(1)).runExtremeSync(any(Runnable.class));
     }
 }

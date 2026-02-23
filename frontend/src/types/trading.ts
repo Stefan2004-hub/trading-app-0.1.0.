@@ -33,6 +33,7 @@ export interface UpdatePricePeakPayload {
 
 export type TransactionType = 'BUY' | 'SELL';
 export type TransactionView = 'OPEN' | 'MATCHED';
+export type DashboardGroupingMode = 'ASSET' | 'EXCHANGE';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
 export type AccumulationTradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type TransactionAccumulationRole = 'NONE' | 'ACCUMULATION_EXIT' | 'ACCUMULATION_REENTRY';
@@ -134,6 +135,12 @@ export interface HistoricalDataSyncResult {
     assetSymbol: string;
     reason: string;
   }[];
+}
+
+export interface HistoricalSyncStartResult {
+  status: string;
+  message: string;
+  startedAt: string;
 }
 
 export interface TradeFormPayload {

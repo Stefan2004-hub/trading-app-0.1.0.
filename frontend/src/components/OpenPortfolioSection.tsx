@@ -1,83 +1,293 @@
 import { useMemo } from 'react';
 import { useAssetSpotPrices } from '../hooks/useAssetSpotPrices';
-import type { AssetSummary } from '../types/trading';
+import type { AssetPriceState } from '../hooks/useAssetSpotPrices';
+import type { AssetSummary, DashboardGroupingMode, PortfolioAssetPerformance } from '../types/trading';
 import { formatNumber, formatUsd } from '../utils/format';
 
 interface OpenPortfolioSectionProps {
   assetSummary: AssetSummary[];
+  performance: PortfolioAssetPerformance[];
+  groupingMode: DashboardGroupingMode;
 }
 
-export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps): JSX.Element {
-  const openRows = useMemo(() => {
-    return assetSummary
-      .map((row) => ({
-        assetName: row.assetName,
-        symbol: row.assetSymbol.toUpperCase(),
-        netAmount: Number.isFinite(Number(row.netQuantity)) ? Number(row.netQuantity) : 0,
-        usdInvested: Number.isFinite(Number(row.totalInvested)) ? Number(row.totalInvested) : 0,
-        realizedProfit: Number.isFinite(Number(row.totalRealizedProfit)) ? Number(row.totalRealizedProfit) : 0
-      }))
-      .sort((a, b) => a.symbol.localeCompare(b.symbol));
+function formatPercent(value: number): string {
+  return `${formatNumber(value.toFixed(2))}%`;
+}
+
+interface BasePerformanceRow {
+  symbol: string;
+  exchange: string;
+  currentBalance: number;
+  totalInvestedUsd: number;
+  realizedPnlUsd: number;
+}
+
+interface AssetViewRow {
+  assetName: string;
+  symbol: string;
+  netAmount: number;
+  usdInvested: number;
+  realizedProfit: number;
+  currentPrice: number | null;
+  currentValue: number | null;
+  priceState?: AssetPriceState;
+}
+
+interface ExchangeViewRow {
+  exchangeName: string;
+  usdInvested: number;
+  totalValueUsd: number | null;
+  unrealizedPnlPercent: number | null;
+  realizedProfitUsd: number;
+  portfolioPercent: number | null;
+}
+
+export function OpenPortfolioSection({ assetSummary, performance, groupingMode }: OpenPortfolioSectionProps): JSX.Element {
+  const assetNameBySymbol = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of assetSummary) {
+      map.set(row.assetSymbol.toUpperCase(), row.assetName);
+    }
+    return map;
   }, [assetSummary]);
 
-  const symbols = useMemo(() => openRows.map((row) => row.symbol), [openRows]);
+  const baseRows = useMemo<BasePerformanceRow[]>(() => {
+    return performance.map((row) => ({
+      symbol: row.symbol.toUpperCase(),
+      exchange: row.exchange?.trim() || 'Unknown Exchange',
+      currentBalance: Number.isFinite(Number(row.currentBalance)) ? Number(row.currentBalance) : 0,
+      totalInvestedUsd: Number.isFinite(Number(row.totalInvestedUsd)) ? Number(row.totalInvestedUsd) : 0,
+      realizedPnlUsd: Number.isFinite(Number(row.realizedPnlUsd)) ? Number(row.realizedPnlUsd) : 0
+    }));
+  }, [performance]);
+
+  const symbols = useMemo(
+    () => Array.from(new Set(baseRows.filter((row) => row.currentBalance > 0).map((row) => row.symbol))),
+    [baseRows]
+  );
   const pricesBySymbol = useAssetSpotPrices(symbols);
 
-  const valuationRows = useMemo(
-    () =>
-      openRows.map((row) => {
-        const priceState = pricesBySymbol[row.symbol];
-        const currentPrice =
-          priceState?.status === 'success' && priceState.priceUsd && Number.isFinite(Number(priceState.priceUsd))
-            ? Number(priceState.priceUsd)
-            : null;
-        const currentValue = row.netAmount === 0 ? 0 : currentPrice === null ? null : row.netAmount * currentPrice;
+  const rowValuations = useMemo(() => {
+    return baseRows.map((row) => {
+      if (row.currentBalance <= 0) {
         return {
           ...row,
-          priceState,
-          currentPrice,
-          currentValue
+          currentPrice: null,
+          priceState: undefined,
+          currentValue: 0 as number | null
         };
-      }),
-    [openRows, pricesBySymbol]
+      }
+
+      const priceState = pricesBySymbol[row.symbol];
+      const currentPrice =
+        priceState?.status === 'success' && priceState.priceUsd && Number.isFinite(Number(priceState.priceUsd))
+          ? Number(priceState.priceUsd)
+          : null;
+
+      return {
+        ...row,
+        currentPrice,
+        priceState,
+        currentValue: currentPrice === null ? null : row.currentBalance * currentPrice
+      };
+    });
+  }, [baseRows, pricesBySymbol]);
+
+  const totalInvested = useMemo(
+    () => rowValuations.reduce((sum, row) => sum + row.totalInvestedUsd, 0),
+    [rowValuations]
   );
 
-  const summary = useMemo(() => {
-    const totalInvested = valuationRows.reduce((sum, row) => sum + row.usdInvested, 0);
-    const allValuesKnown = valuationRows.every((row) => row.currentValue !== null);
-    const totalMarketValue = allValuesKnown
-      ? valuationRows.reduce((sum, row) => sum + (row.currentValue ?? 0), 0)
-      : null;
+  const assetRows = useMemo<AssetViewRow[]>(() => {
+    const grouped = new Map<
+      string,
+      {
+        assetName: string;
+        symbol: string;
+        netAmount: number;
+        usdInvested: number;
+        realizedProfit: number;
+        currentPrice: number | null;
+        currentValueSum: number;
+        hasUnknownOpenValue: boolean;
+      }
+    >();
 
-    return { totalInvested, totalMarketValue };
-  }, [valuationRows]);
+    for (const row of rowValuations) {
+      const existing = grouped.get(row.symbol);
+      const next =
+        existing ?? {
+          assetName: assetNameBySymbol.get(row.symbol) ?? row.symbol,
+          symbol: row.symbol,
+          netAmount: 0,
+          usdInvested: 0,
+          realizedProfit: 0,
+          currentPrice: null,
+          currentValueSum: 0,
+          hasUnknownOpenValue: false
+        };
+
+      next.netAmount += row.currentBalance;
+      next.usdInvested += row.totalInvestedUsd;
+      next.realizedProfit += row.realizedPnlUsd;
+      if (row.currentBalance > 0) {
+        if (row.currentValue === null) {
+          next.hasUnknownOpenValue = true;
+        } else {
+          next.currentValueSum += row.currentValue;
+        }
+        if (row.currentPrice !== null) {
+          next.currentPrice = row.currentPrice;
+        }
+      }
+      grouped.set(row.symbol, next);
+    }
+
+    return Array.from(grouped.values())
+      .map((row) => ({
+        assetName: row.assetName,
+        symbol: row.symbol,
+        netAmount: row.netAmount,
+        usdInvested: row.usdInvested,
+        realizedProfit: row.realizedProfit,
+        currentPrice: row.currentPrice,
+        currentValue: row.hasUnknownOpenValue ? null : row.currentValueSum,
+        priceState: pricesBySymbol[row.symbol]
+      }))
+      .sort((a, b) => a.symbol.localeCompare(b.symbol));
+  }, [assetNameBySymbol, pricesBySymbol, rowValuations]);
+
+  const exchangeRows = useMemo<ExchangeViewRow[]>(() => {
+    const grouped = new Map<
+      string,
+      {
+        exchangeName: string;
+        usdInvested: number;
+        totalValueSum: number;
+        realizedProfitUsd: number;
+        hasUnknownOpenValue: boolean;
+        hasOpen: boolean;
+      }
+    >();
+
+    for (const row of rowValuations) {
+      const existing = grouped.get(row.exchange);
+      const next =
+        existing ?? {
+          exchangeName: row.exchange,
+          usdInvested: 0,
+          totalValueSum: 0,
+          realizedProfitUsd: 0,
+          hasUnknownOpenValue: false,
+          hasOpen: false
+        };
+
+      next.usdInvested += row.totalInvestedUsd;
+      next.realizedProfitUsd += row.realizedPnlUsd;
+      if (row.currentBalance > 0) {
+        next.hasOpen = true;
+        if (row.currentValue === null) {
+          next.hasUnknownOpenValue = true;
+        } else {
+          next.totalValueSum += row.currentValue;
+        }
+      }
+      grouped.set(row.exchange, next);
+    }
+
+    const activeRows = Array.from(grouped.values()).filter((row) => row.hasOpen);
+    const hasUnknownAny = activeRows.some((row) => row.hasUnknownOpenValue);
+    const globalValue = hasUnknownAny ? null : activeRows.reduce((sum, row) => sum + row.totalValueSum, 0);
+
+    return activeRows
+      .map((row) => {
+        const totalValueUsd = row.hasUnknownOpenValue ? null : row.totalValueSum;
+        const portfolioPercent =
+          totalValueUsd === null || globalValue === null || globalValue <= 0 ? null : (totalValueUsd / globalValue) * 100;
+        const unrealizedPnlPercent =
+          totalValueUsd === null || row.usdInvested <= 0 ? null : ((totalValueUsd - row.usdInvested) / row.usdInvested) * 100;
+
+        return {
+          exchangeName: row.exchangeName,
+          usdInvested: row.usdInvested,
+          totalValueUsd,
+          unrealizedPnlPercent,
+          realizedProfitUsd: row.realizedProfitUsd,
+          portfolioPercent
+        };
+      })
+      .sort((left, right) => (right.totalValueUsd ?? -1) - (left.totalValueUsd ?? -1));
+  }, [rowValuations]);
+
+  const globalMarketValue = useMemo(() => {
+    if (exchangeRows.some((row) => row.totalValueUsd === null)) {
+      return null;
+    }
+    return exchangeRows.reduce((sum, row) => sum + (row.totalValueUsd ?? 0), 0);
+  }, [exchangeRows]);
+
+  const activeAssetCount = useMemo(() => assetRows.filter((row) => row.netAmount > 0).length, [assetRows]);
+  const activeExchangeCount = exchangeRows.length;
+
+  const totalAssetValueForDebug = useMemo(() => {
+    const openAssetRows = assetRows.filter((row) => row.netAmount > 0);
+    if (openAssetRows.some((row) => row.currentValue === null)) {
+      return null;
+    }
+    return openAssetRows.reduce((sum, row) => sum + (row.currentValue ?? 0), 0);
+  }, [assetRows]);
+  const totalExchangeValueForDebug = useMemo(() => {
+    if (exchangeRows.some((row) => row.totalValueUsd === null)) {
+      return null;
+    }
+    return exchangeRows.reduce((sum, row) => sum + (row.totalValueUsd ?? 0), 0);
+  }, [exchangeRows]);
+  const totalExchangeInvestedForDebug = useMemo(
+    () => exchangeRows.reduce((sum, row) => sum + row.usdInvested, 0),
+    [exchangeRows]
+  );
+  const hasCalculationDrift =
+    totalAssetValueForDebug !== null &&
+    totalExchangeValueForDebug !== null &&
+    Math.abs(totalAssetValueForDebug - totalExchangeValueForDebug) > 0.01;
+  const hasInvestedDrift = Math.abs(totalInvested - totalExchangeInvestedForDebug) > 0.01;
+  const hasAnyDrift = hasCalculationDrift || hasInvestedDrift;
 
   const summaryClassName =
-    summary.totalMarketValue === null
+    globalMarketValue === null
       ? ''
-      : summary.totalMarketValue >= summary.totalInvested
+      : globalMarketValue >= totalInvested
         ? 'pnl-positive'
         : 'pnl-negative';
 
   return (
     <section className="history-panel history-panel-prominent">
       <h3>Portfolio Summary</h3>
-      <div className="portfolio-summary-inline">
+      <div className="cards-grid portfolio-summary-cards">
         <div className="metric-card">
           <h3>Total Invested</h3>
-          <p>{formatUsd(String(summary.totalInvested))}</p>
+          <p>{formatUsd(String(totalInvested))}</p>
         </div>
         <div className="metric-card">
           <h3>Current Market Value</h3>
           <p className={summaryClassName}>
-            {summary.totalMarketValue === null ? '---' : formatUsd(String(summary.totalMarketValue))}
+            {globalMarketValue === null ? '---' : formatUsd(String(globalMarketValue))}
           </p>
+        </div>
+        <div className="metric-card">
+          <h3>Active Assets</h3>
+          <p>{activeAssetCount}</p>
+        </div>
+        <div className="metric-card">
+          <h3>Active Exchanges</h3>
+          <p>{activeExchangeCount}</p>
         </div>
       </div>
 
-      {valuationRows.length === 0 ? (
-        <p>No portfolio history yet.</p>
-      ) : (
+      {groupingMode === 'ASSET' && assetRows.length === 0 ? <p>No portfolio history yet.</p> : null}
+      {groupingMode === 'EXCHANGE' && exchangeRows.length === 0 ? <p>No open positions by exchange yet.</p> : null}
+
+      {groupingMode === 'ASSET' && assetRows.length > 0 ? (
         <div className="table-wrap">
           <table>
             <thead>
@@ -91,7 +301,7 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
               </tr>
             </thead>
             <tbody>
-              {valuationRows.map((row) => {
+              {assetRows.map((row) => {
                 const diff =
                   row.currentValue === null || !Number.isFinite(row.currentValue)
                     ? null
@@ -124,7 +334,57 @@ export function OpenPortfolioSection({ assetSummary }: OpenPortfolioSectionProps
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
+
+      {groupingMode === 'EXCHANGE' && exchangeRows.length > 0 ? (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Exchange Name</th>
+                <th>USD Invested</th>
+                <th>Current Market Value</th>
+                <th>Unrealized P/L %</th>
+                <th>Percentage of Portfolio</th>
+                <th>Realized Profit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {exchangeRows.map((row) => {
+                const unrealizedClassName =
+                  row.unrealizedPnlPercent === null
+                    ? ''
+                    : row.unrealizedPnlPercent > 0
+                      ? 'pnl-positive'
+                      : row.unrealizedPnlPercent < 0
+                        ? 'pnl-negative'
+                        : '';
+                const realizedClassName =
+                  row.realizedProfitUsd > 0 ? 'pnl-positive' : row.realizedProfitUsd < 0 ? 'pnl-negative' : '';
+                return (
+                  <tr key={row.exchangeName}>
+                    <td>{row.exchangeName}</td>
+                    <td>{formatUsd(String(row.usdInvested))}</td>
+                    <td>{row.totalValueUsd === null ? '---' : formatUsd(String(row.totalValueUsd))}</td>
+                    <td className={unrealizedClassName}>
+                      {row.unrealizedPnlPercent === null ? '---' : formatPercent(row.unrealizedPnlPercent)}
+                    </td>
+                    <td>{row.portfolioPercent === null ? '---' : formatPercent(row.portfolioPercent)}</td>
+                    <td className={realizedClassName}>{formatUsd(String(row.realizedProfitUsd))}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      <div className={`dashboard-debug-footer${hasAnyDrift ? ' mismatch' : ''}`}>
+        <span>Total Asset Value: {totalAssetValueForDebug === null ? '---' : formatUsd(String(totalAssetValueForDebug))}</span>
+        <span>Total Exchange Value: {totalExchangeValueForDebug === null ? '---' : formatUsd(String(totalExchangeValueForDebug))}</span>
+        <span>Total Invested (Card): {formatUsd(String(totalInvested))}</span>
+        <span>Total Exchange Invested: {formatUsd(String(totalExchangeInvestedForDebug))}</span>
+      </div>
     </section>
   );
 }

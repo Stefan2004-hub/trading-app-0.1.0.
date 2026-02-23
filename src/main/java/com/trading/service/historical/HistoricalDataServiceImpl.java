@@ -7,6 +7,7 @@ import com.trading.domain.repository.AssetHistoricDataRepository;
 import com.trading.dto.historical.HistoricalAssetRefreshStatusResponse;
 import com.trading.dto.historical.HistoricalDataRowResponse;
 import com.trading.dto.historical.HistoricalDataSyncResponse;
+import com.trading.dto.historical.HistoricalSyncStartResponse;
 import com.trading.dto.historical.SkippedAssetSyncItem;
 import com.trading.service.historical.coingecko.CoinGeckoClient;
 import org.slf4j.Logger;
@@ -20,11 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Service
 @ConditionalOnProperty(name = "app.historical.enabled", havingValue = "true", matchIfMissing = true)
@@ -32,22 +35,27 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
 
     private static final Logger log = LoggerFactory.getLogger(HistoricalDataServiceImpl.class);
     private static final int DEFAULT_LOOKBACK_DAYS = 30;
+    private static final long EXTREME_THROTTLE_DELAY_MS = 60000L;
 
     private final AssetRepository assetRepository;
     private final AssetHistoricDataRepository assetHistoricDataRepository;
     private final CoinGeckoClient coinGeckoClient;
     private final HistoricalSyncProperties historicalSyncProperties;
+    private final HistoricalSyncAsyncRunner historicalSyncAsyncRunner;
+    private final AtomicBoolean extremeSyncInProgress = new AtomicBoolean(false);
 
     public HistoricalDataServiceImpl(
         AssetRepository assetRepository,
         AssetHistoricDataRepository assetHistoricDataRepository,
         CoinGeckoClient coinGeckoClient,
-        HistoricalSyncProperties historicalSyncProperties
+        HistoricalSyncProperties historicalSyncProperties,
+        HistoricalSyncAsyncRunner historicalSyncAsyncRunner
     ) {
         this.assetRepository = assetRepository;
         this.assetHistoricDataRepository = assetHistoricDataRepository;
         this.coinGeckoClient = coinGeckoClient;
         this.historicalSyncProperties = historicalSyncProperties;
+        this.historicalSyncAsyncRunner = historicalSyncAsyncRunner;
     }
 
     @Override
@@ -69,6 +77,16 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
                 todayUtc
             ))
             .toList();
+    }
+
+    @Override
+    public HistoricalSyncStartResponse startExtremeSync(UUID userId) {
+        if (!extremeSyncInProgress.compareAndSet(false, true)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Historical sync already running.");
+        }
+        historicalSyncAsyncRunner.runExtremeSync(() -> runExtremeSyncInBackground(userId));
+        OffsetDateTime startedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        return new HistoricalSyncStartResponse("STARTED", "Sync Started", startedAt);
     }
 
     @Override
@@ -102,6 +120,54 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
             skippedExistingRecords
         );
         return new HistoricalDataSyncResponse(assets.size(), rowsInserted, skippedAssets.size(), skippedAssets);
+    }
+
+    void runExtremeSyncInBackground(UUID userId) {
+        List<Asset> assets = assetRepository.findAllByOrderBySymbolAsc();
+        log.info("Extreme historical sync started by user {} for {} assets.", userId, assets.size());
+        try {
+            for (int i = 0; i < assets.size(); i++) {
+                Asset asset = assets.get(i);
+                boolean hasNextAsset = i < assets.size() - 1;
+                log.info("Syncing {}: starting sync.", asset.getSymbol());
+                try {
+                    AssetSyncResult result = syncAsset(asset, null);
+                    int daysFound = result.rowsInserted() + result.skippedExistingRecords();
+                    if (result.assetSkippedReason() != null) {
+                        log.info("Syncing {}: skipped ({})", asset.getSymbol(), result.assetSkippedReason());
+                    } else if (hasNextAsset) {
+                        log.info(
+                            "Syncing {}: {} day found. Waiting 60 seconds before next asset...",
+                            asset.getSymbol(),
+                            daysFound
+                        );
+                    } else {
+                        log.info(
+                            "Syncing {}: {} day found. Final asset complete.",
+                            asset.getSymbol(),
+                            daysFound
+                        );
+                    }
+                } catch (Exception ex) {
+                    if (hasNextAsset) {
+                        log.warn(
+                            "Syncing {} failed ({}). Waiting 60 seconds before next asset...",
+                            asset.getSymbol(),
+                            ex.getMessage()
+                        );
+                    } else {
+                        log.warn("Syncing {} failed ({}). Final asset complete.", asset.getSymbol(), ex.getMessage());
+                    }
+                } finally {
+                    if (hasNextAsset && !sleepExtremeThrottle(asset.getSymbol())) {
+                        break;
+                    }
+                }
+            }
+        } finally {
+            extremeSyncInProgress.set(false);
+            log.info("Extreme historical sync finished for user {}.", userId);
+        }
     }
 
     private List<Asset> resolveAssetsToSync(UUID assetId) {
@@ -202,6 +268,17 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         }
         assetHistoricDataRepository.saveAll(rowsToInsert);
         return new AssetSyncResult(rowsToInsert.size(), existingRowsSkipped, null);
+    }
+
+    private boolean sleepExtremeThrottle(String assetSymbol) {
+        try {
+            Thread.sleep(EXTREME_THROTTLE_DELAY_MS);
+            return true;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("Extreme sync sleep interrupted after {}. Stopping background job.", assetSymbol);
+            return false;
+        }
     }
 
     void sleepAfterBatchIfNeeded(int processedCount, int totalAssets) {

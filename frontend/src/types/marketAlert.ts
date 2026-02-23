@@ -21,4 +21,14 @@ export interface MarketScanResult {
   alertsCreated: number;
   fixedAlertsCreated: number;
   dynamicAlertsCreated: number;
+  snapshotsUpdated: number;
+}
+
+export interface MarketSnapshotItem {
+  assetName: string;
+  symbol: string;
+  currentRsi: string;
+  currentStoch: string;
+  lastUpdatedDate: string;
+  momentum: 'UP' | 'DOWN' | 'FLAT';
 }
