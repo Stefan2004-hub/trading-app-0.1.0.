@@ -88,17 +88,22 @@ export function HistoricalDataPage(): JSX.Element {
     setSkipped([]);
     try {
       const resolvedAssetId = assetIdOverride ?? selectedRefreshAssetId;
-      const response = await tradingApi.refreshHistoricalData(resolvedAssetId || undefined);
-      setInfo(
-        `Sync complete: ${response.rowsInserted} rows added across ${response.assetsProcessed} assets (${response.assetsSkipped} skipped).`
-      );
-      setSkipped(response.skippedAssets ?? []);
-      if (currentPage === 0) {
-        await loadRows(0, pageSize);
+      if (!resolvedAssetId) {
+        const response = await tradingApi.startHistoricalDataRefreshAll();
+        setInfo(`${response.message} (${response.startedAt})`);
       } else {
-        setCurrentPage(0);
+        const response = await tradingApi.refreshHistoricalData(resolvedAssetId);
+        setInfo(
+          `Sync complete: ${response.rowsInserted} rows added across ${response.assetsProcessed} assets (${response.assetsSkipped} skipped).`
+        );
+        setSkipped(response.skippedAssets ?? []);
+        if (currentPage === 0) {
+          await loadRows(0, pageSize);
+        } else {
+          setCurrentPage(0);
+        }
+        await loadMissingAssets();
       }
-      await loadMissingAssets();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to refresh historical data.');
     } finally {
