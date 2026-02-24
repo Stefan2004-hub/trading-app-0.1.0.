@@ -13,6 +13,9 @@ public record UpsertAssetRequest(
     String name,
     @Size(max = 120, message = "coinGeckoId must be at most 120 characters")
     @Pattern(regexp = "^[A-Za-z0-9-]*$", message = "coinGeckoId may contain only letters, numbers, and dashes")
-    String coinGeckoId
+    String coinGeckoId,
+    @Size(max = 20, message = "gateIoSymbol must be at most 20 characters")
+    @Pattern(regexp = "^[A-Za-z0-9_]*$", message = "gateIoSymbol may contain only letters, numbers, and underscore")
+    String gateIoSymbol
 ) {
 }

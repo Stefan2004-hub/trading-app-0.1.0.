@@ -7,9 +7,10 @@ interface AssetFormState {
   symbol: string;
   name: string;
   coinGeckoId: string;
+  gateIoSymbol: string;
 }
 
-const EMPTY_FORM: AssetFormState = { symbol: '', name: '', coinGeckoId: '' };
+const EMPTY_FORM: AssetFormState = { symbol: '', name: '', coinGeckoId: '', gateIoSymbol: '' };
 
 export function AssetsPage(): JSX.Element {
   const [assets, setAssets] = useState<AssetOption[]>([]);
@@ -46,10 +47,12 @@ export function AssetsPage(): JSX.Element {
     setSaving(true);
     setError(null);
     const coinGeckoId = form.coinGeckoId.trim().toLowerCase();
+    const gateIoSymbol = form.gateIoSymbol.trim().toUpperCase();
     const payload = {
       symbol: form.symbol.trim().toUpperCase(),
       name: form.name.trim(),
-      coinGeckoId: coinGeckoId.length > 0 ? coinGeckoId : null
+      coinGeckoId: coinGeckoId.length > 0 ? coinGeckoId : null,
+      gateIoSymbol: gateIoSymbol.length > 0 ? gateIoSymbol : null
     };
 
     try {
@@ -84,7 +87,12 @@ export function AssetsPage(): JSX.Element {
 
   function startEdit(asset: AssetOption): void {
     setEditingId(asset.id);
-    setForm({ symbol: asset.symbol, name: asset.name, coinGeckoId: asset.coinGeckoId ?? '' });
+    setForm({
+      symbol: asset.symbol,
+      name: asset.name,
+      coinGeckoId: asset.coinGeckoId ?? '',
+      gateIoSymbol: asset.gateIoSymbol ?? ''
+    });
   }
 
   return (
@@ -134,6 +142,15 @@ export function AssetsPage(): JSX.Element {
             onChange={(event) => setForm((current) => ({ ...current, coinGeckoId: event.target.value }))}
           />
 
+          <label htmlFor="asset-gateio-symbol">Gate.io Symbol (optional)</label>
+          <input
+            id="asset-gateio-symbol"
+            value={form.gateIoSymbol}
+            maxLength={20}
+            placeholder="e.g. ORDERLY"
+            onChange={(event) => setForm((current) => ({ ...current, gateIoSymbol: event.target.value }))}
+          />
+
           <div className="transaction-actions">
             <button type="submit" disabled={saving}>
               {saving ? 'Saving...' : editingId ? 'Update Asset' : 'Create Asset'}
@@ -163,6 +180,7 @@ export function AssetsPage(): JSX.Element {
                   <th>Symbol</th>
                   <th>Name</th>
                   <th>CoinGecko ID</th>
+                  <th>Gate.io Symbol</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -172,6 +190,7 @@ export function AssetsPage(): JSX.Element {
                     <td>{asset.symbol}</td>
                     <td>{asset.name}</td>
                     <td>{asset.coinGeckoId ?? '-'}</td>
+                    <td>{asset.gateIoSymbol ?? '-'}</td>
                     <td>
                       <div className="transaction-actions">
                         <button type="button" className="row-action-button row-action-edit" onClick={() => startEdit(asset)}>
@@ -186,7 +205,7 @@ export function AssetsPage(): JSX.Element {
                 ))}
                 {!loading && assets.length === 0 ? (
                   <tr>
-                    <td colSpan={4}>No assets found.</td>
+                    <td colSpan={5}>No assets found.</td>
                   </tr>
                 ) : null}
               </tbody>

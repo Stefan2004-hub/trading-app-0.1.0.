@@ -2,6 +2,7 @@ package com.trading;
 
 import com.trading.service.historical.coingecko.CoinGeckoProperties;
 import com.trading.service.historical.HistoricalSyncProperties;
+import com.trading.service.spotprice.SpotPriceProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -11,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 @EnableCaching
 @EnableAsync
-@EnableConfigurationProperties({CoinGeckoProperties.class, HistoricalSyncProperties.class})
+@EnableConfigurationProperties({CoinGeckoProperties.class, HistoricalSyncProperties.class, SpotPriceProperties.class})
 public class TradingApplication {
 
     public static void main(String[] args) {

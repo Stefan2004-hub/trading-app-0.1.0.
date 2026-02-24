@@ -19,7 +19,8 @@ import type {
   TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload,
-  UpdatePricePeakPayload
+  UpdatePricePeakPayload,
+  SpotPriceQuote
 } from '../types/trading';
 
 function extractLookupContent<T>(response: T[] | PaginatedResponse<T>): T[] {
@@ -52,14 +53,14 @@ export const tradingApi = {
     ).then(extractLookupContent);
   },
 
-  createAsset(payload: { symbol: string; name: string; coinGeckoId?: string | null }): Promise<AssetOption> {
+  createAsset(payload: { symbol: string; name: string; coinGeckoId?: string | null; gateIoSymbol?: string | null }): Promise<AssetOption> {
     return request<AssetOption>('/api/assets', {
       method: 'POST',
       body: payload
     });
   },
 
-  updateAsset(id: string, payload: { symbol: string; name: string; coinGeckoId?: string | null }): Promise<AssetOption> {
+  updateAsset(id: string, payload: { symbol: string; name: string; coinGeckoId?: string | null; gateIoSymbol?: string | null }): Promise<AssetOption> {
     return request<AssetOption>(`/api/assets/${id}`, {
       method: 'PUT',
       body: payload
@@ -150,6 +151,11 @@ export const tradingApi = {
 
   getAssetSummary(): Promise<AssetSummary[]> {
     return request<AssetSummary[]>('/api/portfolio/asset-summary');
+  },
+
+  getSpotPrice(symbol: string): Promise<SpotPriceQuote> {
+    const normalized = symbol.trim().toUpperCase();
+    return request<SpotPriceQuote>(`/api/prices/spot?symbol=${encodeURIComponent(normalized)}`);
   },
 
   listHistoricalData(params?: { page?: number; size?: number }): Promise<PaginatedResponse<HistoricalDataRow>> {
