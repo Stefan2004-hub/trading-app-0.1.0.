@@ -89,13 +89,14 @@ class HistoricalDataServiceImplTest {
     @Test
     void syncIncrementalDeletesTodayAndThenSavesNewQuotes() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        LocalDate latestExisting = todayUtc.minusDays(2);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
+        LocalDate latestExisting = syncEndDate.minusDays(1);
         LocalDate expectedStart = latestExisting.plusDays(1);
 
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(latestExisting);
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), expectedStart, todayUtc)).thenReturn(Set.of());
-        when(coinGeckoClient.fetchDailyQuotes("bitcoin", expectedStart, todayUtc)).thenReturn(List.of(
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), expectedStart, syncEndDate)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", expectedStart, syncEndDate)).thenReturn(List.of(
             new CoinGeckoClient.CoinGeckoDailyQuote(
                 expectedStart,
                 new java.math.BigDecimal("68000.00"),
@@ -123,11 +124,12 @@ class HistoricalDataServiceImplTest {
     @Test
     void syncIncrementalRateLimitStillPropagates() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
 
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
-        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(todayUtc.minusDays(1));
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
-        when(coinGeckoClient.fetchDailyQuotes("bitcoin", todayUtc, todayUtc))
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(syncEndDate.minusDays(1));
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), syncEndDate, syncEndDate)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", syncEndDate, syncEndDate))
             .thenThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "CoinGecko rate limit reached."));
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> historicalDataService.syncIncremental(userId, null));
@@ -141,11 +143,12 @@ class HistoricalDataServiceImplTest {
     @Test
     void syncIncrementalNon429ErrorSkipsAssetAndKeepsFlow() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
 
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
-        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(todayUtc.minusDays(1));
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
-        when(coinGeckoClient.fetchDailyQuotes(eq("bitcoin"), eq(todayUtc), eq(todayUtc)))
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(syncEndDate.minusDays(1));
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), syncEndDate, syncEndDate)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes(eq("bitcoin"), eq(syncEndDate), eq(syncEndDate)))
             .thenThrow(new ResponseStatusException(HttpStatus.BAD_GATEWAY, "upstream failed"));
 
         HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, null);
@@ -164,31 +167,31 @@ class HistoricalDataServiceImplTest {
 
     @Test
     void cleanAndResetDeletesAllThenFetchesAllAssetsFromThirtyDayLookback() {
-        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        LocalDate resetStartDate = todayUtc.minusDays(29);
+        LocalDate syncEndDate = LocalDate.now(ZoneOffset.UTC).minusDays(1);
+        LocalDate resetStartDate = syncEndDate.minusDays(29);
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), resetStartDate, todayUtc)).thenReturn(Set.of());
-        when(coinGeckoClient.fetchDailyQuotes("bitcoin", resetStartDate, todayUtc)).thenReturn(List.of());
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), resetStartDate, syncEndDate)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", resetStartDate, syncEndDate)).thenReturn(List.of());
 
         HistoricalDataSyncResponse response = historicalDataService.cleanAndReset(userId);
 
         assertEquals(1, response.assetsProcessed());
         assertEquals(0, response.rowsInserted());
         verify(assetHistoricDataRepository).deleteAllInBatch();
-        verify(coinGeckoClient).fetchDailyQuotes("bitcoin", resetStartDate, todayUtc);
+        verify(coinGeckoClient).fetchDailyQuotes("bitcoin", resetStartDate, syncEndDate);
     }
 
     @Test
     void syncIncrementalSkipsExistingRowsAndStillInsertsNewRows() {
-        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        LocalDate startDate = todayUtc.minusDays(1);
+        LocalDate syncEndDate = LocalDate.now(ZoneOffset.UTC).minusDays(1);
+        LocalDate startDate = syncEndDate.minusDays(1);
         LocalDate existingDate = startDate;
-        LocalDate newDate = todayUtc;
+        LocalDate newDate = syncEndDate;
 
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(startDate.minusDays(1));
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), startDate, todayUtc)).thenReturn(Set.of(existingDate));
-        when(coinGeckoClient.fetchDailyQuotes("bitcoin", startDate, todayUtc)).thenReturn(List.of(
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), startDate, syncEndDate)).thenReturn(Set.of(existingDate));
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", startDate, syncEndDate)).thenReturn(List.of(
             new CoinGeckoClient.CoinGeckoDailyQuote(existingDate, new java.math.BigDecimal("100"), new java.math.BigDecimal("90"), new java.math.BigDecimal("95")),
             new CoinGeckoClient.CoinGeckoDailyQuote(newDate, new java.math.BigDecimal("110"), new java.math.BigDecimal("100"), new java.math.BigDecimal("105"))
         ));
@@ -216,9 +219,10 @@ class HistoricalDataServiceImplTest {
         secondAsset.setCoinGeckoId("ethereum");
 
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
         when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset, secondAsset));
-        when(assetHistoricDataRepository.findLatestDayDateByAssetId(any())).thenReturn(todayUtc.minusDays(1));
-        when(assetHistoricDataRepository.findExistingDayDates(any(), eq(todayUtc), eq(todayUtc))).thenReturn(Set.of());
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(any())).thenReturn(syncEndDate.minusDays(1));
+        when(assetHistoricDataRepository.findExistingDayDates(any(), eq(syncEndDate), eq(syncEndDate))).thenReturn(Set.of());
         when(coinGeckoClient.fetchDailyQuotes(any(), any(), any())).thenReturn(List.of());
 
         serviceWithSpySleep.syncIncremental(userId, null);
@@ -230,11 +234,12 @@ class HistoricalDataServiceImplTest {
     @Test
     void syncIncrementalWithSpecificAssetRefreshesOnlySelectedAsset() {
         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        LocalDate latestExisting = todayUtc.minusDays(1);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
+        LocalDate latestExisting = syncEndDate.minusDays(1);
         when(assetRepository.findById(btcAsset.getId())).thenReturn(Optional.of(btcAsset));
         when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(latestExisting);
-        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), todayUtc, todayUtc)).thenReturn(Set.of());
-        when(coinGeckoClient.fetchDailyQuotes("bitcoin", todayUtc, todayUtc)).thenReturn(List.of());
+        when(assetHistoricDataRepository.findExistingDayDates(btcAsset.getId(), syncEndDate, syncEndDate)).thenReturn(Set.of());
+        when(coinGeckoClient.fetchDailyQuotes("bitcoin", syncEndDate, syncEndDate)).thenReturn(List.of());
 
         HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, btcAsset.getId());
 
@@ -262,9 +267,9 @@ class HistoricalDataServiceImplTest {
     }
 
     @Test
-    void listAssetsNeedingRefreshTodayReturnsMissingAssetsForTodayUtc() {
-        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        when(assetRepository.findAssetsMissingHistoricalDataForDay(todayUtc)).thenReturn(List.of(btcAsset));
+    void listAssetsNeedingRefreshTodayReturnsMissingAssetsForYesterdayUtc() {
+        LocalDate syncCutoffDate = LocalDate.now(ZoneOffset.UTC).minusDays(1);
+        when(assetRepository.findAssetsMissingHistoricalDataForDay(syncCutoffDate)).thenReturn(List.of(btcAsset));
 
         var response = historicalDataService.listAssetsNeedingRefreshToday(userId);
 
@@ -272,7 +277,25 @@ class HistoricalDataServiceImplTest {
         assertEquals(btcAsset.getId(), response.get(0).assetId());
         assertEquals("BTC", response.get(0).assetSymbol());
         assertEquals("Bitcoin", response.get(0).assetName());
-        assertEquals(todayUtc, response.get(0).missingDate());
+        assertEquals(syncCutoffDate, response.get(0).missingDate());
+    }
+
+    @Test
+    void syncIncrementalSkipsApiCallWhenAssetAlreadySyncedThroughYesterday() {
+        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+        LocalDate syncEndDate = todayUtc.minusDays(1);
+
+        when(assetRepository.findAllByOrderBySymbolAsc()).thenReturn(List.of(btcAsset));
+        when(assetHistoricDataRepository.findLatestDayDateByAssetId(btcAsset.getId())).thenReturn(syncEndDate);
+
+        HistoricalDataSyncResponse response = historicalDataService.syncIncremental(userId, null);
+
+        assertEquals(1, response.assetsProcessed());
+        assertEquals(0, response.rowsInserted());
+        assertEquals(0, response.assetsSkipped());
+        verify(assetHistoricDataRepository).deleteByDayDate(todayUtc);
+        verify(assetHistoricDataRepository, never()).findExistingDayDates(any(), any(), any());
+        verify(coinGeckoClient, never()).fetchDailyQuotes(any(), any(), any());
     }
 
     @Test
