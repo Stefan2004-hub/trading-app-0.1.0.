@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { tradingApi } from '../api/tradingApi';
 
 type PriceSource = 'coinbase' | 'gateio';
 type PriceStatus = 'loading' | 'success' | 'error';
@@ -27,36 +28,6 @@ function isFresh(result: PriceResult): boolean {
   return Date.now() - result.fetchedAt < CACHE_TTL_MS;
 }
 
-async function fetchCoinbaseSpotPrice(symbol: string): Promise<string> {
-  const response = await fetch(`https://api.coinbase.com/v2/prices/${symbol}-USD/spot`);
-  if (!response.ok) {
-    throw new Error(`Coinbase returned ${response.status}`);
-  }
-
-  const payload = (await response.json()) as { data?: { amount?: string } };
-  const amount = payload?.data?.amount;
-  if (!amount) {
-    throw new Error('Coinbase amount missing');
-  }
-
-  return amount;
-}
-
-async function fetchGateIoSpotPrice(symbol: string): Promise<string> {
-  const response = await fetch(`https://api.gateio.ws/api/v4/spot/tickers?currency_pair=${symbol}_USDT`);
-  if (!response.ok) {
-    throw new Error(`Gate.io returned ${response.status}`);
-  }
-
-  const payload = (await response.json()) as Array<{ last?: string }>;
-  const amount = payload[0]?.last;
-  if (!amount) {
-    throw new Error('Gate.io last price missing');
-  }
-
-  return amount;
-}
-
 async function resolveAssetPrice(symbol: string): Promise<PriceResult> {
   const cached = resultCache.get(symbol);
   if (cached && isFresh(cached)) {
@@ -70,23 +41,14 @@ async function resolveAssetPrice(symbol: string): Promise<PriceResult> {
 
   const nextInFlight = (async () => {
     try {
-      const coinbasePrice = await fetchCoinbaseSpotPrice(symbol);
-      const coinbaseResult: PriceResult = {
-        priceUsd: coinbasePrice,
-        source: 'coinbase',
+      const response = await tradingApi.getSpotPrice(symbol);
+      const result: PriceResult = {
+        priceUsd: response.priceUsd,
+        source: response.source,
         fetchedAt: Date.now()
       };
-      resultCache.set(symbol, coinbaseResult);
-      return coinbaseResult;
-    } catch {
-      const gatePrice = await fetchGateIoSpotPrice(symbol);
-      const gateResult: PriceResult = {
-        priceUsd: gatePrice,
-        source: 'gateio',
-        fetchedAt: Date.now()
-      };
-      resultCache.set(symbol, gateResult);
-      return gateResult;
+      resultCache.set(symbol, result);
+      return result;
     } finally {
       inFlightCache.delete(symbol);
     }
