@@ -68,13 +68,13 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
     @Override
     @Transactional(readOnly = true)
     public List<HistoricalAssetRefreshStatusResponse> listAssetsNeedingRefreshToday(UUID userId) {
-        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-        return assetRepository.findAssetsMissingHistoricalDataForDay(todayUtc).stream()
+        LocalDate syncCutoffDate = syncCutoffDateUtc();
+        return assetRepository.findAssetsMissingHistoricalDataForDay(syncCutoffDate).stream()
             .map((asset) -> new HistoricalAssetRefreshStatusResponse(
                 asset.getId(),
                 asset.getSymbol(),
                 asset.getName(),
-                todayUtc
+                syncCutoffDate
             ))
             .toList();
     }
@@ -188,7 +188,7 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         int rowsInserted = 0;
         int skippedExistingRecords = 0;
         List<SkippedAssetSyncItem> skippedAssets = new ArrayList<>();
-        LocalDate resetStartDate = LocalDate.now(ZoneOffset.UTC).minusDays(DEFAULT_LOOKBACK_DAYS - 1L);
+        LocalDate resetStartDate = syncCutoffDateUtc().minusDays(DEFAULT_LOOKBACK_DAYS - 1L);
         for (int i = 0; i < assets.size(); i++) {
             Asset asset = assets.get(i);
             AssetSyncResult result = syncAsset(asset, resetStartDate);
@@ -217,7 +217,7 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
             return new AssetSyncResult(0, 0, "coin_gecko_id is not set");
         }
 
-        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        LocalDate syncEndDate = syncCutoffDateUtc();
         LocalDate latestExistingDate = assetHistoricDataRepository.findLatestDayDateByAssetId(asset.getId());
 
         LocalDate startDate;
@@ -226,17 +226,17 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         } else if (latestExistingDate != null) {
             startDate = latestExistingDate.plusDays(1);
         } else {
-            startDate = today.minusDays(DEFAULT_LOOKBACK_DAYS - 1L);
+            startDate = syncEndDate.minusDays(DEFAULT_LOOKBACK_DAYS - 1L);
         }
 
-        if (startDate.isAfter(today)) {
+        if (startDate.isAfter(syncEndDate)) {
             return new AssetSyncResult(0, 0, null);
         }
 
-        Set<LocalDate> existingDates = assetHistoricDataRepository.findExistingDayDates(asset.getId(), startDate, today);
+        Set<LocalDate> existingDates = assetHistoricDataRepository.findExistingDayDates(asset.getId(), startDate, syncEndDate);
         List<CoinGeckoClient.CoinGeckoDailyQuote> quotes;
         try {
-            quotes = coinGeckoClient.fetchDailyQuotes(coinId, startDate, today);
+            quotes = coinGeckoClient.fetchDailyQuotes(coinId, startDate, syncEndDate);
         } catch (ResponseStatusException ex) {
             if (ex.getStatusCode().value() == 429) {
                 throw ex;
@@ -247,7 +247,7 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         List<AssetHistoricData> rowsToInsert = new ArrayList<>();
         int existingRowsSkipped = 0;
         for (CoinGeckoClient.CoinGeckoDailyQuote quote : quotes) {
-            if (quote.dayDate().isBefore(startDate) || quote.dayDate().isAfter(today)) {
+            if (quote.dayDate().isBefore(startDate) || quote.dayDate().isAfter(syncEndDate)) {
                 continue;
             }
             if (existingDates.contains(quote.dayDate())) {
@@ -268,6 +268,10 @@ public class HistoricalDataServiceImpl implements HistoricalDataService {
         }
         assetHistoricDataRepository.saveAll(rowsToInsert);
         return new AssetSyncResult(rowsToInsert.size(), existingRowsSkipped, null);
+    }
+
+    private LocalDate syncCutoffDateUtc() {
+        return LocalDate.now(ZoneOffset.UTC).minusDays(1);
     }
 
     private boolean sleepExtremeThrottle(String assetSymbol) {
