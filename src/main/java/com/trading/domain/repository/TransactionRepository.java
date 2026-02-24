@@ -33,10 +33,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
             WHERE t.user.id = :userId
               AND (
                 :searchPattern IS NULL
-                OR a.symbol LIKE :searchPattern
-                OR a.name LIKE :searchPattern
-                OR e.symbol LIKE :searchPattern
-                OR e.name LIKE :searchPattern
+                OR LOWER(a.symbol) LIKE :searchPattern
+                OR LOWER(a.name) LIKE :searchPattern
+                OR LOWER(e.symbol) LIKE :searchPattern
+                OR LOWER(e.name) LIKE :searchPattern
               )
             """
     )

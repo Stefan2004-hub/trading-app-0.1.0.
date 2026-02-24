@@ -585,7 +585,7 @@ public class TransactionServiceImpl implements TransactionService {
         if (normalizedSearch == null) {
             return null;
         }
-        return "%" + normalizedSearch + "%";
+        return "%" + normalizedSearch.toLowerCase(Locale.ROOT) + "%";
     }
 
     private static boolean matchesSearch(Transaction tx, String normalizedSearch) {
