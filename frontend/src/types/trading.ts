@@ -3,6 +3,15 @@ export interface AssetOption {
   symbol: string;
   name: string;
   coinGeckoId: string | null;
+  gateIoSymbol: string | null;
+}
+
+export interface SpotPriceQuote {
+  symbol: string;
+  priceUsd: string;
+  source: 'coinbase' | 'gateio';
+  resolvedPair: string;
+  fetchedAt: string;
 }
 
 export interface ExchangeOption {

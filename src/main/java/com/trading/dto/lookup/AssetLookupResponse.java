@@ -6,6 +6,7 @@ public record AssetLookupResponse(
     UUID id,
     String symbol,
     String name,
-    String coinGeckoId
+    String coinGeckoId,
+    String gateIoSymbol
 ) {
 }

@@ -242,7 +242,8 @@ public class BackupServiceImpl implements BackupService {
                 "id", asset.getId(),
                 "symbol", asset.getSymbol(),
                 "name", asset.getName(),
-                "coin_gecko_id", asset.getCoinGeckoId()
+                "coin_gecko_id", asset.getCoinGeckoId(),
+                "gate_io_symbol", asset.getGateIoSymbol()
             ));
         }
     }

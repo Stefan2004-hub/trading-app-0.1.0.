@@ -44,3 +44,9 @@ app:
     sync:
       batch-size: ${APP_HISTORICAL_SYNC_BATCH_SIZE:50}
       sleep-ms-between-batches: ${APP_HISTORICAL_SYNC_SLEEP_MS_BETWEEN_BATCHES:1200}
+  spot-price:
+    coinbase-base-url: ${APP_SPOT_PRICE_COINBASE_BASE_URL:https://api.coinbase.com}
+    gate-io-base-url: ${APP_SPOT_PRICE_GATE_IO_BASE_URL:https://api.gateio.ws/api/v4}
+    cache-ttl-millis: ${APP_SPOT_PRICE_CACHE_TTL_MILLIS:30000}
+    connect-timeout-millis: ${APP_SPOT_PRICE_CONNECT_TIMEOUT_MILLIS:2000}
+    read-timeout-millis: ${APP_SPOT_PRICE_READ_TIMEOUT_MILLIS:3000}

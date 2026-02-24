@@ -26,6 +26,9 @@ public class Asset {
     @Column(name = "coin_gecko_id", length = 120)
     private String coinGeckoId;
 
+    @Column(name = "gate_io_symbol", length = 20)
+    private String gateIoSymbol;
+
     public UUID getId() {
         return id;
     }
@@ -56,5 +59,13 @@ public class Asset {
 
     public void setCoinGeckoId(String coinGeckoId) {
         this.coinGeckoId = coinGeckoId;
+    }
+
+    public String getGateIoSymbol() {
+        return gateIoSymbol;
+    }
+
+    public void setGateIoSymbol(String gateIoSymbol) {
+        this.gateIoSymbol = gateIoSymbol;
     }
 }

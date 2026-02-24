@@ -46,6 +46,7 @@ public class AssetServiceImpl implements AssetService {
         String symbol = normalizeSymbol(request.symbol());
         String name = normalizeName(request.name());
         String coinGeckoId = normalizeCoinGeckoId(request.coinGeckoId());
+        String gateIoSymbol = normalizeGateIoSymbol(request.gateIoSymbol());
 
         assertUniqueSymbol(symbol, null);
         assertUniqueCoinGeckoId(coinGeckoId, null);
@@ -54,6 +55,7 @@ public class AssetServiceImpl implements AssetService {
         asset.setSymbol(symbol);
         asset.setName(name);
         asset.setCoinGeckoId(coinGeckoId);
+        asset.setGateIoSymbol(gateIoSymbol);
         return toResponse(assetRepository.save(asset));
     }
 
@@ -64,6 +66,7 @@ public class AssetServiceImpl implements AssetService {
         String symbol = normalizeSymbol(request.symbol());
         String name = normalizeName(request.name());
         String coinGeckoId = normalizeCoinGeckoId(request.coinGeckoId());
+        String gateIoSymbol = normalizeGateIoSymbol(request.gateIoSymbol());
 
         Asset existing = requireAsset(id);
         assertUniqueSymbol(symbol, id);
@@ -72,6 +75,7 @@ public class AssetServiceImpl implements AssetService {
         existing.setSymbol(symbol);
         existing.setName(name);
         existing.setCoinGeckoId(coinGeckoId);
+        existing.setGateIoSymbol(gateIoSymbol);
         return toResponse(assetRepository.save(existing));
     }
 
@@ -122,6 +126,14 @@ public class AssetServiceImpl implements AssetService {
         return normalized.isBlank() ? null : normalized;
     }
 
+    private static String normalizeGateIoSymbol(String gateIoSymbol) {
+        if (gateIoSymbol == null) {
+            return null;
+        }
+        String normalized = gateIoSymbol.trim().toUpperCase(Locale.ROOT);
+        return normalized.isBlank() ? null : normalized;
+    }
+
     private static String normalizeSearch(String search) {
         if (search == null || search.isBlank()) {
             return null;
@@ -130,6 +142,12 @@ public class AssetServiceImpl implements AssetService {
     }
 
     private static AssetLookupResponse toResponse(Asset asset) {
-        return new AssetLookupResponse(asset.getId(), asset.getSymbol(), asset.getName(), asset.getCoinGeckoId());
+        return new AssetLookupResponse(
+            asset.getId(),
+            asset.getSymbol(),
+            asset.getName(),
+            asset.getCoinGeckoId(),
+            asset.getGateIoSymbol()
+        );
     }
 }
