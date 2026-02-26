@@ -264,6 +264,18 @@ export const tradingApi = {
     return { blob: response.blob, fileName };
   },
 
+  getKeepAliveStatus(): Promise<{ keepAliveActive: boolean }> {
+    return request<{ keepAliveActive: boolean }>('/api/admin/ping-status', {
+      method: 'GET'
+    });
+  },
+
+  toggleKeepAlive(): Promise<{ keepAliveActive: boolean }> {
+    return request<{ keepAliveActive: boolean }>('/api/admin/toggle-ping', {
+      method: 'POST'
+    });
+  },
+
   listAccumulationTrades(params?: {
     status?: AccumulationTradeStatus;
     userId?: string;
