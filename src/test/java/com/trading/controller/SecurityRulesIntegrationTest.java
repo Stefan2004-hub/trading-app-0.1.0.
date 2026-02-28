@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
@@ -115,6 +116,31 @@ class SecurityRulesIntegrationTest {
         mockMvc.perform(get("/api/auth/ping"))
             .andExpect(status().isOk());
     }
+
+    @Test
+    void rootAndHealthEndpointsArePublic() throws Exception {
+        mockMvc.perform(get("/"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ok"))
+            .andExpect(jsonPath("$.service").value("trading-app-backend"))
+            .andExpect(jsonPath("$.health").value("/health"))
+            .andExpect(jsonPath("$.apiBase").value("/api"));
+
+        mockMvc.perform(get("/health"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ok"));
+    }
+
+    @Test
+    void missingPublicRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/does-not-exist"))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.status").value(404))
+            .andExpect(jsonPath("$.error").value("Not Found"))
+            .andExpect(jsonPath("$.message").value("Resource not found"))
+            .andExpect(jsonPath("$.path").value("/does-not-exist"));
+    }
+
     @MockBean
     private BackupService backupService;
 
