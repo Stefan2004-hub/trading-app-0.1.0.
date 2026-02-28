@@ -12,6 +12,8 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.OffsetDateTime;
 import java.util.Comparator;
@@ -148,6 +150,22 @@ public class ApiExceptionHandler {
         String message = ex.getReason() == null ? ex.getStatusCode().toString() : ex.getReason();
         HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
         return build(status, message, request, List.of());
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoHandlerFound(
+        NoHandlerFoundException ex,
+        HttpServletRequest request
+    ) {
+        return build(HttpStatus.NOT_FOUND, "Resource not found", request, List.of());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+        NoResourceFoundException ex,
+        HttpServletRequest request
+    ) {
+        return build(HttpStatus.NOT_FOUND, "Resource not found", request, List.of());
     }
 
     @ExceptionHandler(Exception.class)
