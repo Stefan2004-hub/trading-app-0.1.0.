@@ -239,6 +239,7 @@ const primaryGroups: NavGroupConfig[] = [
     items: [
       { label: 'Dashboard', to: '/dashboard', icon: DashboardIcon },
       { label: 'Transactions', to: '/transactions', icon: TransactionsIcon },
+      { label: 'Accumulation Strategy', to: '/accumulation-strategy', icon: StrategyIcon },
       { label: 'Strategies', to: '/strategies', icon: StrategyIcon }
     ]
   },

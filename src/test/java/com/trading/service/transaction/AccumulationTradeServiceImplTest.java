@@ -6,8 +6,10 @@ import com.trading.domain.entity.Transaction;
 import com.trading.domain.entity.User;
 import com.trading.domain.enums.AccumulationTradeStatus;
 import com.trading.domain.enums.TransactionType;
+import com.trading.domain.projection.AccumulationTradeAssetSummaryProjection;
 import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.TransactionRepository;
+import com.trading.dto.transaction.AccumulationTradeAssetSummaryResponse;
 import com.trading.dto.transaction.AccumulationTradeResponse;
 import com.trading.dto.transaction.CloseAccumulationTradeRequest;
 import com.trading.dto.transaction.OpenAccumulationTradeRequest;
@@ -17,16 +19,23 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -109,6 +118,71 @@ class AccumulationTradeServiceImplTest {
             }
             return trade;
         });
+    }
+
+    @Test
+    void listReturnsPagedResponsesFilteredByStatusAndAsset() {
+        UUID requestedAssetId = assetId;
+        PageRequest expectedPageRequest = PageRequest.of(1, 10, Sort.by(Sort.Order.desc("createdAt")));
+        when(accumulationTradeRepository.findAllByUser_IdAndStatusAndAsset_Id(
+            userId,
+            AccumulationTradeStatus.CLOSED,
+            requestedAssetId,
+            expectedPageRequest
+        )).thenReturn(new PageImpl<>(List.of(openTrade), expectedPageRequest, 11));
+
+        Page<AccumulationTradeResponse> response = accumulationTradeService.list(
+            userId,
+            1,
+            10,
+            AccumulationTradeStatus.CLOSED,
+            requestedAssetId
+        );
+
+        assertEquals(11, response.getTotalElements());
+        assertEquals(tradeId, response.getContent().get(0).id());
+        verify(accumulationTradeRepository).findAllByUser_IdAndStatusAndAsset_Id(
+            eq(userId),
+            eq(AccumulationTradeStatus.CLOSED),
+            eq(requestedAssetId),
+            eq(expectedPageRequest)
+        );
+    }
+
+    @Test
+    void listReturnsPagedResponsesForUserOnly() {
+        PageRequest expectedPageRequest = PageRequest.of(0, 20, Sort.by(Sort.Order.desc("createdAt")));
+        when(accumulationTradeRepository.findAllByUser_Id(userId, expectedPageRequest))
+            .thenReturn(new PageImpl<>(List.of(openTrade), expectedPageRequest, 1));
+
+        Page<AccumulationTradeResponse> response = accumulationTradeService.list(userId, 0, 20, null, null);
+
+        assertEquals(1, response.getTotalElements());
+        assertEquals(tradeId, response.getContent().get(0).id());
+        verify(accumulationTradeRepository).findAllByUser_Id(eq(userId), eq(expectedPageRequest));
+    }
+
+    @Test
+    void summarizeByAssetDefaultsToClosedStatus() {
+        AccumulationTradeAssetSummaryProjection projection = new TestAccumulationTradeAssetSummaryProjection(
+            assetId,
+            new BigDecimal("0.125000000000000000"),
+            3
+        );
+        when(accumulationTradeRepository.summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, null))
+            .thenReturn(List.of(projection));
+
+        List<AccumulationTradeAssetSummaryResponse> response = accumulationTradeService.summarizeByAsset(
+            userId,
+            null,
+            null
+        );
+
+        assertEquals(1, response.size());
+        assertEquals(assetId, response.get(0).assetId());
+        assertEquals(0, response.get(0).totalAccumulationDelta().compareTo(new BigDecimal("0.125")));
+        assertEquals(3, response.get(0).tradeCount());
+        verify(accumulationTradeRepository).summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, null);
     }
 
     @Test
@@ -216,5 +290,27 @@ class AccumulationTradeServiceImplTest {
         );
 
         assertEquals("Only OPEN accumulation trades can be closed", ex.getMessage());
+    }
+
+    private record TestAccumulationTradeAssetSummaryProjection(
+        UUID assetId,
+        BigDecimal totalAccumulationDelta,
+        long tradeCount
+    ) implements AccumulationTradeAssetSummaryProjection {
+
+        @Override
+        public UUID getAssetId() {
+            return assetId;
+        }
+
+        @Override
+        public BigDecimal getTotalAccumulationDelta() {
+            return totalAccumulationDelta;
+        }
+
+        @Override
+        public long getTradeCount() {
+            return tradeCount;
+        }
     }
 }

@@ -6,9 +6,13 @@ import com.trading.domain.enums.AccumulationTradeStatus;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.TransactionRepository;
+import com.trading.dto.transaction.AccumulationTradeAssetSummaryResponse;
 import com.trading.dto.transaction.AccumulationTradeResponse;
 import com.trading.dto.transaction.CloseAccumulationTradeRequest;
 import com.trading.dto.transaction.OpenAccumulationTradeRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -32,14 +36,51 @@ public class AccumulationTradeServiceImpl implements AccumulationTradeService {
     }
 
     @Override
-    public List<AccumulationTradeResponse> list(UUID userId, AccumulationTradeStatus status) {
+    public Page<AccumulationTradeResponse> list(
+        UUID userId,
+        int page,
+        int size,
+        AccumulationTradeStatus status,
+        UUID assetId
+    ) {
         Objects.requireNonNull(userId, "userId is required");
 
-        List<AccumulationTrade> trades = status == null
-            ? accumulationTradeRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
-            : accumulationTradeRepository.findAllByUser_IdAndStatusOrderByCreatedAtDesc(userId, status);
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt")));
+        Page<AccumulationTrade> trades;
+        if (status != null && assetId != null) {
+            trades = accumulationTradeRepository.findAllByUser_IdAndStatusAndAsset_Id(
+                userId,
+                status,
+                assetId,
+                pageRequest
+            );
+        } else if (status != null) {
+            trades = accumulationTradeRepository.findAllByUser_IdAndStatus(userId, status, pageRequest);
+        } else if (assetId != null) {
+            trades = accumulationTradeRepository.findAllByUser_IdAndAsset_Id(userId, assetId, pageRequest);
+        } else {
+            trades = accumulationTradeRepository.findAllByUser_Id(userId, pageRequest);
+        }
 
-        return trades.stream().map(AccumulationTradeServiceImpl::toResponse).toList();
+        return trades.map(AccumulationTradeServiceImpl::toResponse);
+    }
+
+    @Override
+    public List<AccumulationTradeAssetSummaryResponse> summarizeByAsset(
+        UUID userId,
+        AccumulationTradeStatus status,
+        UUID assetId
+    ) {
+        Objects.requireNonNull(userId, "userId is required");
+        AccumulationTradeStatus resolvedStatus = status == null ? AccumulationTradeStatus.CLOSED : status;
+        return accumulationTradeRepository.summarizeByAsset(userId, resolvedStatus, assetId)
+            .stream()
+            .map((row) -> new AccumulationTradeAssetSummaryResponse(
+                row.getAssetId(),
+                row.getTotalAccumulationDelta(),
+                row.getTradeCount()
+            ))
+            .toList();
     }
 
     @Override

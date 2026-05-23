@@ -2,6 +2,7 @@ import { request, requestBlob } from './http';
 import { decimalToFractionalPercent } from '../utils/decimal';
 import type {
   AccumulationTradeItem,
+  AccumulationTradeAssetSummaryItem,
   AssetSummary,
   AccumulationTradeStatus,
   AssetOption,
@@ -277,10 +278,36 @@ export const tradingApi = {
   },
 
   listAccumulationTrades(params?: {
+    page?: number;
+    size?: number;
+    assetId?: string;
     status?: AccumulationTradeStatus;
     userId?: string;
-  }): Promise<AccumulationTradeItem[]> {
+  }): Promise<PaginatedResponse<AccumulationTradeItem>> {
     const queryParams = new URLSearchParams();
+    queryParams.set('page', String(params?.page ?? 0));
+    queryParams.set('size', String(params?.size ?? 20));
+    if (params?.assetId) {
+      queryParams.set('assetId', params.assetId);
+    }
+    if (params?.status) {
+      queryParams.set('status', params.status);
+    }
+    if (params?.userId) {
+      queryParams.set('userId', params.userId);
+    }
+    return request<PaginatedResponse<AccumulationTradeItem>>(`/api/accumulation-trades?${queryParams.toString()}`);
+  },
+
+  listAccumulationTradeAssetSummaries(params?: {
+    assetId?: string;
+    status?: AccumulationTradeStatus;
+    userId?: string;
+  }): Promise<AccumulationTradeAssetSummaryItem[]> {
+    const queryParams = new URLSearchParams();
+    if (params?.assetId) {
+      queryParams.set('assetId', params.assetId);
+    }
     if (params?.status) {
       queryParams.set('status', params.status);
     }
@@ -288,7 +315,9 @@ export const tradingApi = {
       queryParams.set('userId', params.userId);
     }
     const query = queryParams.toString();
-    return request<AccumulationTradeItem[]>(`/api/accumulation-trades${query ? `?${query}` : ''}`);
+    return request<AccumulationTradeAssetSummaryItem[]>(
+      `/api/accumulation-trades/grouped-by-asset${query ? `?${query}` : ''}`
+    );
   },
 
   openAccumulationTrade(payload: {

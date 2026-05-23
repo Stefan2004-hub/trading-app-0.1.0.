@@ -1,9 +1,12 @@
 package com.trading.controller;
 
 import com.trading.service.backup.BackupService;
+import com.trading.domain.enums.AccumulationTradeStatus;
 import com.trading.domain.enums.TransactionListView;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.enums.TransactionAccumulationRole;
+import com.trading.dto.transaction.AccumulationTradeAssetSummaryResponse;
+import com.trading.dto.transaction.AccumulationTradeResponse;
 import com.trading.dto.transaction.CleanHistoryBackup;
 import com.trading.dto.transaction.TransactionResponse;
 import com.trading.security.UserPrincipal;
@@ -283,6 +286,76 @@ class TransactionControllerIntegrationTest {
     }
 
     @Test
+    void accumulationTradeListEndpointReturnsPagedPayload() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID assetId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+        AccumulationTradeResponse response = accumulationTradeResponse(userId, assetId);
+
+        when(accumulationTradeService.list(userId, 2, 10, AccumulationTradeStatus.CLOSED, assetId))
+            .thenReturn(accumulationPageOf(List.of(response), 2, 10, 21));
+
+        mockMvc.perform(
+                get("/api/accumulation-trades")
+                    .queryParam("page", "2")
+                    .queryParam("size", "10")
+                    .queryParam("status", "CLOSED")
+                    .queryParam("assetId", assetId.toString())
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].id").value(response.id().toString()))
+            .andExpect(jsonPath("$.content[0].assetId").value(assetId.toString()))
+            .andExpect(jsonPath("$.content[0].status").value("CLOSED"))
+            .andExpect(jsonPath("$.totalElements").value(21))
+            .andExpect(jsonPath("$.totalPages").value(3));
+
+        verify(accumulationTradeService).list(userId, 2, 10, AccumulationTradeStatus.CLOSED, assetId);
+    }
+
+    @Test
+    void accumulationTradeListRejectsMismatchedUserId() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID otherUserId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        mockMvc.perform(
+                get("/api/accumulation-trades")
+                    .queryParam("userId", otherUserId.toString())
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void accumulationTradeGroupedByAssetEndpointReturnsTotals() throws Exception {
+        UUID userId = UUID.randomUUID();
+        UUID assetId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+        AccumulationTradeAssetSummaryResponse summary = new AccumulationTradeAssetSummaryResponse(
+            assetId,
+            new BigDecimal("0.250000000000000000"),
+            2
+        );
+
+        when(accumulationTradeService.summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, assetId))
+            .thenReturn(List.of(summary));
+
+        mockMvc.perform(
+                get("/api/accumulation-trades/grouped-by-asset")
+                    .queryParam("status", "CLOSED")
+                    .queryParam("assetId", assetId.toString())
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].assetId").value(assetId.toString()))
+            .andExpect(jsonPath("$[0].totalAccumulationDelta").value(0.25))
+            .andExpect(jsonPath("$[0].tradeCount").value(2));
+
+        verify(accumulationTradeService).summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, assetId);
+    }
+
+    @Test
     void protectedEndpointsRequireAuthentication() throws Exception {
         mockMvc.perform(get("/api/transactions"))
             .andExpect(status().isUnauthorized());
@@ -291,6 +364,9 @@ class TransactionControllerIntegrationTest {
             .andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/transactions/sell").contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/api/accumulation-trades"))
             .andExpect(status().isUnauthorized());
     }
 
@@ -367,6 +443,38 @@ class TransactionControllerIntegrationTest {
             content,
             org.springframework.data.domain.PageRequest.of(page, size),
             totalElements
+        );
+    }
+
+    private static Page<AccumulationTradeResponse> accumulationPageOf(
+        List<AccumulationTradeResponse> content,
+        int page,
+        int size,
+        long totalElements
+    ) {
+        return new PageImpl<>(
+            content,
+            org.springframework.data.domain.PageRequest.of(page, size),
+            totalElements
+        );
+    }
+
+    private static AccumulationTradeResponse accumulationTradeResponse(UUID userId, UUID assetId) {
+        return new AccumulationTradeResponse(
+            UUID.randomUUID(),
+            userId,
+            assetId,
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+            new BigDecimal("1.000000000000000000"),
+            new BigDecimal("1.250000000000000000"),
+            new BigDecimal("0.250000000000000000"),
+            AccumulationTradeStatus.CLOSED,
+            new BigDecimal("60000.000000000000000000"),
+            new BigDecimal("50000.000000000000000000"),
+            OffsetDateTime.parse("2026-02-13T10:00:00Z"),
+            OffsetDateTime.parse("2026-02-14T10:00:00Z"),
+            null
         );
     }
 }

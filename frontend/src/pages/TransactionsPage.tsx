@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import { AccumulationStrategySection } from '../components/AccumulationStrategySection';
 import { AppHeader } from '../components/AppHeader';
 import { BuyTransactionModal } from '../components/BuyTransactionModal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -300,8 +299,6 @@ export function TransactionsPage(): JSX.Element {
             setIsBuyModalOpen(true);
           }}
         />
-
-        <AccumulationStrategySection trades={accumulationTrades} assets={assets} />
 
         <div className="transactions-pagination-footer">
           <label htmlFor="transactions-page-size">

@@ -2,6 +2,9 @@ package com.trading.domain.repository;
 
 import com.trading.domain.entity.AccumulationTrade;
 import com.trading.domain.enums.AccumulationTradeStatus;
+import com.trading.domain.projection.AccumulationTradeAssetSummaryProjection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,9 +18,30 @@ public interface AccumulationTradeRepository extends JpaRepository<AccumulationT
 
     List<AccumulationTrade> findAllByUser_IdOrderByCreatedAtDesc(UUID userId);
 
+    Page<AccumulationTrade> findAllByUser_Id(UUID userId, Pageable pageable);
+
     List<AccumulationTrade> findAllByUser_IdAndStatusOrderByCreatedAtDesc(
         UUID userId,
         AccumulationTradeStatus status
+    );
+
+    Page<AccumulationTrade> findAllByUser_IdAndStatus(
+        UUID userId,
+        AccumulationTradeStatus status,
+        Pageable pageable
+    );
+
+    Page<AccumulationTrade> findAllByUser_IdAndAsset_Id(
+        UUID userId,
+        UUID assetId,
+        Pageable pageable
+    );
+
+    Page<AccumulationTrade> findAllByUser_IdAndStatusAndAsset_Id(
+        UUID userId,
+        AccumulationTradeStatus status,
+        UUID assetId,
+        Pageable pageable
     );
 
     Optional<AccumulationTrade> findByIdAndUser_Id(UUID accumulationTradeId, UUID userId);
@@ -42,6 +66,28 @@ public interface AccumulationTradeRepository extends JpaRepository<AccumulationT
     List<AccumulationTrade> findAllLinkedToTransactions(
         @Param("userId") UUID userId,
         @Param("transactionIds") Collection<UUID> transactionIds
+    );
+
+    @Query(
+        """
+            SELECT
+                at.asset.id AS assetId,
+                COALESCE(SUM(COALESCE(at.accumulationDelta, at.newCoinAmount - at.oldCoinAmount)), 0) AS totalAccumulationDelta,
+                COUNT(at.id) AS tradeCount
+            FROM AccumulationTrade at
+            WHERE at.user.id = :userId
+              AND (:status IS NULL OR at.status = :status)
+              AND (:assetId IS NULL OR at.asset.id = :assetId)
+              AND at.newCoinAmount IS NOT NULL
+              AND at.oldCoinAmount IS NOT NULL
+            GROUP BY at.asset.id
+            ORDER BY at.asset.id
+            """
+    )
+    List<AccumulationTradeAssetSummaryProjection> summarizeByAsset(
+        @Param("userId") UUID userId,
+        @Param("status") AccumulationTradeStatus status,
+        @Param("assetId") UUID assetId
     );
 
     void deleteAllByUser_IdAndExitTransaction_Id(UUID userId, UUID exitTransactionId);
