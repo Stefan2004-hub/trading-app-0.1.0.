@@ -9,6 +9,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { AssetsPage } from '../pages/AssetsPage';
 import { AlertsPage } from '../pages/AlertsPage';
+import { AccumulationStrategyPage } from '../pages/AccumulationStrategyPage';
 import { MarketAlertsPage } from '../pages/MarketAlertsPage';
 import { HistoricalDataPage } from '../pages/HistoricalDataPage';
 import { PricePeaksPage } from '../pages/PricePeaksPage';
@@ -66,6 +67,14 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <TransactionsPage />
+      </RequireAuth>
+    )
+  },
+  {
+    path: '/accumulation-strategy',
+    element: (
+      <RequireAuth>
+        <AccumulationStrategyPage />
       </RequireAuth>
     )
   },

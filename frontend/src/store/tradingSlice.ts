@@ -56,7 +56,10 @@ const initialState: TradingState = {
 };
 
 export const loadTradingBootstrap = createAsyncThunk('trading/loadBootstrap', async (userId?: string) => {
-  const accumulationTradesPromise = tradingApi.listAccumulationTrades({ userId }).catch(() => [] as AccumulationTradeItem[]);
+  const accumulationTradesPromise = tradingApi
+    .listAccumulationTrades({ userId, status: 'OPEN', page: 0, size: 1000 })
+    .then((response) => response.content)
+    .catch(() => [] as AccumulationTradeItem[]);
   const [assets, exchanges, transactionsPage, summary, performance, assetSummary, userPreferences, accumulationTrades] =
     await Promise.all([
     tradingApi.listAssets(),

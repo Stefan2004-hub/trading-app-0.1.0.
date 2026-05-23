@@ -1,12 +1,15 @@
 package com.trading.controller;
 
 import com.trading.domain.enums.AccumulationTradeStatus;
+import com.trading.dto.transaction.AccumulationTradeAssetSummaryResponse;
 import com.trading.dto.transaction.AccumulationTradeResponse;
 import com.trading.dto.transaction.CloseAccumulationTradeRequest;
 import com.trading.dto.transaction.OpenAccumulationTradeRequest;
 import com.trading.security.CurrentUserProvider;
 import com.trading.service.transaction.AccumulationTradeService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -37,12 +40,25 @@ public class AccumulationTradeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<AccumulationTradeResponse>> list(
+    public ResponseEntity<Page<AccumulationTradeResponse>> list(
+        @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+        @RequestParam(name = "size", defaultValue = "20") @Min(1) int size,
+        @RequestParam(name = "assetId", required = false) UUID assetId,
         @RequestParam(name = "status", required = false) AccumulationTradeStatus status,
         @RequestParam(name = "userId", required = false) UUID userId
     ) {
         UUID resolvedUserId = resolveUserId(userId);
-        return ResponseEntity.ok(accumulationTradeService.list(resolvedUserId, status));
+        return ResponseEntity.ok(accumulationTradeService.list(resolvedUserId, page, size, status, assetId));
+    }
+
+    @GetMapping("/grouped-by-asset")
+    public ResponseEntity<List<AccumulationTradeAssetSummaryResponse>> groupedByAsset(
+        @RequestParam(name = "assetId", required = false) UUID assetId,
+        @RequestParam(name = "status", required = false) AccumulationTradeStatus status,
+        @RequestParam(name = "userId", required = false) UUID userId
+    ) {
+        UUID resolvedUserId = resolveUserId(userId);
+        return ResponseEntity.ok(accumulationTradeService.summarizeByAsset(resolvedUserId, status, assetId));
     }
 
     @PostMapping("/open")

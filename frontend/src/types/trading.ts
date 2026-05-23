@@ -85,6 +85,12 @@ export interface AccumulationTradeItem {
   predictionNotes: string | null;
 }
 
+export interface AccumulationTradeAssetSummaryItem {
+  assetId: string;
+  totalAccumulationDelta: string;
+  tradeCount: number;
+}
+
 export interface PortfolioAssetPerformance {
   symbol: string;
   exchange: string;
