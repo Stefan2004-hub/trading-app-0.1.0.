@@ -7,9 +7,9 @@ import com.trading.domain.projection.UserAssetRealizedPnlProjection;
 import com.trading.domain.projection.UserAssetSummaryProjection;
 import com.trading.domain.projection.SellOpportunityProjection;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
-import com.trading.domain.enums.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.trading.domain.enums.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -38,11 +38,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
                 OR LOWER(e.symbol) LIKE :searchPattern
                 OR LOWER(e.name) LIKE :searchPattern
               )
+              AND (:dateFromInclusive IS NULL OR t.transactionDate >= :dateFromInclusive)
+              AND (:dateToExclusive IS NULL OR t.transactionDate < :dateToExclusive)
             """
     )
-    Page<Transaction> findByUser_IdAndSearch(
+    Page<Transaction> findOpenTransactions(
         @Param("userId") UUID userId,
         @Param("searchPattern") String searchPattern,
+        @Param("dateFromInclusive") OffsetDateTime dateFromInclusive,
+        @Param("dateToExclusive") OffsetDateTime dateToExclusive,
         Pageable pageable
     );
 

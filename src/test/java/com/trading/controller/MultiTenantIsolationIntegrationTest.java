@@ -102,8 +102,8 @@ class MultiTenantIsolationIntegrationTest {
         Authentication authA = authenticationFor(userA);
         Authentication authB = authenticationFor(userB);
 
-        when(transactionService.list(userA, 0, 20, null, TransactionListView.OPEN, 20)).thenReturn(pageOf(List.of(txFor(userA))));
-        when(transactionService.list(userB, 0, 20, null, TransactionListView.OPEN, 20)).thenReturn(pageOf(List.of(txFor(userB))));
+        when(transactionService.list(eq(userA), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null))).thenReturn(pageOf(List.of(txFor(userA))));
+        when(transactionService.list(eq(userB), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null))).thenReturn(pageOf(List.of(txFor(userB))));
 
         mockMvc.perform(get("/api/transactions").with(authentication(authA)))
             .andExpect(status().isOk())
@@ -113,8 +113,8 @@ class MultiTenantIsolationIntegrationTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content[0].userId").value(userB.toString()));
 
-        verify(transactionService).list(eq(userA), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20));
-        verify(transactionService).list(eq(userB), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20));
+        verify(transactionService).list(eq(userA), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null));
+        verify(transactionService).list(eq(userB), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null));
     }
 
     @Test

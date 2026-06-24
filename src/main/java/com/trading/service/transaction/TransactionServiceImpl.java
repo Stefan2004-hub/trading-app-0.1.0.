@@ -117,43 +117,86 @@ public class TransactionServiceImpl implements TransactionService {
         int size,
         String search,
         TransactionListView view,
-        int groupSize
+        int groupSize,
+        String sortBy,
+        String sortDirection,
+        OffsetDateTime dateFromInclusive,
+        OffsetDateTime dateToExclusive
     ) {
         Objects.requireNonNull(userId, "userId is required");
         Objects.requireNonNull(view, "view is required");
         if (groupSize <= 0) {
             throw new IllegalArgumentException("groupSize must be positive");
         }
+        if (sortBy != null && !"date".equals(sortBy)) {
+            throw new IllegalArgumentException("sortBy must be 'date'");
+        }
+        if (sortDirection != null && !"asc".equalsIgnoreCase(sortDirection) && !"desc".equalsIgnoreCase(sortDirection)) {
+            throw new IllegalArgumentException("sortDirection must be 'asc' or 'desc'");
+        }
+        boolean sortByDate = "date".equals(sortBy);
+        boolean asc = "asc".equalsIgnoreCase(sortDirection);
+        if (dateFromInclusive != null && dateToExclusive != null && !dateFromInclusive.isBefore(dateToExclusive)) {
+            throw new IllegalArgumentException("dateFrom must be before or equal to dateTo");
+        }
+        DateRange dateRange = new DateRange(dateFromInclusive, dateToExclusive);
         if (view == TransactionListView.MATCHED) {
-            return listMatched(userId, page, groupSize, search);
+            return listMatched(userId, page, groupSize, search, sortByDate, asc, dateRange);
         }
 
-        return listOpen(userId, page, size, search);
+        return listOpen(userId, page, size, search, sortByDate, asc, dateRange);
     }
 
-    private Page<TransactionResponse> listOpen(UUID userId, int page, int size, String search) {
+    private Page<TransactionResponse> listOpen(
+        UUID userId,
+        int page,
+        int size,
+        String search,
+        boolean sortByDate,
+        boolean asc,
+        DateRange dateRange
+    ) {
         String searchPattern = toSearchPattern(search);
-        Sort sort = Sort.by(
-            Sort.Order.asc("exchange.name"),
-            Sort.Order.asc("asset.symbol"),
-            Sort.Order.desc("transactionDate")
-        );
+        Sort sort;
+        if (sortByDate) {
+            sort = Sort.by(asc ? Sort.Order.asc("transactionDate") : Sort.Order.desc("transactionDate"));
+        } else {
+            sort = Sort.by(
+                Sort.Order.asc("exchange.name"),
+                Sort.Order.asc("asset.symbol"),
+                Sort.Order.desc("transactionDate")
+            );
+        }
         PageRequest pageRequest = PageRequest.of(page, size, sort);
-        Page<Transaction> transactionPage = transactionRepository.findByUser_IdAndSearch(userId, searchPattern, pageRequest);
+        Page<Transaction> openTransactionsPage = transactionRepository.findOpenTransactions(
+            userId,
+            searchPattern,
+            dateRange.fromInclusive(),
+            dateRange.toExclusive(),
+            pageRequest
+        );
         List<Transaction> allUserTransactions = transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId);
         Map<UUID, UUID> matchedPairs = buildMatchedPairsByTransactionId(allUserTransactions);
         Map<UUID, TransactionAccumulationRole> accumulationRoles = buildAccumulationRolesByTransactionId(userId);
-        List<TransactionResponse> content = transactionPage.getContent().stream()
+        List<TransactionResponse> content = openTransactionsPage.getContent().stream()
             .map((transaction) -> toResponse(
                 transaction,
                 matchedPairs.get(transaction.getId()),
                 accumulationRoles.getOrDefault(transaction.getId(), TransactionAccumulationRole.NONE)
             ))
             .toList();
-        return new PageImpl<>(content, pageRequest, transactionPage.getTotalElements());
+        return new PageImpl<>(content, pageRequest, openTransactionsPage.getTotalElements());
     }
 
-    private Page<TransactionResponse> listMatched(UUID userId, int page, int groupSize, String search) {
+    private Page<TransactionResponse> listMatched(
+        UUID userId,
+        int page,
+        int groupSize,
+        String search,
+        boolean sortByDate,
+        boolean asc,
+        DateRange dateRange
+    ) {
         int matchedRowPageSize = groupSize * 2;
         List<Transaction> allUserTransactions = transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId);
         if (allUserTransactions.isEmpty()) {
@@ -164,14 +207,34 @@ public class TransactionServiceImpl implements TransactionService {
         Map<UUID, TransactionAccumulationRole> accumulationRoles = buildAccumulationRolesByTransactionId(userId);
         List<MatchedPairGroup> allGroups = buildMatchedPairGroups(allUserTransactions, search);
 
-        int totalGroups = allGroups.size();
+        List<MatchedPairGroup> filteredGroups;
+        if (dateRange.hasBounds()) {
+            filteredGroups = new ArrayList<>();
+            for (MatchedPairGroup group : allGroups) {
+                OffsetDateTime buyDate = group.buy().getTransactionDate();
+                OffsetDateTime sellDate = group.sell().getTransactionDate();
+                boolean buyInRange = isWithinDateRange(buyDate, dateRange);
+                boolean sellInRange = isWithinDateRange(sellDate, dateRange);
+                if (buyInRange || sellInRange) {
+                    filteredGroups.add(group);
+                }
+            }
+        } else {
+            filteredGroups = allGroups;
+        }
+
+        if (sortByDate) {
+            filteredGroups.sort(matchedPairGroupComparator(asc));
+        }
+
+        int totalGroups = filteredGroups.size();
         int fromIndex = page * groupSize;
         if (fromIndex >= totalGroups) {
             return new PageImpl<>(List.of(), PageRequest.of(page, matchedRowPageSize), totalGroups * 2L);
         }
 
         int toIndex = Math.min(fromIndex + groupSize, totalGroups);
-        List<MatchedPairGroup> pageGroups = allGroups.subList(fromIndex, toIndex);
+        List<MatchedPairGroup> pageGroups = filteredGroups.subList(fromIndex, toIndex);
         List<TransactionResponse> content = new ArrayList<>(pageGroups.size() * 2);
         for (MatchedPairGroup group : pageGroups) {
             content.add(
@@ -191,6 +254,35 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         return new PageImpl<>(content, PageRequest.of(page, matchedRowPageSize), totalGroups * 2L);
+    }
+
+    private static boolean isWithinDateRange(OffsetDateTime date, DateRange dateRange) {
+        if (date == null) return false;
+        if (dateRange.fromInclusive() != null && date.isBefore(dateRange.fromInclusive())) return false;
+        if (dateRange.toExclusive() != null && !date.isBefore(dateRange.toExclusive())) return false;
+        return true;
+    }
+
+    private static Comparator<MatchedPairGroup> matchedPairGroupComparator(boolean asc) {
+        return (left, right) -> {
+            OffsetDateTime leftDate = left.latestDate();
+            OffsetDateTime rightDate = right.latestDate();
+            if (leftDate == null && rightDate != null) return asc ? -1 : 1;
+            if (leftDate != null && rightDate == null) return asc ? 1 : -1;
+            if (leftDate != null) {
+                int dateComparison = asc ? leftDate.compareTo(rightDate) : rightDate.compareTo(leftDate);
+                if (dateComparison != 0) {
+                    return dateComparison;
+                }
+            }
+            return MATCHED_PAIR_GROUP_COMPARATOR.compare(left, right);
+        };
+    }
+
+    private record DateRange(OffsetDateTime fromInclusive, OffsetDateTime toExclusive) {
+        private boolean hasBounds() {
+            return fromInclusive != null || toExclusive != null;
+        }
     }
 
     @Override

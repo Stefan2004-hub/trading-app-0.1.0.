@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   AccumulationTradeItem,
+  SortDirection,
   TradeFormPayload,
+  TransactionColumnKey,
+  TransactionSortBy,
   TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
@@ -13,6 +16,27 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { EditTransactionModal } from './EditTransactionModal';
 import { EditTransactionQuantityModal } from './EditTransactionQuantityModal';
 import { SellTransactionModal } from './SellTransactionModal';
+
+const ALL_COLUMNS: { key: TransactionColumnKey; label: string }[] = [
+  { key: 'type', label: 'Type' },
+  { key: 'asset', label: 'Asset' },
+  { key: 'exchange', label: 'Exchange' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'feeAmount', label: 'Fee Amount' },
+  { key: 'feePercent', label: 'Fee %' },
+  { key: 'price', label: 'Price' },
+  { key: 'currentPrice', label: 'Current Price' },
+  { key: 'unrealizedPnl', label: 'Unrealized P&L' },
+  { key: 'usdInvested', label: 'USD Invested' },
+  { key: 'remainingDollars', label: 'Remaining Dollars' },
+  { key: 'realizedPnl', label: 'Realized PnL' },
+  { key: 'date', label: 'Date' },
+  { key: 'actions', label: 'Actions' }
+];
+
+const TOGGLEABLE_COLUMNS = ALL_COLUMNS.filter(
+  (col) => col.key !== 'actions'
+);
 
 interface TransactionHistoryTableProps {
   transactions: TransactionItem[];
@@ -35,6 +59,11 @@ interface TransactionHistoryTableProps {
     assetId: string;
     exchangeId: string;
   }) => void;
+  visibleColumns: TransactionColumnKey[];
+  onVisibleColumnsChange: (columns: TransactionColumnKey[]) => void;
+  sortBy: TransactionSortBy;
+  sortDirection: SortDirection;
+  onSortChange: (sortBy: TransactionSortBy, sortDirection: SortDirection) => void;
 }
 
 function labelAsset(assetId: string, assets: AssetOption[]): string {
@@ -57,7 +86,12 @@ export function TransactionHistoryTable({
   onDeleteTransaction,
   onSellFromTransaction,
   onOpenAccumulationTrade,
-  onCompleteAccumulationTrade
+  onCompleteAccumulationTrade,
+  visibleColumns,
+  onVisibleColumnsChange,
+  sortBy,
+  sortDirection,
+  onSortChange
 }: TransactionHistoryTableProps): JSX.Element {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [editQuantityTargetId, setEditQuantityTargetId] = useState<string | null>(null);
@@ -65,6 +99,8 @@ export function TransactionHistoryTable({
   const [sellTargetId, setSellTargetId] = useState<string | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const columnsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!openMenuId) {
@@ -89,6 +125,37 @@ export function TransactionHistoryTable({
       document.removeEventListener('mousedown', handleDocumentPointerDown);
     };
   }, [openMenuId]);
+
+  useEffect(() => {
+    if (!columnsOpen) {
+      return;
+    }
+    function handleDocumentPointerDown(event: MouseEvent): void {
+      if (columnsRef.current && !columnsRef.current.contains(event.target as Node)) {
+        setColumnsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleDocumentPointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentPointerDown);
+    };
+  }, [columnsOpen]);
+
+  const toggleColumn = useCallback((key: TransactionColumnKey): void => {
+    if (key === 'actions') return;
+    const next = visibleColumns.includes(key)
+      ? visibleColumns.filter((c) => c !== key)
+      : [...visibleColumns, key];
+    onVisibleColumnsChange(next);
+  }, [visibleColumns, onVisibleColumnsChange]);
+
+  const handleDateHeaderClick = useCallback((): void => {
+    if (sortBy === 'date' && sortDirection === 'desc') {
+      onSortChange('date', 'asc');
+    } else {
+      onSortChange('date', 'desc');
+    }
+  }, [sortBy, sortDirection, onSortChange]);
 
   const editQuantityTransaction = useMemo(
     () => transactions.find((item) => item.id === editQuantityTargetId) ?? null,
@@ -225,29 +292,54 @@ export function TransactionHistoryTable({
   return (
     <>
       <section className="history-panel history-panel-prominent">
-        <div className="transaction-table-header">
-          <h3>Transactions</h3>
-          <div className="transactions-view-tabs" role="tablist" aria-label="Transaction views">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={transactionView === 'OPEN'}
-              className={`transactions-view-tab ${transactionView === 'OPEN' ? 'active' : ''}`.trim()}
-              onClick={() => onTransactionViewChange('OPEN')}
-            >
-              Open
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={transactionView === 'MATCHED'}
-              className={`transactions-view-tab ${transactionView === 'MATCHED' ? 'active' : ''}`.trim()}
-              onClick={() => onTransactionViewChange('MATCHED')}
-            >
-              Matched
-            </button>
+          <div className="transaction-table-header">
+            <h3>Transactions</h3>
+            <div className="transaction-table-header-right">
+              <div className="columns-dropdown-container" ref={columnsRef}>
+                <button
+                  type="button"
+                  className="columns-dropdown-trigger"
+                  onClick={() => setColumnsOpen((prev) => !prev)}
+                >
+                  Columns
+                </button>
+                {columnsOpen ? (
+                  <div className="columns-dropdown-menu" role="menu" aria-label="Column visibility">
+                    {TOGGLEABLE_COLUMNS.map((col) => (
+                      <label key={col.key} className="columns-dropdown-item">
+                        <input
+                          type="checkbox"
+                          checked={visibleColumns.includes(col.key)}
+                          onChange={() => toggleColumn(col.key)}
+                        />
+                        {col.label}
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <div className="transactions-view-tabs" role="tablist" aria-label="Transaction views">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={transactionView === 'OPEN'}
+                  className={`transactions-view-tab ${transactionView === 'OPEN' ? 'active' : ''}`.trim()}
+                  onClick={() => onTransactionViewChange('OPEN')}
+                >
+                  Open
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={transactionView === 'MATCHED'}
+                  className={`transactions-view-tab ${transactionView === 'MATCHED' ? 'active' : ''}`.trim()}
+                  onClick={() => onTransactionViewChange('MATCHED')}
+                >
+                  Matched
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
         {rowsToRender.length === 0 ? (
           <p>{transactionView === 'MATCHED' ? 'No matched buy/sell history found.' : 'No open buy transactions.'}</p>
         ) : (
@@ -256,19 +348,25 @@ export function TransactionHistoryTable({
               <table className="transaction-table">
               <thead>
                 <tr>
-                  <th>Type</th>
-                  <th>Asset</th>
-                  <th>Exchange</th>
-                  <th>Amount</th>
-                  <th>Fee Amount</th>
-                  <th>Fee %</th>
-                  <th>Price</th>
-                  <th>Current Price</th>
-                  <th>Unrealized P&L</th>
-                  <th>USD Invested</th>
-                  <th>Remaining Dollars</th>
-                  <th>Realized PnL</th>
-                  <th>Date</th>
+                  {visibleColumns.includes('type') ? <th>Type</th> : null}
+                  {visibleColumns.includes('asset') ? <th>Asset</th> : null}
+                  {visibleColumns.includes('exchange') ? <th>Exchange</th> : null}
+                  {visibleColumns.includes('amount') ? <th>Amount</th> : null}
+                  {visibleColumns.includes('feeAmount') ? <th>Fee Amount</th> : null}
+                  {visibleColumns.includes('feePercent') ? <th>Fee %</th> : null}
+                  {visibleColumns.includes('price') ? <th>Price</th> : null}
+                  {visibleColumns.includes('currentPrice') ? <th>Current Price</th> : null}
+                  {visibleColumns.includes('unrealizedPnl') ? <th>Unrealized P&L</th> : null}
+                  {visibleColumns.includes('usdInvested') ? <th>USD Invested</th> : null}
+                  {visibleColumns.includes('remainingDollars') ? <th>Remaining Dollars</th> : null}
+                  {visibleColumns.includes('realizedPnl') ? <th>Realized PnL</th> : null}
+                  {visibleColumns.includes('date') ? (
+                    <th>
+                      <button type="button" className="date-sort-header" onClick={handleDateHeaderClick}>
+                        Date {sortBy === 'date' ? (sortDirection === 'desc' ? '↓' : '↑') : ''}
+                      </button>
+                    </th>
+                  ) : null}
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -288,38 +386,48 @@ export function TransactionHistoryTable({
 
                   return (
                     <tr key={tx.id} className={`${groupClassName} ${accumulationOpenClassName} ${accumulationRoleClassName}`.trim()}>
-                      <td>{tx.transactionType}</td>
-                      <td>{labelAsset(tx.assetId, assets)}</td>
-                      <td>{labelExchange(tx.exchangeId, exchanges)}</td>
-                      <td>{formatNumber(tx.netAmount)}</td>
-                      <td>
-                        {formatNumber(tx.feeAmount)}
-                        {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
-                      </td>
-                      <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
-                      <td>{formatUsd(tx.unitPriceUsd)}</td>
-                      <td>
-                        {!symbol || !priceState || priceState.status === 'error'
-                          ? '---'
-                          : priceState.status === 'loading'
-                            ? <span className="table-price-loading" aria-label="Loading current price" />
-                            : formatUsd(priceState.priceUsd)}
-                      </td>
-                      <td>
-                        {unrealizedPnlValue === null ? (
-                          '---'
-                        ) : (
-                          <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
-                            {formatUsd(String(unrealizedPnlValue))}
-                          </span>
-                        )}
-                      </td>
-                      <td>{formatUsd(tx.totalSpentUsd)}</td>
-                      <td className={remainingClassName}>
-                        {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
-                      </td>
-                      <td>{formatUsd(tx.realizedPnl)}</td>
-                      <td>{formatDateTime(tx.transactionDate)}</td>
+                      {visibleColumns.includes('type') ? <td>{tx.transactionType}</td> : null}
+                      {visibleColumns.includes('asset') ? <td>{labelAsset(tx.assetId, assets)}</td> : null}
+                      {visibleColumns.includes('exchange') ? <td>{labelExchange(tx.exchangeId, exchanges)}</td> : null}
+                      {visibleColumns.includes('amount') ? <td>{formatNumber(tx.netAmount)}</td> : null}
+                      {visibleColumns.includes('feeAmount') ? (
+                        <td>
+                          {formatNumber(tx.feeAmount)}
+                          {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
+                        </td>
+                      ) : null}
+                      {visibleColumns.includes('feePercent') ? (
+                        <td>{tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</td>
+                      ) : null}
+                      {visibleColumns.includes('price') ? <td>{formatUsd(tx.unitPriceUsd)}</td> : null}
+                      {visibleColumns.includes('currentPrice') ? (
+                        <td>
+                          {!symbol || !priceState || priceState.status === 'error'
+                            ? '---'
+                            : priceState.status === 'loading'
+                              ? <span className="table-price-loading" aria-label="Loading current price" />
+                              : formatUsd(priceState.priceUsd)}
+                        </td>
+                      ) : null}
+                      {visibleColumns.includes('unrealizedPnl') ? (
+                        <td>
+                          {unrealizedPnlValue === null ? (
+                            '---'
+                          ) : (
+                            <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                              {formatUsd(String(unrealizedPnlValue))}
+                            </span>
+                          )}
+                        </td>
+                      ) : null}
+                      {visibleColumns.includes('usdInvested') ? <td>{formatUsd(tx.totalSpentUsd)}</td> : null}
+                      {visibleColumns.includes('remainingDollars') ? (
+                        <td className={remainingClassName}>
+                          {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
+                        </td>
+                      ) : null}
+                      {visibleColumns.includes('realizedPnl') ? <td>{formatUsd(tx.realizedPnl)}</td> : null}
+                      {visibleColumns.includes('date') ? <td>{formatDateTime(tx.transactionDate)}</td> : null}
                       <td>
                         <div className="transaction-actions" data-actions-row-id={tx.id}>
                           <button
@@ -446,10 +554,16 @@ export function TransactionHistoryTable({
                     className={`transaction-mobile-card ${groupClassName} ${accumulationOpenClassName} ${accumulationRoleClassName}`.trim()}
                   >
                   <div className="transaction-mobile-card-top">
-                    <div>
-                      <p className="transaction-mobile-asset">{labelAsset(tx.assetId, assets)}</p>
-                      <p className="transaction-mobile-price">{formatUsd(tx.unitPriceUsd)}</p>
-                    </div>
+                    {visibleColumns.includes('asset') || visibleColumns.includes('price') ? (
+                      <div>
+                        {visibleColumns.includes('asset') ? (
+                          <p className="transaction-mobile-asset">{labelAsset(tx.assetId, assets)}</p>
+                        ) : null}
+                        {visibleColumns.includes('price') ? (
+                          <p className="transaction-mobile-price">{formatUsd(tx.unitPriceUsd)}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                     <div className="transaction-actions" data-actions-row-id={tx.id}>
                       <button
                         type="button"
@@ -552,53 +666,61 @@ export function TransactionHistoryTable({
                   </div>
 
                   <div className="transaction-mobile-details">
-                    <p>
-                      <strong>Type:</strong> {tx.transactionType}
-                    </p>
-                    <p>
-                      <strong>Exchange:</strong> {labelExchange(tx.exchangeId, exchanges)}
-                    </p>
-                    <p>
-                      <strong>Net Amount:</strong> {formatNumber(tx.netAmount)}
-                    </p>
-                    <p>
-                      <strong>Fee Amount:</strong> {formatNumber(tx.feeAmount)}
-                      {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
-                    </p>
-                    <p>
-                      <strong>Fee %:</strong> {tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}
-                    </p>
-                    <p>
-                      <strong>Current Price:</strong>{' '}
-                      {!symbol || !priceState || priceState.status === 'error'
-                        ? '---'
-                        : priceState.status === 'loading'
-                          ? 'Loading...'
-                          : formatUsd(priceState.priceUsd)}
-                    </p>
-                    <p>
-                      <strong>Unrealized P&L:</strong>{' '}
-                      {unrealizedPnlValue === null ? (
-                        '---'
-                      ) : (
-                        <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
-                          {formatUsd(String(unrealizedPnlValue))}
-                        </span>
-                      )}
-                    </p>
-                    <p>
-                      <strong>USD Invested:</strong> {formatUsd(tx.totalSpentUsd)}
-                    </p>
-                    <p>
-                      <strong>Remaining Dollars:</strong>{' '}
-                      {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
-                    </p>
-                    <p>
-                      <strong>Realized PnL:</strong> {formatUsd(tx.realizedPnl)}
-                    </p>
-                    <p>
-                      <strong>Date:</strong> {formatDateTime(tx.transactionDate)}
-                    </p>
+                    {visibleColumns.includes('type') ? (
+                      <p><strong>Type:</strong> {tx.transactionType}</p>
+                    ) : null}
+                    {visibleColumns.includes('exchange') ? (
+                      <p><strong>Exchange:</strong> {labelExchange(tx.exchangeId, exchanges)}</p>
+                    ) : null}
+                    {visibleColumns.includes('amount') ? (
+                      <p><strong>Net Amount:</strong> {formatNumber(tx.netAmount)}</p>
+                    ) : null}
+                    {visibleColumns.includes('feeAmount') ? (
+                      <p>
+                        <strong>Fee Amount:</strong> {formatNumber(tx.feeAmount)}
+                        {tx.feeCurrency ? ` ${tx.feeCurrency}` : ''}
+                      </p>
+                    ) : null}
+                    {visibleColumns.includes('feePercent') ? (
+                      <p><strong>Fee %:</strong> {tx.feePercentage ? `${(Number(tx.feePercentage) * 100).toFixed(4)}%` : '-'}</p>
+                    ) : null}
+                    {visibleColumns.includes('currentPrice') ? (
+                      <p>
+                        <strong>Current Price:</strong>{' '}
+                        {!symbol || !priceState || priceState.status === 'error'
+                          ? '---'
+                          : priceState.status === 'loading'
+                            ? 'Loading...'
+                            : formatUsd(priceState.priceUsd)}
+                      </p>
+                    ) : null}
+                    {visibleColumns.includes('unrealizedPnl') ? (
+                      <p>
+                        <strong>Unrealized P&L:</strong>{' '}
+                        {unrealizedPnlValue === null ? (
+                          '---'
+                        ) : (
+                          <span className={unrealizedPnlValue >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                            {formatUsd(String(unrealizedPnlValue))}
+                          </span>
+                        )}
+                      </p>
+                    ) : null}
+                    {visibleColumns.includes('usdInvested') ? (
+                      <p><strong>USD Invested:</strong> {formatUsd(tx.totalSpentUsd)}</p>
+                    ) : null}
+                    {visibleColumns.includes('remainingDollars') ? (
+                      <p>
+                        <strong>Remaining Dollars:</strong>{' '}
+                        {remainingDollarsValue === null ? '---' : formatUsd(String(remainingDollarsValue))}
+                      </p>
+                    ) : null}
+                    {visibleColumns.includes('realizedPnl') ? (
+                      <p><strong>Realized PnL:</strong> {formatUsd(tx.realizedPnl)}</p>
+                    ) : null}
+                    {visibleColumns.includes('date') ? (
+                      <p><strong>Date:</strong> {formatDateTime(tx.transactionDate)}</p>
+                    ) : null}
                   </div>
                   </article>
                 );

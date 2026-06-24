@@ -12,6 +12,7 @@ import com.trading.service.transaction.TransactionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @RestController
@@ -51,11 +53,22 @@ public class TransactionController {
         @RequestParam(name = "size", defaultValue = "20") @Min(1) int size,
         @RequestParam(name = "search", required = false) String search,
         @RequestParam(name = "view", defaultValue = "OPEN") TransactionListView view,
-        @RequestParam(name = "groupSize", required = false) @Min(1) Integer groupSize
+        @RequestParam(name = "groupSize", required = false) @Min(1) Integer groupSize,
+        @RequestParam(name = "sortBy", required = false) String sortBy,
+        @RequestParam(name = "sortDirection", required = false) String sortDirection,
+        @RequestParam(name = "dateFromInclusive", required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        OffsetDateTime dateFromInclusive,
+        @RequestParam(name = "dateToExclusive", required = false)
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        OffsetDateTime dateToExclusive
     ) {
         UUID userId = currentUserProvider.getCurrentUserId();
         int resolvedGroupSize = groupSize == null ? size : groupSize;
-        return ResponseEntity.ok(transactionService.list(userId, page, size, search, view, resolvedGroupSize));
+        return ResponseEntity.ok(transactionService.list(
+            userId, page, size, search, view, resolvedGroupSize, sortBy, sortDirection, dateFromInclusive,
+            dateToExclusive
+        ));
     }
 
     @PostMapping("/buy")
