@@ -9,8 +9,10 @@ import type {
   ExchangeOption,
   PortfolioAssetPerformance,
   PortfolioSummary,
+  SortDirection,
   TradeFormPayload,
   TransactionItem,
+  TransactionSortBy,
   TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
@@ -82,14 +84,22 @@ export const loadTransactions = createAsyncThunk(
     size,
     search,
     view,
-    groupSize
+    groupSize,
+    sortBy,
+    sortDirection,
+    dateFromInclusive,
+    dateToExclusive
   }: {
     page: number;
     size: number;
     search?: string;
     view?: TransactionView;
     groupSize?: number;
-  }) => tradingApi.listTransactions({ page, size, search, view, groupSize })
+    sortBy?: TransactionSortBy;
+    sortDirection?: SortDirection;
+    dateFromInclusive?: string;
+    dateToExclusive?: string;
+  }) => tradingApi.listTransactions({ page, size, search, view, groupSize, sortBy, sortDirection, dateFromInclusive, dateToExclusive })
 );
 
 export const submitBuyTrade = createAsyncThunk(

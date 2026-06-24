@@ -46,6 +46,23 @@ export type DashboardGroupingMode = 'ASSET' | 'EXCHANGE';
 export type BuyInputMode = 'COIN_AMOUNT' | 'USD_AMOUNT';
 export type AccumulationTradeStatus = 'OPEN' | 'CLOSED' | 'CANCELLED';
 export type TransactionAccumulationRole = 'NONE' | 'ACCUMULATION_EXIT' | 'ACCUMULATION_REENTRY';
+export type TransactionSortBy = 'date';
+export type SortDirection = 'asc' | 'desc';
+export type TransactionColumnKey =
+  | 'type'
+  | 'asset'
+  | 'exchange'
+  | 'amount'
+  | 'feeAmount'
+  | 'feePercent'
+  | 'price'
+  | 'currentPrice'
+  | 'unrealizedPnl'
+  | 'usdInvested'
+  | 'remainingDollars'
+  | 'realizedPnl'
+  | 'date'
+  | 'actions';
 
 export interface TransactionItem {
   id: string;

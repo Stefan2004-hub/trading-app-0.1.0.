@@ -22,11 +22,87 @@ import {
 } from '../store/tradingSlice';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import type {
+  SortDirection,
   TradeFormPayload,
+  TransactionColumnKey,
+  TransactionSortBy,
   TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload
 } from '../types/trading';
+
+const DEFAULT_VISIBLE_COLUMNS: TransactionColumnKey[] = [
+  'type',
+  'asset',
+  'exchange',
+  'amount',
+  'price',
+  'currentPrice',
+  'unrealizedPnl',
+  'usdInvested',
+  'date',
+  'actions'
+];
+
+const ALL_TRANSACTION_COLUMNS: TransactionColumnKey[] = [
+  'type',
+  'asset',
+  'exchange',
+  'amount',
+  'feeAmount',
+  'feePercent',
+  'price',
+  'currentPrice',
+  'unrealizedPnl',
+  'usdInvested',
+  'remainingDollars',
+  'realizedPnl',
+  'date',
+  'actions'
+];
+
+const STORAGE_KEY = 'trading.transactions.visibleColumns';
+
+function sanitizeVisibleColumns(parsed: unknown): TransactionColumnKey[] {
+  if (!Array.isArray(parsed)) {
+    return [...DEFAULT_VISIBLE_COLUMNS];
+  }
+
+  const validColumns = new Set(ALL_TRANSACTION_COLUMNS);
+  const selectedColumns = new Set<TransactionColumnKey>();
+  for (const column of parsed) {
+    if (typeof column !== 'string' || !validColumns.has(column as TransactionColumnKey)) {
+      return [...DEFAULT_VISIBLE_COLUMNS];
+    }
+    selectedColumns.add(column as TransactionColumnKey);
+  }
+  selectedColumns.add('actions');
+  return ALL_TRANSACTION_COLUMNS.filter((column) => selectedColumns.has(column));
+}
+
+function loadVisibleColumns(): TransactionColumnKey[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return [...DEFAULT_VISIBLE_COLUMNS];
+    return sanitizeVisibleColumns(JSON.parse(stored));
+  } catch {
+    return [...DEFAULT_VISIBLE_COLUMNS];
+  }
+}
+
+function saveVisibleColumns(columns: TransactionColumnKey[]): void {
+  const normalizedColumns = sanitizeVisibleColumns(columns);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedColumns));
+}
+
+function nextLocalDate(date: string): string {
+  const [year, month, day] = date.split('-').map(Number);
+  const nextDate = new Date(year, month - 1, day + 1);
+  const nextYear = nextDate.getFullYear();
+  const nextMonth = String(nextDate.getMonth() + 1).padStart(2, '0');
+  const nextDay = String(nextDate.getDate()).padStart(2, '0');
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
 
 export function TransactionsPage(): JSX.Element {
   const defaultPageSize = 20;
@@ -48,6 +124,11 @@ export function TransactionsPage(): JSX.Element {
   const [transactionView, setTransactionView] = useState<TransactionView>('OPEN');
   const [isCleanHistoryConfirmOpen, setIsCleanHistoryConfirmOpen] = useState(false);
   const [cleaningHistory, setCleaningHistory] = useState(false);
+  const [sortBy, setSortBy] = useState<TransactionSortBy>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [visibleColumns, setVisibleColumns] = useState<TransactionColumnKey[]>(() => loadVisibleColumns());
   const {
     assets,
     exchanges,
@@ -62,6 +143,8 @@ export function TransactionsPage(): JSX.Element {
     transactionTotalElements
   } = useAppSelector((state) => state.trading);
   const authUserId = useAppSelector((state) => state.auth.user?.userId);
+  const dateFromInclusive = dateFrom ? new Date(`${dateFrom}T00:00:00`).toISOString() : undefined;
+  const dateToExclusive = dateTo ? new Date(`${nextLocalDate(dateTo)}T00:00:00`).toISOString() : undefined;
 
   useEffect(() => {
     if (loading || bootstrapAttempted) {
@@ -81,14 +164,18 @@ export function TransactionsPage(): JSX.Element {
           size: pageSize,
           search: searchTerm.trim() ? searchTerm : undefined,
           view: transactionView,
-          groupSize: transactionView === 'MATCHED' ? pageSize : undefined
+          groupSize: transactionView === 'MATCHED' ? pageSize : undefined,
+          sortBy,
+          sortDirection,
+          dateFromInclusive,
+          dateToExclusive
         })
       );
     }, 250);
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [bootstrapAttempted, currentPage, dispatch, pageSize, searchTerm, transactionView]);
+  }, [bootstrapAttempted, currentPage, dispatch, pageSize, searchTerm, transactionView, sortBy, sortDirection, dateFromInclusive, dateToExclusive]);
 
   useEffect(() => {
     if (transactionTotalPages > 0 && currentPage >= transactionTotalPages) {
@@ -103,10 +190,14 @@ export function TransactionsPage(): JSX.Element {
         size: pageSize,
         search: searchTerm.trim() ? searchTerm : undefined,
         view: transactionView,
-        groupSize: transactionView === 'MATCHED' ? pageSize : undefined
+        groupSize: transactionView === 'MATCHED' ? pageSize : undefined,
+        sortBy,
+        sortDirection,
+        dateFromInclusive,
+        dateToExclusive
       })
     ).unwrap();
-  }, [currentPage, dispatch, pageSize, searchTerm, transactionView]);
+  }, [currentPage, dispatch, pageSize, searchTerm, transactionView, sortBy, sortDirection, dateFromInclusive, dateToExclusive]);
 
   const showToast = useCallback((message: string, variant: ToastVariant): void => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -196,6 +287,23 @@ export function TransactionsPage(): JSX.Element {
     [authUserId, dispatch, refreshTransactionsForSearch, showToast]
   );
 
+  const handleSortChange = useCallback((newSortBy: TransactionSortBy, newSortDirection: SortDirection): void => {
+    setSortBy(newSortBy);
+    setSortDirection(newSortDirection);
+    setCurrentPage(0);
+  }, []);
+
+  const handleVisibleColumnsChange = useCallback((columns: TransactionColumnKey[]): void => {
+    setVisibleColumns(columns);
+    saveVisibleColumns(columns);
+  }, []);
+
+  const clearDateFilter = useCallback((): void => {
+    setDateFrom('');
+    setDateTo('');
+    setCurrentPage(0);
+  }, []);
+
   const submitCleanHistory = useCallback(async (): Promise<void> => {
     setCleaningHistory(true);
     dispatch(clearTradingError());
@@ -269,6 +377,40 @@ export function TransactionsPage(): JSX.Element {
           />
         </div>
 
+        <div className="date-filter-row">
+          <div className="date-filter-field">
+            <label htmlFor="date-from">From</label>
+            <input
+              id="date-from"
+              type="date"
+              className="search-input date-input"
+              value={dateFrom}
+              onChange={(e) => {
+                setDateFrom(e.target.value);
+                setCurrentPage(0);
+              }}
+            />
+          </div>
+          <div className="date-filter-field">
+            <label htmlFor="date-to">To</label>
+            <input
+              id="date-to"
+              type="date"
+              className="search-input date-input"
+              value={dateTo}
+              onChange={(e) => {
+                setDateTo(e.target.value);
+                setCurrentPage(0);
+              }}
+            />
+          </div>
+          {(dateFrom || dateTo) ? (
+            <button type="button" className="date-filter-clear" onClick={clearDateFilter}>
+              Clear
+            </button>
+          ) : null}
+        </div>
+
         <TransactionHistoryTable
           transactions={transactions}
           transactionView={transactionView}
@@ -284,6 +426,11 @@ export function TransactionsPage(): JSX.Element {
           onDeleteTransaction={submitDeleteTransaction}
           onSellFromTransaction={submitSellFromTransaction}
           onOpenAccumulationTrade={submitOpenAccumulationTrade}
+          visibleColumns={visibleColumns}
+          onVisibleColumnsChange={handleVisibleColumnsChange}
+          sortBy={sortBy}
+          sortDirection={sortDirection}
+          onSortChange={handleSortChange}
           onCompleteAccumulationTrade={({ accumulationTradeId, exitTransactionId, assetId, exchangeId }) => {
             const exitTransaction = transactions.find((tx) => tx.id === exitTransactionId) ?? null;
             const inheritedUsdAmount =

@@ -105,7 +105,7 @@ class TransactionControllerIntegrationTest {
         Authentication auth = authenticationFor(userId);
 
         TransactionResponse tx = txResponse(userId, TransactionType.BUY);
-        when(transactionService.list(userId, 0, 20, null, TransactionListView.OPEN, 20))
+        when(transactionService.list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null)))
             .thenReturn(pageOf(List.of(tx), 0, 20, 1));
 
         mockMvc.perform(get("/api/transactions").with(authentication(auth)))
@@ -117,7 +117,7 @@ class TransactionControllerIntegrationTest {
             .andExpect(jsonPath("$.totalElements").value(1))
             .andExpect(jsonPath("$.totalPages").value(1));
 
-        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20));
+        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq(null), eq(null), eq(null), eq(null));
     }
 
     @Test
@@ -125,7 +125,7 @@ class TransactionControllerIntegrationTest {
         UUID userId = UUID.randomUUID();
         Authentication auth = authenticationFor(userId);
 
-        when(transactionService.list(userId, 2, 50, "btc", TransactionListView.OPEN, 50))
+        when(transactionService.list(eq(userId), eq(2), eq(50), eq("btc"), eq(TransactionListView.OPEN), eq(50), eq(null), eq(null), eq(null), eq(null)))
             .thenReturn(pageOf(List.of(), 2, 50, 0));
 
         mockMvc.perform(
@@ -137,7 +137,7 @@ class TransactionControllerIntegrationTest {
             )
             .andExpect(status().isOk());
 
-        verify(transactionService).list(eq(userId), eq(2), eq(50), eq("btc"), eq(TransactionListView.OPEN), eq(50));
+        verify(transactionService).list(eq(userId), eq(2), eq(50), eq("btc"), eq(TransactionListView.OPEN), eq(50), eq(null), eq(null), eq(null), eq(null));
     }
 
     @Test
@@ -145,7 +145,7 @@ class TransactionControllerIntegrationTest {
         UUID userId = UUID.randomUUID();
         Authentication auth = authenticationFor(userId);
 
-        when(transactionService.list(userId, 1, 20, "btc", TransactionListView.MATCHED, 7))
+        when(transactionService.list(eq(userId), eq(1), eq(20), eq("btc"), eq(TransactionListView.MATCHED), eq(7), eq(null), eq(null), eq(null), eq(null)))
             .thenReturn(pageOf(List.of(), 1, 7, 0));
 
         mockMvc.perform(
@@ -159,7 +159,65 @@ class TransactionControllerIntegrationTest {
             )
             .andExpect(status().isOk());
 
-        verify(transactionService).list(eq(userId), eq(1), eq(20), eq("btc"), eq(TransactionListView.MATCHED), eq(7));
+        verify(transactionService).list(eq(userId), eq(1), eq(20), eq("btc"), eq(TransactionListView.MATCHED), eq(7), eq(null), eq(null), eq(null), eq(null));
+    }
+
+    @Test
+    void listEndpointPassesSortAndDateParams() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        OffsetDateTime dateFromInclusive = OffsetDateTime.parse("2026-01-01T00:00:00Z");
+        OffsetDateTime dateToExclusive = OffsetDateTime.parse("2027-01-01T00:00:00Z");
+        when(transactionService.list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq("date"), eq("asc"), eq(dateFromInclusive), eq(dateToExclusive)))
+            .thenReturn(pageOf(List.of(), 0, 20, 0));
+
+        mockMvc.perform(
+                get("/api/transactions")
+                    .queryParam("sortBy", "date")
+                    .queryParam("sortDirection", "asc")
+                    .queryParam("dateFromInclusive", "2026-01-01T00:00:00Z")
+                    .queryParam("dateToExclusive", "2027-01-01T00:00:00Z")
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isOk());
+
+        verify(transactionService).list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq("date"), eq("asc"), eq(dateFromInclusive), eq(dateToExclusive));
+    }
+
+    @Test
+    void listEndpointRejectsInvalidSortBy() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        when(transactionService.list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq("asset"), eq(null), eq(null), eq(null)))
+            .thenThrow(new IllegalArgumentException("sortBy must be 'date'"));
+
+        mockMvc.perform(
+                get("/api/transactions")
+                    .queryParam("sortBy", "asset")
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("sortBy must be 'date'"));
+    }
+
+    @Test
+    void listEndpointRejectsInvalidSortDirection() throws Exception {
+        UUID userId = UUID.randomUUID();
+        Authentication auth = authenticationFor(userId);
+
+        when(transactionService.list(eq(userId), eq(0), eq(20), eq(null), eq(TransactionListView.OPEN), eq(20), eq("date"), eq("sideways"), eq(null), eq(null)))
+            .thenThrow(new IllegalArgumentException("sortDirection must be 'asc' or 'desc'"));
+
+        mockMvc.perform(
+                get("/api/transactions")
+                    .queryParam("sortBy", "date")
+                    .queryParam("sortDirection", "sideways")
+                    .with(authentication(auth))
+            )
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.message").value("sortDirection must be 'asc' or 'desc'"));
     }
 
     @Test

@@ -15,8 +15,10 @@ import type {
   PaginatedResponse,
   PortfolioAssetPerformance,
   PortfolioSummary,
+  SortDirection,
   TradeFormPayload,
   TransactionItem,
+  TransactionSortBy,
   TransactionView,
   UpdateTransactionNetAmountPayload,
   UpdateTransactionPayload,
@@ -125,6 +127,10 @@ export const tradingApi = {
     search?: string;
     view?: TransactionView;
     groupSize?: number;
+    sortBy?: TransactionSortBy;
+    sortDirection?: SortDirection;
+    dateFromInclusive?: string;
+    dateToExclusive?: string;
   }): Promise<PaginatedResponse<TransactionItem>> {
     const queryParams = new URLSearchParams();
     queryParams.set('page', String(params?.page ?? 0));
@@ -137,6 +143,18 @@ export const tradingApi = {
     }
     if (params?.groupSize && params.groupSize > 0) {
       queryParams.set('groupSize', String(params.groupSize));
+    }
+    if (params?.sortBy) {
+      queryParams.set('sortBy', params.sortBy);
+    }
+    if (params?.sortDirection) {
+      queryParams.set('sortDirection', params.sortDirection);
+    }
+    if (params?.dateFromInclusive) {
+      queryParams.set('dateFromInclusive', params.dateFromInclusive);
+    }
+    if (params?.dateToExclusive) {
+      queryParams.set('dateToExclusive', params.dateToExclusive);
     }
 
     return request<PaginatedResponse<TransactionItem>>(`/api/transactions?${queryParams.toString()}`);

@@ -9,11 +9,23 @@ import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionRequest;
 import org.springframework.data.domain.Page;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 public interface TransactionService {
 
-    Page<TransactionResponse> list(UUID userId, int page, int size, String search, TransactionListView view, int groupSize);
+    Page<TransactionResponse> list(
+        UUID userId,
+        int page,
+        int size,
+        String search,
+        TransactionListView view,
+        int groupSize,
+        String sortBy,
+        String sortDirection,
+        OffsetDateTime dateFromInclusive,
+        OffsetDateTime dateToExclusive
+    );
 
     TransactionResponse buy(UUID userId, BuyTransactionRequest request);
 

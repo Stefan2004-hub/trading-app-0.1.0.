@@ -21,9 +21,12 @@ import com.trading.dto.transaction.TransactionResponse;
 import com.trading.dto.transaction.UpdateTransactionNetAmountRequest;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -521,13 +524,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(exchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(buy), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, buy));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(sellId, response.matchedTransactionId());
@@ -550,13 +552,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(exchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, sell));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyId, response.matchedTransactionId());
@@ -578,13 +579,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(exchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, sell));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(false, response.matched());
         assertNull(response.matchedTransactionId());
@@ -614,13 +614,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(exchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, sell));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buyCloser, buyFarther));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyCloserId, response.matchedTransactionId());
@@ -650,13 +649,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(exchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, sell));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buyNewer, buyOlder));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(true, response.matched());
         assertEquals(buyOlderId, response.matchedTransactionId());
@@ -679,13 +677,12 @@ class TransactionServiceImplTest {
         sell.setAsset(asset(assetId, "BTC"));
         sell.setExchange(exchange(otherExchangeId));
 
-        PageRequest pageRequest = PageRequest.of(0, 1);
-        when(transactionRepository.findByUser_IdAndSearch(eq(userId), eq(null), any(PageRequest.class)))
-            .thenReturn(new PageImpl<>(List.of(sell), pageRequest, 1));
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 1, 1, sell));
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1).getContent().get(0);
+        TransactionResponse response = transactionService.list(userId, 0, 1, null, TransactionListView.OPEN, 1, null, null, null, null).getContent().get(0);
 
         assertEquals(false, response.matched());
         assertNull(response.matchedTransactionId());
@@ -725,8 +722,8 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sellB, buyB, sellA, buyA));
 
-        var page0 = transactionService.list(userId, 0, 20, null, TransactionListView.MATCHED, 1);
-        var page1 = transactionService.list(userId, 1, 20, null, TransactionListView.MATCHED, 1);
+        var page0 = transactionService.list(userId, 0, 20, null, TransactionListView.MATCHED, 1, null, null, null, null);
+        var page1 = transactionService.list(userId, 1, 20, null, TransactionListView.MATCHED, 1, null, null, null, null);
 
         assertEquals(4, page0.getTotalElements());
         assertEquals(2, page0.getContent().size());
@@ -760,12 +757,306 @@ class TransactionServiceImplTest {
         when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
             .thenReturn(List.of(sell, buy));
 
-        var page = transactionService.list(userId, 0, 20, "BTC", TransactionListView.MATCHED, 10);
+        var page = transactionService.list(userId, 0, 20, "BTC", TransactionListView.MATCHED, 10, null, null, null, null);
 
         assertEquals(2, page.getTotalElements());
         assertEquals(2, page.getContent().size());
         assertEquals(true, page.getContent().get(0).matched());
         assertEquals(true, page.getContent().get(1).matched());
+    }
+
+    @Test
+    void openViewUsesPagedRepositoryResults() {
+        Transaction pageItem = existingBuy("1.0", "50000", "2026-01-02T09:00:00Z");
+        pageItem.setId(UUID.randomUUID());
+        pageItem.setUser(user(userId));
+        pageItem.setAsset(asset(assetId, "BTC"));
+        pageItem.setExchange(exchange(exchangeId));
+
+        Transaction offPageItem = existingBuy("2.0", "70000", "2026-01-01T09:00:00Z");
+        offPageItem.setId(UUID.randomUUID());
+        offPageItem.setUser(user(userId));
+        offPageItem.setAsset(asset(assetId, "BTC"));
+        offPageItem.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(1, 1, 5, pageItem));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(pageItem, offPageItem));
+
+        var page = transactionService.list(userId, 1, 1, null, TransactionListView.OPEN, 1, "date", "desc", null, null);
+
+        assertEquals(5, page.getTotalElements());
+        assertEquals(1, page.getContent().size());
+        assertEquals(pageItem.getId(), page.getContent().get(0).id());
+    }
+
+    @Test
+    void openViewDateFilterUsesExplicitInstantBounds() {
+        Transaction included = existingBuy("1.0", "50000", "2026-01-01T00:30:00Z");
+        included.setId(UUID.randomUUID());
+        included.setUser(user(userId));
+        included.setAsset(asset(assetId, "BTC"));
+        included.setExchange(exchange(exchangeId));
+
+        Transaction excluded = existingBuy("1.0", "50000", "2025-12-31T23:30:00Z");
+        excluded.setId(UUID.randomUUID());
+        excluded.setUser(user(userId));
+        excluded.setAsset(asset(assetId, "BTC"));
+        excluded.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findOpenTransactions(
+            eq(userId),
+            eq(null),
+            eq(OffsetDateTime.parse("2026-01-01T00:00:00+02:00")),
+            eq(OffsetDateTime.parse("2026-01-02T00:00:00+02:00")),
+            any(Pageable.class)
+        )).thenReturn(openTransactionsPage(0, 20, 1, included));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(included, excluded));
+
+        var page = transactionService.list(
+            userId,
+            0,
+            20,
+            null,
+            TransactionListView.OPEN,
+            20,
+            null,
+            null,
+            OffsetDateTime.parse("2026-01-01T00:00:00+02:00"),
+            OffsetDateTime.parse("2026-01-02T00:00:00+02:00")
+        );
+
+        assertEquals(1, page.getTotalElements());
+        assertEquals(included.getId(), page.getContent().get(0).id());
+    }
+
+    @Test
+    void listRejectsInvertedDateBounds() {
+        IllegalArgumentException error = assertThrows(
+            IllegalArgumentException.class,
+            () -> transactionService.list(
+                userId,
+                0,
+                20,
+                null,
+                TransactionListView.OPEN,
+                20,
+                null,
+                null,
+                OffsetDateTime.parse("2026-01-02T00:00:00Z"),
+                OffsetDateTime.parse("2026-01-01T00:00:00Z")
+            )
+        );
+
+        assertEquals("dateFrom must be before or equal to dateTo", error.getMessage());
+    }
+
+    @Test
+    void openViewDateSortAscendingUsesTransactionDateOrder() {
+        Transaction older = existingBuy("1.0", "50000", "2026-01-01T09:00:00Z");
+        older.setId(UUID.randomUUID());
+        older.setUser(user(userId));
+        older.setAsset(asset(assetId, "BTC"));
+        older.setExchange(exchange(exchangeId));
+
+        Transaction newer = existingBuy("1.0", "50000", "2026-01-02T09:00:00Z");
+        newer.setId(UUID.randomUUID());
+        newer.setUser(user(userId));
+        newer.setAsset(asset(assetId, "BTC"));
+        newer.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 20, 2, older, newer));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(newer, older));
+
+        var page = transactionService.list(userId, 0, 20, null, TransactionListView.OPEN, 20, "date", "asc", null, null);
+
+        assertEquals(List.of(older.getId(), newer.getId()), page.getContent().stream().map(TransactionResponse::id).toList());
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(transactionRepository).findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertEquals(Sort.Direction.ASC, pageableCaptor.getValue().getSort().getOrderFor("transactionDate").getDirection());
+    }
+
+    @Test
+    void openViewDateSortDescendingUsesTransactionDateOrder() {
+        Transaction newer = existingBuy("1.0", "50000", "2026-01-02T09:00:00Z");
+        newer.setId(UUID.randomUUID());
+        newer.setUser(user(userId));
+        newer.setAsset(asset(assetId, "BTC"));
+        newer.setExchange(exchange(exchangeId));
+
+        Transaction older = existingBuy("1.0", "50000", "2026-01-01T09:00:00Z");
+        older.setId(UUID.randomUUID());
+        older.setUser(user(userId));
+        older.setAsset(asset(assetId, "BTC"));
+        older.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 20, 2, newer, older));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(newer, older));
+
+        var page = transactionService.list(userId, 0, 20, null, TransactionListView.OPEN, 20, "date", "desc", null, null);
+
+        assertEquals(List.of(newer.getId(), older.getId()), page.getContent().stream().map(TransactionResponse::id).toList());
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(transactionRepository).findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        assertEquals(Sort.Direction.DESC, pageableCaptor.getValue().getSort().getOrderFor("transactionDate").getDirection());
+    }
+
+    @Test
+    void openViewDefaultSortRemainsExchangeAssetThenNewestDate() {
+        Transaction first = existingBuy("1.0", "50000", "2026-01-02T09:00:00Z");
+        first.setId(UUID.randomUUID());
+        first.setUser(user(userId));
+        first.setAsset(asset(assetId, "BTC"));
+        first.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), any(Pageable.class)))
+            .thenReturn(openTransactionsPage(0, 20, 1, first));
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(first));
+
+        transactionService.list(userId, 0, 20, null, TransactionListView.OPEN, 20, null, null, null, null);
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(transactionRepository).findOpenTransactions(eq(userId), eq(null), eq(null), eq(null), pageableCaptor.capture());
+        Sort sort = pageableCaptor.getValue().getSort();
+        assertEquals(Sort.Direction.ASC, sort.getOrderFor("exchange.name").getDirection());
+        assertEquals(Sort.Direction.ASC, sort.getOrderFor("asset.symbol").getDirection());
+        assertEquals(Sort.Direction.DESC, sort.getOrderFor("transactionDate").getDirection());
+    }
+
+    @Test
+    void matchedViewDateSortAscendingKeepsPairsGrouped() {
+        UUID buyAId = UUID.randomUUID();
+        UUID sellAId = UUID.randomUUID();
+        UUID buyBId = UUID.randomUUID();
+        UUID sellBId = UUID.randomUUID();
+
+        Transaction buyA = existingBuy("1.0", "50000", "2026-02-10T10:00:00Z");
+        buyA.setId(buyAId);
+        buyA.setUser(user(userId));
+        buyA.setAsset(asset(assetId, "BTC"));
+        buyA.setExchange(exchange(exchangeId));
+
+        Transaction sellA = existingSell("1.0", "60000", "2026-02-11T10:00:00Z");
+        sellA.setId(sellAId);
+        sellA.setUser(user(userId));
+        sellA.setAsset(asset(assetId, "BTC"));
+        sellA.setExchange(exchange(exchangeId));
+
+        Transaction buyB = existingBuy("2.0", "50000", "2026-02-12T10:00:00Z");
+        buyB.setId(buyBId);
+        buyB.setUser(user(userId));
+        buyB.setAsset(asset(assetId, "BTC"));
+        buyB.setExchange(exchange(exchangeId));
+
+        Transaction sellB = existingSell("2.0", "60000", "2026-02-13T10:00:00Z");
+        sellB.setId(sellBId);
+        sellB.setUser(user(userId));
+        sellB.setAsset(asset(assetId, "BTC"));
+        sellB.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sellB, buyB, sellA, buyA));
+
+        var page = transactionService.list(userId, 0, 20, null, TransactionListView.MATCHED, 2, "date", "asc", null, null);
+
+        assertEquals(List.of(buyAId, sellAId, buyBId, sellBId), page.getContent().stream().map(TransactionResponse::id).toList());
+    }
+
+    @Test
+    void matchedViewDateSortDescendingKeepsPairsGrouped() {
+        UUID buyAId = UUID.randomUUID();
+        UUID sellAId = UUID.randomUUID();
+        UUID buyBId = UUID.randomUUID();
+        UUID sellBId = UUID.randomUUID();
+
+        Transaction buyA = existingBuy("1.0", "50000", "2026-02-10T10:00:00Z");
+        buyA.setId(buyAId);
+        buyA.setUser(user(userId));
+        buyA.setAsset(asset(assetId, "BTC"));
+        buyA.setExchange(exchange(exchangeId));
+
+        Transaction sellA = existingSell("1.0", "60000", "2026-02-11T10:00:00Z");
+        sellA.setId(sellAId);
+        sellA.setUser(user(userId));
+        sellA.setAsset(asset(assetId, "BTC"));
+        sellA.setExchange(exchange(exchangeId));
+
+        Transaction buyB = existingBuy("2.0", "50000", "2026-02-12T10:00:00Z");
+        buyB.setId(buyBId);
+        buyB.setUser(user(userId));
+        buyB.setAsset(asset(assetId, "BTC"));
+        buyB.setExchange(exchange(exchangeId));
+
+        Transaction sellB = existingSell("2.0", "60000", "2026-02-13T10:00:00Z");
+        sellB.setId(sellBId);
+        sellB.setUser(user(userId));
+        sellB.setAsset(asset(assetId, "BTC"));
+        sellB.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sellB, buyB, sellA, buyA));
+
+        var page = transactionService.list(userId, 0, 20, null, TransactionListView.MATCHED, 2, "date", "desc", null, null);
+
+        assertEquals(List.of(buyBId, sellBId, buyAId, sellAId), page.getContent().stream().map(TransactionResponse::id).toList());
+    }
+
+    @Test
+    void matchedViewDateFilterIncludesPairWhenOnlyOneSideMatchesExplicitBounds() {
+        UUID buyAId = UUID.randomUUID();
+        UUID sellAId = UUID.randomUUID();
+        UUID buyBId = UUID.randomUUID();
+        UUID sellBId = UUID.randomUUID();
+
+        Transaction buyA = existingBuy("1.0", "50000", "2026-01-01T00:30:00Z");
+        buyA.setId(buyAId);
+        buyA.setUser(user(userId));
+        buyA.setAsset(asset(assetId, "BTC"));
+        buyA.setExchange(exchange(exchangeId));
+
+        Transaction sellA = existingSell("1.0", "60000", "2026-01-03T10:00:00Z");
+        sellA.setId(sellAId);
+        sellA.setUser(user(userId));
+        sellA.setAsset(asset(assetId, "BTC"));
+        sellA.setExchange(exchange(exchangeId));
+
+        Transaction buyB = existingBuy("2.0", "50000", "2026-01-04T10:00:00Z");
+        buyB.setId(buyBId);
+        buyB.setUser(user(userId));
+        buyB.setAsset(asset(assetId, "BTC"));
+        buyB.setExchange(exchange(exchangeId));
+
+        Transaction sellB = existingSell("2.0", "60000", "2026-01-05T10:00:00Z");
+        sellB.setId(sellBId);
+        sellB.setUser(user(userId));
+        sellB.setAsset(asset(assetId, "BTC"));
+        sellB.setExchange(exchange(exchangeId));
+
+        when(transactionRepository.findAllByUser_IdOrderByTransactionDateDesc(userId))
+            .thenReturn(List.of(sellB, buyB, sellA, buyA));
+
+        var page = transactionService.list(
+            userId,
+            0,
+            20,
+            null,
+            TransactionListView.MATCHED,
+            10,
+            "date",
+            "asc",
+            OffsetDateTime.parse("2026-01-01T00:00:00+02:00"),
+            OffsetDateTime.parse("2026-01-02T00:00:00+02:00")
+        );
+
+        assertEquals(2, page.getTotalElements());
+        assertEquals(List.of(buyAId, sellAId), page.getContent().stream().map(TransactionResponse::id).toList());
     }
 
     private BuyTransactionRequest buyRequest(
@@ -868,6 +1159,10 @@ class TransactionServiceImplTest {
         });
 
         return history;
+    }
+
+    private static PageImpl<Transaction> openTransactionsPage(int page, int size, long total, Transaction... content) {
+        return new PageImpl<>(List.of(content), PageRequest.of(page, size), total);
     }
 
     private static BigDecimal calculateRemainingInvestedUsd(List<Transaction> history) {
