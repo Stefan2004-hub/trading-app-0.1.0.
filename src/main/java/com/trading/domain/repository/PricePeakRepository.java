@@ -21,8 +21,7 @@ public interface PricePeakRepository extends JpaRepository<PricePeak, UUID> {
             JOIN pp.asset a
             WHERE pp.user.id = :userId
               AND (
-                :searchPattern IS NULL
-                OR LOWER(a.symbol) LIKE LOWER(:searchPattern)
+                LOWER(a.symbol) LIKE LOWER(:searchPattern)
                 OR LOWER(a.name) LIKE LOWER(:searchPattern)
               )
             ORDER BY pp.updatedAt DESC

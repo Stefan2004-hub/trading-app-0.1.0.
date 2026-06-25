@@ -3,6 +3,7 @@ package com.trading.service.transaction;
 import com.trading.domain.entity.AccumulationTrade;
 import com.trading.domain.entity.Transaction;
 import com.trading.domain.enums.AccumulationTradeStatus;
+import com.trading.domain.projection.AccumulationTradeAssetSummaryProjection;
 import com.trading.domain.enums.TransactionType;
 import com.trading.domain.repository.AccumulationTradeRepository;
 import com.trading.domain.repository.TransactionRepository;
@@ -73,7 +74,17 @@ public class AccumulationTradeServiceImpl implements AccumulationTradeService {
     ) {
         Objects.requireNonNull(userId, "userId is required");
         AccumulationTradeStatus resolvedStatus = status == null ? AccumulationTradeStatus.CLOSED : status;
-        return accumulationTradeRepository.summarizeByAsset(userId, resolvedStatus, assetId)
+        List<AccumulationTradeAssetSummaryProjection> summaryRows;
+        if (assetId == null) {
+            summaryRows = accumulationTradeRepository.summarizeByAssetAndStatus(userId, resolvedStatus);
+        } else {
+            summaryRows = accumulationTradeRepository.summarizeByAssetAndStatusAndAssetId(
+                userId,
+                resolvedStatus,
+                assetId
+            );
+        }
+        return summaryRows
             .stream()
             .map((row) -> new AccumulationTradeAssetSummaryResponse(
                 row.getAssetId(),

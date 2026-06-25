@@ -7,8 +7,6 @@ import com.trading.domain.projection.UserAssetRealizedPnlProjection;
 import com.trading.domain.projection.UserAssetSummaryProjection;
 import com.trading.domain.projection.SellOpportunityProjection;
 import com.trading.domain.projection.UserPortfolioPerformanceProjection;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import com.trading.domain.enums.TransactionType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,35 +18,9 @@ import java.util.Optional;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
+public interface TransactionRepository extends JpaRepository<Transaction, UUID>, TransactionRepositoryCustom {
 
     List<Transaction> findAllByUser_IdOrderByTransactionDateDesc(UUID userId);
-
-    @Query(
-        """
-            SELECT t
-            FROM Transaction t
-            JOIN t.asset a
-            JOIN t.exchange e
-            WHERE t.user.id = :userId
-              AND (
-                :searchPattern IS NULL
-                OR LOWER(a.symbol) LIKE :searchPattern
-                OR LOWER(a.name) LIKE :searchPattern
-                OR LOWER(e.symbol) LIKE :searchPattern
-                OR LOWER(e.name) LIKE :searchPattern
-              )
-              AND (:dateFromInclusive IS NULL OR t.transactionDate >= :dateFromInclusive)
-              AND (:dateToExclusive IS NULL OR t.transactionDate < :dateToExclusive)
-            """
-    )
-    Page<Transaction> findOpenTransactions(
-        @Param("userId") UUID userId,
-        @Param("searchPattern") String searchPattern,
-        @Param("dateFromInclusive") OffsetDateTime dateFromInclusive,
-        @Param("dateToExclusive") OffsetDateTime dateToExclusive,
-        Pageable pageable
-    );
 
     List<Transaction> findAllByUser_IdAndAsset_IdOrderByTransactionDateDesc(UUID userId, UUID assetId);
 

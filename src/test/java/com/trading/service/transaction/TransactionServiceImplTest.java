@@ -850,7 +850,7 @@ class TransactionServiceImplTest {
             )
         );
 
-        assertEquals("dateFrom must be before or equal to dateTo", error.getMessage());
+        assertEquals("dateFromInclusive must be before dateToExclusive", error.getMessage());
     }
 
     @Test
