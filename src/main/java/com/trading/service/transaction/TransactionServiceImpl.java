@@ -137,7 +137,7 @@ public class TransactionServiceImpl implements TransactionService {
         boolean sortByDate = "date".equals(sortBy);
         boolean asc = "asc".equalsIgnoreCase(sortDirection);
         if (dateFromInclusive != null && dateToExclusive != null && !dateFromInclusive.isBefore(dateToExclusive)) {
-            throw new IllegalArgumentException("dateFrom must be before or equal to dateTo");
+            throw new IllegalArgumentException("dateFromInclusive must be before dateToExclusive");
         }
         DateRange dateRange = new DateRange(dateFromInclusive, dateToExclusive);
         if (view == TransactionListView.MATCHED) {

@@ -22,6 +22,9 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +90,17 @@ class PricePeakServiceImplTest {
 
         assertEquals(1, response.size());
         verify(pricePeakRepository).findByUser_IdAndSearch(userId, "%mat%");
+    }
+
+    @Test
+    void listWithBlankSearchFallsBackToUserListingQuery() {
+        when(pricePeakRepository.findAllByUser_IdOrderByUpdatedAtDesc(userId)).thenReturn(List.of(row));
+
+        List<PricePeakResponse> response = pricePeakService.list(userId, "   ");
+
+        assertEquals(1, response.size());
+        verify(pricePeakRepository).findAllByUser_IdOrderByUpdatedAtDesc(userId);
+        verify(pricePeakRepository, never()).findByUser_IdAndSearch(eq(userId), anyString());
     }
 
     @Test

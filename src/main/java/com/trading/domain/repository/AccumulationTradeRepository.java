@@ -76,15 +76,35 @@ public interface AccumulationTradeRepository extends JpaRepository<AccumulationT
                 COUNT(at.id) AS tradeCount
             FROM AccumulationTrade at
             WHERE at.user.id = :userId
-              AND (:status IS NULL OR at.status = :status)
-              AND (:assetId IS NULL OR at.asset.id = :assetId)
+              AND at.status = :status
               AND at.newCoinAmount IS NOT NULL
               AND at.oldCoinAmount IS NOT NULL
             GROUP BY at.asset.id
             ORDER BY at.asset.id
             """
     )
-    List<AccumulationTradeAssetSummaryProjection> summarizeByAsset(
+    List<AccumulationTradeAssetSummaryProjection> summarizeByAssetAndStatus(
+        @Param("userId") UUID userId,
+        @Param("status") AccumulationTradeStatus status
+    );
+
+    @Query(
+        """
+            SELECT
+                at.asset.id AS assetId,
+                COALESCE(SUM(COALESCE(at.accumulationDelta, at.newCoinAmount - at.oldCoinAmount)), 0) AS totalAccumulationDelta,
+                COUNT(at.id) AS tradeCount
+            FROM AccumulationTrade at
+            WHERE at.user.id = :userId
+              AND at.status = :status
+              AND at.asset.id = :assetId
+              AND at.newCoinAmount IS NOT NULL
+              AND at.oldCoinAmount IS NOT NULL
+            GROUP BY at.asset.id
+            ORDER BY at.asset.id
+            """
+    )
+    List<AccumulationTradeAssetSummaryProjection> summarizeByAssetAndStatusAndAssetId(
         @Param("userId") UUID userId,
         @Param("status") AccumulationTradeStatus status,
         @Param("assetId") UUID assetId

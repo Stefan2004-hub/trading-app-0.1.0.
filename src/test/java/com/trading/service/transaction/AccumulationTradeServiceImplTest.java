@@ -169,7 +169,7 @@ class AccumulationTradeServiceImplTest {
             new BigDecimal("0.125000000000000000"),
             3
         );
-        when(accumulationTradeRepository.summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, null))
+        when(accumulationTradeRepository.summarizeByAssetAndStatus(userId, AccumulationTradeStatus.CLOSED))
             .thenReturn(List.of(projection));
 
         List<AccumulationTradeAssetSummaryResponse> response = accumulationTradeService.summarizeByAsset(
@@ -182,7 +182,37 @@ class AccumulationTradeServiceImplTest {
         assertEquals(assetId, response.get(0).assetId());
         assertEquals(0, response.get(0).totalAccumulationDelta().compareTo(new BigDecimal("0.125")));
         assertEquals(3, response.get(0).tradeCount());
-        verify(accumulationTradeRepository).summarizeByAsset(userId, AccumulationTradeStatus.CLOSED, null);
+        verify(accumulationTradeRepository).summarizeByAssetAndStatus(userId, AccumulationTradeStatus.CLOSED);
+    }
+
+    @Test
+    void summarizeByAssetUsesAssetSpecificQueryWhenAssetIdProvided() {
+        AccumulationTradeAssetSummaryProjection projection = new TestAccumulationTradeAssetSummaryProjection(
+            assetId,
+            new BigDecimal("0.200000000000000000"),
+            2
+        );
+        when(accumulationTradeRepository.summarizeByAssetAndStatusAndAssetId(
+            userId,
+            AccumulationTradeStatus.CLOSED,
+            assetId
+        )).thenReturn(List.of(projection));
+
+        List<AccumulationTradeAssetSummaryResponse> response = accumulationTradeService.summarizeByAsset(
+            userId,
+            null,
+            assetId
+        );
+
+        assertEquals(1, response.size());
+        assertEquals(assetId, response.get(0).assetId());
+        assertEquals(0, response.get(0).totalAccumulationDelta().compareTo(new BigDecimal("0.2")));
+        assertEquals(2, response.get(0).tradeCount());
+        verify(accumulationTradeRepository).summarizeByAssetAndStatusAndAssetId(
+            userId,
+            AccumulationTradeStatus.CLOSED,
+            assetId
+        );
     }
 
     @Test
